@@ -1,0 +1,39 @@
+language: cpp
+
+matrix:
+  include:
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+
+before_install: |
+  docker pull ${DOCKERIMG}
+  docker ps -a
+  docker run -it -d -v ${PWD}:/sources -w /sources --name ${DOCKERSYS} ${DOCKERIMG} /bin/sh
+
+install:
+  - chmod +x ports/ci/travis/install_deps.sh
+  - ports/ci/travis/install_deps.sh
+
+script:
+  - chmod +x ports/ci/travis/build.sh
+  - ports/ci/travis/build.sh
+
+#after_success:
+#  - chmod +x ports/ci/travis/deploy.sh
+#  - ports/ci/travis/deploy.sh
+
+branches:
+  only:
+    - master
+
+notifications:
+  recipients:
+    - hipersayan.x@gmail.com
+  email:
+    on_success: change
+    on_failure: change
