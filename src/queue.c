@@ -138,17 +138,13 @@ struct mutex *akvcam_queue_mutex(akvcam_queue_t self)
 }
 
 int akvcam_queue_setup(struct vb2_queue *queue,
-                       const void *parg,
                        unsigned int *num_buffers,
                        unsigned int *num_planes,
-                       unsigned int sizes[],
-                       void *alloc_ctxs[])
+                       unsigned int sizes[])
 {
     akvcam_queue_t self;
     akvcam_format_t format;
     size_t frame_size;
-    UNUSED(parg);
-    UNUSED(alloc_ctxs);
 
     printk(KERN_INFO "%s\n", __FUNCTION__);
     self = vb2_get_drv_priv(queue);
@@ -166,6 +162,43 @@ int akvcam_queue_setup(struct vb2_queue *queue,
 
     return 0;
 }
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
+int akvcam_queue_setup_sys(struct vb2_queue *queue,
+                           const void *parg,
+                           unsigned int *num_buffers,
+                           unsigned int *num_planes,
+                           unsigned int sizes[],
+                           void *alloc_ctxs[])
+{
+    UNUSED(parg);
+    UNUSED(alloc_ctxs);
+
+    return akvcam_queue_setup(queue, num_buffers, num_planes, sizes);
+}
+#elif  LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
+int akvcam_queue_setup_sys(struct vb2_queue *queue,
+                           unsigned int *num_buffers,
+                           unsigned int *num_planes,
+                           unsigned int sizes[],
+                           void *alloc_ctxs[])
+{
+    UNUSED(alloc_ctxs);
+
+    return akvcam_queue_setup(queue, num_buffers, num_planes, sizes);
+}
+#else
+int akvcam_queue_setup_sys(struct vb2_queue *queue,
+                           unsigned int *num_buffers,
+                           unsigned int *num_planes,
+                           unsigned int sizes[],
+                           struct device *alloc_devs[])
+{
+    UNUSED(alloc_devs);
+
+    return akvcam_queue_setup(queue, num_buffers, num_planes, sizes);
+}
+#endif
 
 int akvcam_buf_prepare(struct vb2_buffer *buffer)
 {
@@ -267,7 +300,7 @@ int akvcam_queue_send_frames(void *data)
         ok = akvcam_list_pop(self->buffers, 0, (void **) &buffer, NULL);
         akvcam_mutex_unlock(self->qmutex);
 
-        v4l2_buffer = container_of(buffer, struct vb2_v4l2_buffer, vb2_buf);
+        v4l2_buffer = to_vb2_v4l2_buffer(buffer);
         v4l2_buffer->field = V4L2_FIELD_NONE;
         v4l2_buffer->sequence = self->sequence;
         self->sequence++;
@@ -295,7 +328,7 @@ int akvcam_queue_send_frames(void *data)
 }
 
 static struct vb2_ops akvcam_vb2_ops = {
-    .queue_setup     = akvcam_queue_setup    ,
+    .queue_setup     = akvcam_queue_setup_sys,
     .buf_prepare     = akvcam_buf_prepare    ,
     .buf_queue       = akvcam_buf_queue      ,
     .start_streaming = akvcam_start_streaming,
