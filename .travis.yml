@@ -9,16 +9,6 @@ matrix:
     compiler: gcc
     env:
       - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
-      - KERNEL_VERSION_A=4.1.28
-      - KERNEL_VERSION_B=040128
-      - KERNEL_VERSION_C=201607131931
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
       - KERNEL_VERSION_A=4.4.15
       - KERNEL_VERSION_B=040415
       - KERNEL_VERSION_C=201607111333

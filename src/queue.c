@@ -164,12 +164,12 @@ int akvcam_queue_setup(struct vb2_queue *queue,
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
-int akvcam_queue_setup_sys(struct vb2_queue *queue,
-                           const void *parg,
-                           unsigned int *num_buffers,
-                           unsigned int *num_planes,
-                           unsigned int sizes[],
-                           void *alloc_ctxs[])
+int akvcam_queue_setup_compat(struct vb2_queue *queue,
+                              const void *parg,
+                              unsigned int *num_buffers,
+                              unsigned int *num_planes,
+                              unsigned int sizes[],
+                              void *alloc_ctxs[])
 {
     UNUSED(parg);
     UNUSED(alloc_ctxs);
@@ -177,22 +177,22 @@ int akvcam_queue_setup_sys(struct vb2_queue *queue,
     return akvcam_queue_setup(queue, num_buffers, num_planes, sizes);
 }
 #elif  LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
-int akvcam_queue_setup_sys(struct vb2_queue *queue,
-                           unsigned int *num_buffers,
-                           unsigned int *num_planes,
-                           unsigned int sizes[],
-                           void *alloc_ctxs[])
+int akvcam_queue_setup_compat(struct vb2_queue *queue,
+                              unsigned int *num_buffers,
+                              unsigned int *num_planes,
+                              unsigned int sizes[],
+                              void *alloc_ctxs[])
 {
     UNUSED(alloc_ctxs);
 
     return akvcam_queue_setup(queue, num_buffers, num_planes, sizes);
 }
 #else
-int akvcam_queue_setup_sys(struct vb2_queue *queue,
-                           unsigned int *num_buffers,
-                           unsigned int *num_planes,
-                           unsigned int sizes[],
-                           struct device *alloc_devs[])
+int akvcam_queue_setup_compat(struct vb2_queue *queue,
+                              unsigned int *num_buffers,
+                              unsigned int *num_planes,
+                              unsigned int sizes[],
+                              struct device *alloc_devs[])
 {
     UNUSED(alloc_devs);
 
@@ -328,7 +328,7 @@ int akvcam_queue_send_frames(void *data)
 }
 
 static struct vb2_ops akvcam_vb2_ops = {
-    .queue_setup     = akvcam_queue_setup_sys,
+    .queue_setup     = akvcam_queue_setup_compat,
     .buf_prepare     = akvcam_buf_prepare    ,
     .buf_queue       = akvcam_buf_queue      ,
     .start_streaming = akvcam_start_streaming,
