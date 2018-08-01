@@ -13,6 +13,7 @@ ${EXEC} apt-get -y upgrade
 ${EXEC} apt-get -y install \
     g++ \
     make \
+    wget \
     linux-headers-generic
 
 KERNEL_VERSION=${KERNEL_VERSION_A}-${KERNEL_VERSION_B}
