@@ -9,4 +9,4 @@ ${EXEC} apt-get -y upgrade
 ${EXEC} apt-get -y install \
     g++ \
     make \
-    linux-headers
+    linux-headers-generic
