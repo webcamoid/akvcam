@@ -22,7 +22,7 @@ headers=linux-headers-${KERNEL_VERSION}_${KERNEL_VERSION}.${KERNEL_VERSION_C}_al
 headers_generic=linux-headers-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_amd64.deb
 headers_modules=linux-modules-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_amd64.deb
 
-for package in headers headers_generic headers_modules; do
+for package in ${headers} ${headers_generic} ${headers_modules}; do
     ${EXEC} wget -c "${url}/${package}"
     ${EXEC} dpkg -i "${package}"
 done
