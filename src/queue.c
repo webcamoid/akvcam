@@ -250,6 +250,7 @@ int akvcam_queue_send_frames(void *data)
     unsigned int tsleep = 1000 * frame_rate->denominator;
     struct vb2_buffer *buffer;
     struct vb2_v4l2_buffer *v4l2_buffer;
+    struct timeval timestamp;
     char *pixels;
     bool ok;
 
@@ -270,12 +271,11 @@ int akvcam_queue_send_frames(void *data)
         v4l2_buffer->field = V4L2_FIELD_NONE;
         v4l2_buffer->sequence = self->sequence;
         self->sequence++;
+        v4l2_get_timestamp(&timestamp);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
-        v4l2_get_timestamp(&v4l2_buffer->timestamp);
+        v4l2_buffer->timestamp = timestamp;
 #else
-        struct timeval timestamp;
-        v4l2_get_timestamp(&timestamp);
         buffer->timestamp = (u64) ktime_to_ns(timeval_to_ktime(timestamp));
 #endif
 

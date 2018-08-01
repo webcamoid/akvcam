@@ -127,7 +127,7 @@ int akvcam_g_fmt_vid_cap(struct file *filp,
     format->fmt.pix.field = V4L2_FIELD_NONE;
     format->fmt.pix.bytesperline = (__u32) akvcam_format_bypl(current_format);
     format->fmt.pix.sizeimage = (__u32) akvcam_format_size(current_format);
-    format->fmt.pix.colorspace = V4L2_COLORSPACE_RAW;
+    format->fmt.pix.colorspace = 0;
 
     return 0;
 }
@@ -167,7 +167,7 @@ int akvcam_try_fmt_vid_cap(struct file *filp,
     format->fmt.pix.field = V4L2_FIELD_NONE;
     format->fmt.pix.bytesperline = (__u32) akvcam_format_bypl(nearest_format);
     format->fmt.pix.sizeimage = (__u32) akvcam_format_size(nearest_format);
-    format->fmt.pix.colorspace = V4L2_COLORSPACE_RAW;
+    format->fmt.pix.colorspace = 0;
 
     return 0;
 }
