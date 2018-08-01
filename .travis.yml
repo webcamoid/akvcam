@@ -17,13 +17,13 @@ before_install:
   - docker pull ${DOCKERIMG}
   - docker ps -a
   - docker run -it -d -v ${PWD}:/sources -w /sources --name ${DOCKERSYS} ${DOCKERIMG} /bin/sh
+  - export KERNEL_VERSION=${KERNEL_VERSION_A}-${KERNEL_VERSION_B}
 
 install:
   - chmod +x ports/ci/travis/install_deps.sh
   - ports/ci/travis/install_deps.sh
 
 script:
-  - export KERNEL_VERSION=${KERNEL_VERSION_A}-${KERNEL_VERSION_B}
   - chmod +x ports/ci/travis/build.sh
   - ports/ci/travis/build.sh
 
