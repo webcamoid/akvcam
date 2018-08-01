@@ -1,3 +1,5 @@
+KERNEL_DIR ?= /lib/modules/$(shell uname -r)/build
+
 obj-m += akvcam.o
 akvcam-objs := \
 	controls.o \
@@ -14,10 +16,10 @@ akvcam-objs := \
 	utils.o
 
 all:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) modules
 
 clean:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) clean
 
 install:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules_install
+	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) modules_install
