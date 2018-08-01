@@ -9,9 +9,139 @@ matrix:
     compiler: gcc
     env:
       - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.1.28
+      - KERNEL_VERSION_B=040128
+      - KERNEL_VERSION_C=201607131931
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
       - KERNEL_VERSION_A=4.4.15
       - KERNEL_VERSION_B=040415
       - KERNEL_VERSION_C=201607111333
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.6.4
+      - KERNEL_VERSION_B=040604
+      - KERNEL_VERSION_C=201607111332
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.7.1
+      - KERNEL_VERSION_B=040701
+      - KERNEL_VERSION_C=201608160432
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.8.1
+      - KERNEL_VERSION_B=040801
+      - KERNEL_VERSION_C=201610170913
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.9.1
+      - KERNEL_VERSION_B=040901
+      - KERNEL_VERSION_C=201701060531
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.10.1
+      - KERNEL_VERSION_B=041001
+      - KERNEL_VERSION_C=201702260735
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.11.1
+      - KERNEL_VERSION_B=041101
+      - KERNEL_VERSION_C=201705140931
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.12.1
+      - KERNEL_VERSION_B=041201
+      - KERNEL_VERSION_C=201707121132
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.13.1
+      - KERNEL_VERSION_B=041301
+      - KERNEL_VERSION_C=201709100232
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.14.1
+      - KERNEL_VERSION_B=041401
+      - KERNEL_VERSION_C=201711210430
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.15.1
+      - KERNEL_VERSION_B=041501
+      - KERNEL_VERSION_C=201802031831
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.16.1
+      - KERNEL_VERSION_B=041601
+      - KERNEL_VERSION_C=201804081334
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.17.1
+      - KERNEL_VERSION_B=041701
+      - KERNEL_VERSION_C=201806111730
 
 before_install:
   - docker pull ${DOCKERIMG}
