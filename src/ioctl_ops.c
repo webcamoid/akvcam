@@ -46,8 +46,8 @@ int akvcam_querycap(struct file *filp, void *fh, struct v4l2_capability *cap)
     name = akvcam_driver_name();
     description = akvcam_driver_description();
 
-    strscpy((char *) cap->driver, name, 16);
-    strscpy((char *) cap->card, description, 32);
+    snprintf((char *) cap->driver, 16, "%s", name);
+    snprintf((char *) cap->card, 32, "%s", description);
     snprintf((char *) cap->bus_info, 32, "platform:akvcam-%03d",
              akvcam_device_num(device));
 

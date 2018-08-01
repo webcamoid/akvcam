@@ -17,7 +17,6 @@
  */
 
 #include <linux/slab.h>
-#include <linux/string.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ctrls.h>
 
@@ -105,7 +104,7 @@ akvcam_device_t akvcam_device_new(const char *name,
     if (!self->vdev->ioctl_ops)
         goto akvcam_device_new_failed;
 
-    strscpy(self->vdev->name, name, 32);
+    snprintf(self->vdev->name, 32, "%s", name);
     self->vdev->v4l2_dev = &self->v4l2_dev;
     self->vdev->vfl_type = VFL_TYPE_GRABBER;
     self->vdev->vfl_dir =

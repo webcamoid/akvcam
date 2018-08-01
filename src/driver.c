@@ -60,8 +60,8 @@ bool akvcam_driver_init(const char *name, const char *description)
     if (!self->self)
         goto akvcam_driver_new_failed;
 
-    strscpy(self->name, name, AKVCAM_MAX_STRING_SIZE);
-    strscpy(self->description, description, AKVCAM_MAX_STRING_SIZE);
+    snprintf(self->name, AKVCAM_MAX_STRING_SIZE, "%s", name);
+    snprintf(self->description, AKVCAM_MAX_STRING_SIZE, "%s", description);
     self->devices = akvcam_list_new();
 
     if (!self->devices)
