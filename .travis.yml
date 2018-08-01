@@ -9,15 +9,21 @@ matrix:
     compiler: gcc
     env:
       - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - KERNEL_VERSION_A=4.4.15
+      - KERNEL_VERSION_B=040415
+      - KERNEL_VERSION_C=201607111333
 
-before_install: |
-  docker pull ${DOCKERIMG}
-  docker ps -a
-  docker run -it -d -v ${PWD}:/sources -w /sources --name ${DOCKERSYS} ${DOCKERIMG} /bin/sh
+before_install:
+  - docker pull ${DOCKERIMG}
+  - docker ps -a
+  - docker run -it -d -v ${PWD}:/sources -w /sources --name ${DOCKERSYS} ${DOCKERIMG} /bin/sh
 
 install:
   - chmod +x ports/ci/travis/install_deps.sh
   - ports/ci/travis/install_deps.sh
+
+before_script:
+  - export KERNEL_VERSION=${KERNEL_VERSION_A}-${KERNEL_VERSION_B}
 
 script:
   - chmod +x ports/ci/travis/build.sh
