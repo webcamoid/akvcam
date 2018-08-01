@@ -267,7 +267,7 @@ int akvcam_queue_send_frames(void *data)
         ok = akvcam_list_pop(self->buffers, 0, (void **) &buffer, NULL);
         akvcam_mutex_unlock(self->qmutex);
 
-        v4l2_buffer = to_vb2_v4l2_buffer(buffer);
+        v4l2_buffer = container_of(buffer, struct vb2_v4l2_buffer, vb2_buf);
         v4l2_buffer->field = V4L2_FIELD_NONE;
         v4l2_buffer->sequence = self->sequence;
         self->sequence++;
