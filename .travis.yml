@@ -138,7 +138,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=debian DOCKERIMG=ubuntu:xenial
+      - DOCKERSYS=debian DOCKERIMG=ubuntu:bionic
       - KERNEL_VERSION_A=4.17.1
       - KERNEL_VERSION_B=041701
       - KERNEL_VERSION_C=201806111730

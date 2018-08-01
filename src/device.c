@@ -17,6 +17,7 @@
  */
 
 #include <linux/slab.h>
+#include <linux/string.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ctrls.h>
 

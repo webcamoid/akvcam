@@ -9,6 +9,7 @@ ${EXEC} apt-get -y upgrade
 ${EXEC} apt-get -y install \
     g++ \
     make \
+    libelf1 \
     kmod \
     wget
 
