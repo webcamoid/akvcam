@@ -42,9 +42,7 @@ debootstrap --arch amd64 xenial ${system_mount_point}
 # Configure auto login with root user
 sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
 sed -i 's/\/sbin\/agetty/\/sbin\/agetty -a root/' ${system_mount_point}/lib/systemd/system/getty@.service
-
-cat ${system_mount_point}/etc/systemd/logind.conf
-cat ${system_mount_point}/lib/systemd/system/getty@.service
+sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
 
 # Prepare the system to test the driver
 cp -vf src/${DRIVER_FILE} ${system_mount_point}/root
