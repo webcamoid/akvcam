@@ -137,7 +137,7 @@ matrix:
 before_install:
   - docker pull ${DOCKERIMG}
   - docker ps -a
-  - docker run -it -d -v ${PWD}:/sources -w /sources --name ${DOCKERSYS} ${DOCKERIMG} /bin/sh
+  - docker run --privileged -it -d -v ${PWD}:/sources -w /sources --name ${DOCKERSYS} ${DOCKERIMG} /bin/sh
   - export KERNEL_VERSION=${KERNEL_VERSION_A}-${KERNEL_VERSION_B}
 
 install:

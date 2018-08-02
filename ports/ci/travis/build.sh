@@ -34,14 +34,8 @@ mkfs.ext4 ${system_image}
 
 # Install bootstrap system
 mkdir ${system_mount_point}
-EOF
-${EXEC} bash ${BUILDSCRIPT}
-rm -vf ${BUILDSCRIPT}
-
 mount -o loop ${system_image} ${system_mount_point}
-
-cat << EOF >> ${BUILDSCRIPT}
-fakechroot fakeroot debootstrap --variant=fakechroot --arch amd64 xenial ${system_mount_point}
+debootstrap --arch amd64 xenial ${system_mount_point}
 
 echo
 echo "Booting system with custom kernel:"
