@@ -11,13 +11,21 @@ ${EXEC} apt-get -y install \
     make \
     libelf1 \
     kmod \
+    qemu \
+    qemu-kvm \
     wget
 
 url=http://kernel.ubuntu.com/~kernel-ppa/mainline/v${KERNEL_VERSION_A}
 headers=linux-headers-${KERNEL_VERSION}_${KERNEL_VERSION}.${KERNEL_VERSION_C}_all.deb
 headers_generic=linux-headers-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_amd64.deb
 
-for package in ${headers} ${headers_generic} ${headers_modules}; do
+if [ -z "${UNSIGNED_IMG}" ]; then
+    image=linux-image-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_amd64.deb
+else
+    image=linux-image-unsigned-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_amd64.deb
+fi
+
+for package in ${image} ${headers} ${headers_generic} ${headers_modules}; do
     ${EXEC} wget -c "${url}/${package}"
     ${EXEC} dpkg -i "${package}"
 done
