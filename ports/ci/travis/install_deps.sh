@@ -11,6 +11,7 @@ ${EXEC} apt-get -y install \
     make \
     libelf1 \
     kmod \
+    debootstrap \
     qemu \
     wget
 
