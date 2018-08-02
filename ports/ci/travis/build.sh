@@ -47,7 +47,7 @@ cat ${system_mount_point}/etc/systemd/logind.conf
 
 sed -i 's/\/sbin\/agetty/\/sbin\/agetty --autologin root/' ${system_mount_point}/lib/systemd/system/*getty*.service
 
-cat ${system_mount_point}/lib/systemd/system/*getty*
+ls ${system_mount_point}/lib/systemd/system/*getty*
 
 sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
 mkdir -p ${system_mount_point}/etc/systemd/system/getty@\${default_terminal}.service.d
