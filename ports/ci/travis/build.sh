@@ -1,6 +1,7 @@
 #!/bin/bash
 
 EXEC="docker exec ${DOCKERSYS}"
+DRIVER_FILE=akvcam.ko
 BUILDSCRIPT=dockerbuild.sh
 system_image=system-image.img
 system_mount_point=system-mount-point
@@ -22,10 +23,11 @@ echo
 # Build the driver and show it's info.
 cd src
 make KERNEL_DIR=/usr/src/linux-headers-${KERNEL_VERSION}-generic
+cd ..
 echo
 echo "Driver info:"
 echo
-modinfo akvcam.ko
+modinfo src/${DRIVER_FILE}
 echo
 
 # Create the system image to boot with QEMU.
@@ -36,6 +38,20 @@ mkfs.ext4 ${system_image}
 mkdir ${system_mount_point}
 mount -o loop ${system_image} ${system_mount_point}
 debootstrap --arch amd64 xenial ${system_mount_point}
+
+# Configure auto login with root user
+sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
+sed -i 's/\/sbin\/agetty/\/sbin\/agetty -a root/' ${system_mount_point}/lib/systemd/system/getty@.service
+
+# Prepare the system to test the driver
+cp -vf src/${DRIVER_FILE} ${system_mount_point}/root
+echo './driver_test.sh' >> ${system_mount_point}/root/.profile
+touch ${system_mount_point}/root/driver_test.sh
+chmod +x ${system_mount_point}/root/driver_test.sh
+echo 'dmesg -C' >> ${system_mount_point}/root/driver_test.sh
+echo 'insmod ${DRIVER_FILE}' >> ${system_mount_point}/root/driver_test.sh
+echo 'dmesg' >> ${system_mount_point}/root/driver_test.sh
+echo 'shutdown -h now' >> ${system_mount_point}/root/driver_test.sh
 
 echo
 echo "Booting system with custom kernel:"
