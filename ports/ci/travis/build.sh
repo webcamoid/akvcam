@@ -42,11 +42,15 @@ debootstrap --arch amd64 xenial ${system_mount_point}
 # Configure auto login with root user
 default_terminal=ttyS0
 sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
+
+cat ${system_mount_point}/etc/systemd/logind.conf
+
 sed -i 's/\/sbin\/agetty/\/sbin\/agetty --autologin root/' ${system_mount_point}/lib/systemd/system/*getty*.service
 sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
 mkdir -p ${system_mount_point}/etc/systemd/system/getty@\${default_terminal}.service.d
 echo '[Service]' >> ${system_mount_point}/etc/systemd/system/getty@\${default_terminal}.service.d/override.conf
-echo 'ExecStart=-/sbin/agetty --autologin root --noclear %I \$TERM' >> ${system_mount_point}/etc/systemd/system/getty@\${default_terminal}.service.d/override.conf
+echo 'ExecStart=' >> ${system_mount_point}/etc/systemd/system/getty@\${default_terminal}.service.d/override.conf
+echo 'ExecStart=-/sbin/agetty --autologin root --noclear %I' >> ${system_mount_point}/etc/systemd/system/getty@\${default_terminal}.service.d/override.conf
 
 # Prepare the system to test the driver
 cp -vf src/${DRIVER_FILE} ${system_mount_point}/root
