@@ -40,13 +40,12 @@ mount -o loop ${system_image} ${system_mount_point}
 debootstrap --arch amd64 xenial ${system_mount_point}
 
 # Configure auto login with root user
-sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
-sed -i 's/\/sbin\/agetty/\/sbin\/agetty --autologin root/' ${system_mount_point}/lib/systemd/system/*getty*
-sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
+#sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
+#sed -i 's/\/sbin\/agetty/\/sbin\/agetty --autologin root/' ${system_mount_point}/lib/systemd/system/*getty*.service
+#sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
 mkdir -p ${system_mount_point}/etc/systemd/system/getty@tty1.service.d
 echo '[Service]' >> ${system_mount_point}/etc/systemd/system/getty@tty1.service.d/override.conf
-echo 'ExecStart=/sbin/agetty --noissue --autologin root %I \$TERM' >> ${system_mount_point}/etc/systemd/system/getty@tty1.service.d/override.conf
-echo 'Type=idle' >> ${system_mount_point}/etc/systemd/system/getty@tty1.service.d/override.conf
+echo 'ExecStart=-/sbin/agetty --skip-login --autologin root %I \$TERM' >> ${system_mount_point}/etc/systemd/system/getty@tty1.service.d/override.conf
 
 # Prepare the system to test the driver
 cp -vf src/${DRIVER_FILE} ${system_mount_point}/root
