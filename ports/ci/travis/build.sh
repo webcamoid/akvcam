@@ -6,7 +6,7 @@ BUILDSCRIPT=dockerbuild.sh
 cat << EOF >> ${BUILDSCRIPT}
 echo "Available kernel headers:"
 echo
-ls /usr/src/linux-headers-* | sort
+ls /usr/src | grep linux-headers- | sort
 echo
 echo "Available kernel images:"
 echo
@@ -34,17 +34,16 @@ mkfs.ext4 \${system_image}
 # Install bootstrap system
 system_mount_point=system-mount-point
 mkdir \${system_mount_point}
-sudo mount -o loop \${system_image} \${system_mount_point}
-sudo debootstrap --arch amd64 xenial \${system_mount_point}
+mount -o loop \${system_image} \${system_mount_point}
+debootstrap --arch amd64 xenial \${system_mount_point}
 
 echo
 echo "Booting system with custom kernel:"
 echo
 qemu-system-x86_64 \\
-    -kernel /boot/vmlinuz-\$(uname -r) \\
+    -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \\
     -append "root=/dev/sda console=ttyS0" \\
     -hda \${system_image} \\
-    --enable-kvm \\
     --nographic
 EOF
 ${EXEC} bash ${BUILDSCRIPT}

@@ -12,7 +12,6 @@ ${EXEC} apt-get -y install \
     libelf1 \
     kmod \
     qemu \
-    qemu-kvm \
     wget
 
 url=http://kernel.ubuntu.com/~kernel-ppa/mainline/v${KERNEL_VERSION_A}
