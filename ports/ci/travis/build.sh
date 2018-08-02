@@ -2,6 +2,8 @@
 
 EXEC="docker exec ${DOCKERSYS}"
 BUILDSCRIPT=dockerbuild.sh
+system_image=system-image.img
+system_mount_point=system-mount-point
 
 cat << EOF >> ${BUILDSCRIPT}
 echo "Available kernel headers:"
@@ -27,15 +29,19 @@ modinfo akvcam.ko
 echo
 
 # Create the system image to boot with QEMU.
-system_image=system-image.img
-qemu-img create \${system_image} 1g
-mkfs.ext4 \${system_image}
+qemu-img create ${system_image} 1g
+mkfs.ext4 ${system_image}
 
 # Install bootstrap system
-system_mount_point=system-mount-point
-mkdir \${system_mount_point}
-mount -o loop \${system_image} \${system_mount_point}
-debootstrap --arch amd64 xenial \${system_mount_point}
+mkdir ${system_mount_point}
+EOF
+${EXEC} bash ${BUILDSCRIPT}
+rm -vf ${BUILDSCRIPT}
+
+mount -o loop ${system_image} ${system_mount_point}
+
+cat << EOF >> ${BUILDSCRIPT}
+fakechroot fakeroot debootstrap --variant=fakechroot --arch amd64 xenial ${system_mount_point}
 
 echo
 echo "Booting system with custom kernel:"
@@ -43,7 +49,7 @@ echo
 qemu-system-x86_64 \\
     -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \\
     -append "root=/dev/sda console=ttyS0" \\
-    -hda \${system_image} \\
+    -hda ${system_image} \\
     --nographic
 EOF
 ${EXEC} bash ${BUILDSCRIPT}
