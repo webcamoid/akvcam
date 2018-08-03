@@ -2,6 +2,7 @@
 
 EXEC="docker exec ${DOCKERSYS}"
 DRIVER_FILE=akvcam.ko
+DEFERRED_LOG=1
 BUILDSCRIPT=dockerbuild.sh
 system_image=system-image.img
 system_mount_point=system-mount-point
@@ -48,13 +49,13 @@ if [ ! -z "${USE_QEMU}" ]; then
     sed -i 's/\/sbin\/agetty/\/sbin\/agetty --autologin root/' ${system_mount_point}/lib/systemd/system/*getty*.service
     sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
 
-    ln -s /usr/lib/systemd/system/serial-getty@ttyS0.service ${system_mount_point}/etc/systemd/system/multi-user.target.wants/serial-getty@ttyS0.service
-
     # Prepare the system to test the driver
     cp -vf src/${DRIVER_FILE} ${system_mount_point}/root
     echo './driver_test.sh' >> ${system_mount_point}/root/.profile
     touch ${system_mount_point}/root/driver_test.sh
     chmod +x ${system_mount_point}/root/driver_test.sh
+
+    echo 'if [ "\$(tty)" != /dev/pts/1 ] exit' >> ${system_mount_point}/root/driver_test.sh
 
     required_modules=\$(modinfo src/${DRIVER_FILE} | grep 'depends:' | awk '{print \$2}' | sed 's/,/ /g')
 
@@ -64,12 +65,24 @@ if [ ! -z "${USE_QEMU}" ]; then
 
     echo 'dmesg -C' >> ${system_mount_point}/root/driver_test.sh
     echo 'insmod ${DRIVER_FILE}' >> ${system_mount_point}/root/driver_test.sh
-    echo 'v4l2-ctl -d /dev/video0 --all' >> ${system_mount_point}/root/driver_test.sh
-    echo 'v4l2-compliance -d /dev/video0 -f' >> ${system_mount_point}/root/driver_test.sh
+
+    if [ -z "${DEFERRED_LOG}" ]; then
+        echo 'v4l2-ctl -d /dev/video0 --all' >> ${system_mount_point}/root/driver_test.sh
+        echo 'v4l2-compliance -d /dev/video0 -f' >> ${system_mount_point}/root/driver_test.sh
+    else
+        echo 'v4l2-ctl -d /dev/video0 --all &>driver_log.txt' >> ${system_mount_point}/root/driver_test.sh
+        echo 'v4l2-compliance -d /dev/video0 -f &>driver_log.txt' >> ${system_mount_point}/root/driver_test.sh
+    fi
+
     echo 'rmmod ${DRIVER_FILE}' >> ${system_mount_point}/root/driver_test.sh
-    echo 'dmesg' >> ${system_mount_point}/root/driver_test.sh
-    echo 'tty' >> ${system_mount_point}/root/driver_test.sh
-#    echo 'shutdown -h now' >> ${system_mount_point}/root/driver_test.sh
+
+    if [ -z "${DEFERRED_LOG}" ]; then
+        echo 'dmesg' >> ${system_mount_point}/root/driver_test.sh
+    else
+        echo 'dmesg &>driver_log.txt' >> ${system_mount_point}/root/driver_test.sh
+    fi
+
+    echo 'shutdown -h now' >> ${system_mount_point}/root/driver_test.sh
 
     umount ${system_mount_point}
 
@@ -84,6 +97,12 @@ if [ ! -z "${USE_QEMU}" ]; then
         --nographic \\
         -net nic,vlan=1,model=ne2k_pci \\
         -net user,vlan=1
+
+    if [ ! -z "${DEFERRED_LOG}" ]; then
+        mount -o loop ${system_image} ${system_mount_point}
+        cat ${system_mount_point}/root/driver_log.sh
+        umount ${system_mount_point}
+    fi
 fi
 EOF
 ${EXEC} bash ${BUILDSCRIPT}
