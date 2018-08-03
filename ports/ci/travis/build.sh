@@ -55,7 +55,8 @@ if [ ! -z "${USE_QEMU}" ]; then
     touch ${system_mount_point}/root/driver_test.sh
     chmod +x ${system_mount_point}/root/driver_test.sh
 
-    echo '[ "\$(tty)" != /dev/pts/1 ] && exit' >> ${system_mount_point}/root/driver_test.sh
+#    echo '[ "\$(tty)" != /dev/pts/1 ] && exit' >> ${system_mount_point}/root/driver_test.sh
+    echo 'echo \$(tty) >> driver_log.txt' >> ${system_mount_point}/root/driver_test.sh
 
     required_modules=\$(modinfo src/${DRIVER_FILE} | grep 'depends:' | awk '{print \$2}' | sed 's/,/ /g')
 
@@ -70,8 +71,8 @@ if [ ! -z "${USE_QEMU}" ]; then
         echo 'v4l2-ctl -d /dev/video0 --all' >> ${system_mount_point}/root/driver_test.sh
         echo 'v4l2-compliance -d /dev/video0 -f' >> ${system_mount_point}/root/driver_test.sh
     else
-        echo 'v4l2-ctl -d /dev/video0 --all &>driver_log.txt' >> ${system_mount_point}/root/driver_test.sh
-        echo 'v4l2-compliance -d /dev/video0 -f &>driver_log.txt' >> ${system_mount_point}/root/driver_test.sh
+        echo 'v4l2-ctl -d /dev/video0 --all >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
+        echo 'v4l2-compliance -d /dev/video0 -f >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
     fi
 
     echo 'rmmod ${DRIVER_FILE}' >> ${system_mount_point}/root/driver_test.sh
@@ -79,7 +80,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     if [ -z "${DEFERRED_LOG}" ]; then
         echo 'dmesg' >> ${system_mount_point}/root/driver_test.sh
     else
-        echo 'dmesg &>driver_log.txt' >> ${system_mount_point}/root/driver_test.sh
+        echo 'dmesg >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
     fi
 
     echo 'shutdown -h now' >> ${system_mount_point}/root/driver_test.sh
