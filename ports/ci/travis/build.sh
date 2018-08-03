@@ -66,7 +66,8 @@ if [ ! -z "${USE_QEMU}" ]; then
     echo 'v4l2-compliance -d /dev/video0 -f' >> ${system_mount_point}/root/driver_test.sh
     echo 'rmmod ${DRIVER_FILE}' >> ${system_mount_point}/root/driver_test.sh
     echo 'dmesg' >> ${system_mount_point}/root/driver_test.sh
-    echo 'shutdown -h now' >> ${system_mount_point}/root/driver_test.sh
+    echo 'tty' >> ${system_mount_point}/root/driver_test.sh
+#    echo 'shutdown -h now' >> ${system_mount_point}/root/driver_test.sh
 
     umount ${system_mount_point}
 
