@@ -48,6 +48,8 @@ if [ ! -z "${USE_QEMU}" ]; then
     sed -i 's/\/sbin\/agetty/\/sbin\/agetty --autologin root/' ${system_mount_point}/lib/systemd/system/*getty*.service
     sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
 
+    ln -s /usr/lib/systemd/system/serial-getty@ttyS0.service ${system_mount_point}/etc/systemd/system/multi-user.target.wants/serial-getty@ttyS0.service
+
     # Prepare the system to test the driver
     cp -vf src/${DRIVER_FILE} ${system_mount_point}/root
     echo './driver_test.sh' >> ${system_mount_point}/root/.profile
