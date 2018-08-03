@@ -67,9 +67,8 @@ echo "Booting system with custom kernel:"
 echo
 qemu-system-x86_64 \\
     -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \\
-    -append "root=/dev/sda console=ttyS0,9600" \\
+    -append "root=/dev/sda console=ttyS0,9600 single" \\
     -drive ${system_image},index=0,media=disk,format=raw \\
-    --nographic \\
-    single
+    --nographic
 EOF
 ${EXEC} bash ${BUILDSCRIPT}
