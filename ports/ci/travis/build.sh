@@ -101,7 +101,7 @@ if [ ! -z "${USE_QEMU}" ]; then
 
     if [ ! -z "${DEFERRED_LOG}" ]; then
         mount -o loop ${system_image} ${system_mount_point}
-        cat ${system_mount_point}/root/driver_log.sh
+        cat ${system_mount_point}/root/driver_log.txt
         umount ${system_mount_point}
     fi
 fi
