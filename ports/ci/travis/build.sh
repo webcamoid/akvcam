@@ -55,7 +55,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     touch ${system_mount_point}/root/driver_test.sh
     chmod +x ${system_mount_point}/root/driver_test.sh
 
-    echo 'if [ "\$(tty)" != /dev/pts/1 ] exit' >> ${system_mount_point}/root/driver_test.sh
+    echo '[ "\$(tty)" != /dev/pts/1 ] && exit' >> ${system_mount_point}/root/driver_test.sh
 
     required_modules=\$(modinfo src/${DRIVER_FILE} | grep 'depends:' | awk '{print \$2}' | sed 's/,/ /g')
 
