@@ -55,8 +55,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     touch ${system_mount_point}/root/driver_test.sh
     chmod +x ${system_mount_point}/root/driver_test.sh
 
-#    echo '[ "\$(tty)" != /dev/pts/1 ] && exit' >> ${system_mount_point}/root/driver_test.sh
-    echo 'echo \$(tty) >> driver_log.txt' >> ${system_mount_point}/root/driver_test.sh
+    echo '[ "\$(tty)" != /dev/tty1 ] && exit' >> ${system_mount_point}/root/driver_test.sh
 
     required_modules=\$(modinfo src/${DRIVER_FILE} | grep 'depends:' | awk '{print \$2}' | sed 's/,/ /g')
 
@@ -65,12 +64,13 @@ if [ ! -z "${USE_QEMU}" ]; then
     done
 
     echo 'dmesg -C' >> ${system_mount_point}/root/driver_test.sh
-    echo 'insmod ${DRIVER_FILE}' >> ${system_mount_point}/root/driver_test.sh
 
     if [ -z "${DEFERRED_LOG}" ]; then
+        echo 'insmod ${DRIVER_FILE}' >> ${system_mount_point}/root/driver_test.sh
         echo 'v4l2-ctl -d /dev/video0 --all' >> ${system_mount_point}/root/driver_test.sh
         echo 'v4l2-compliance -d /dev/video0 -f' >> ${system_mount_point}/root/driver_test.sh
     else
+        echo 'insmod ${DRIVER_FILE} >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
         echo 'v4l2-ctl -d /dev/video0 --all >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
         echo 'v4l2-compliance -d /dev/video0 -f >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
     fi
