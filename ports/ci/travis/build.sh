@@ -48,6 +48,10 @@ if [ ! -z "${USE_QEMU}" ]; then
     mount -o loop ${system_image} ${system_mount_point}
     debootstrap --components=main,universe,multiverse --include=kmod,v4l-utils --arch amd64 --variant=minbase xenial ${system_mount_point}
 
+    # Copy kernel modules
+    mkdir -p ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
+    cp -rvf /lib/modules/${KERNEL_VERSION}-generic/* ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
+
     # Configure auto login with root user
     sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
     sed -i 's/\/sbin\/agetty/\/sbin\/agetty --autologin root/' ${system_mount_point}/lib/systemd/system/*getty*.service
