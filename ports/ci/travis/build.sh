@@ -64,6 +64,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     chmod +x ${system_mount_point}/root/driver_test.sh
 
     echo '[ "\$(tty)" != /dev/tty1 ] && exit' >> ${system_mount_point}/root/driver_test.sh
+    echo 'depmod -a >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
     echo 'modprobe videodev >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
     echo 'modprobe videobuf2-v4l2 >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
     echo 'modprobe videobuf2-vmalloc >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
