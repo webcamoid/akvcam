@@ -45,11 +45,18 @@ sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
 
 mkdir -p ${system_mount_point}/etc/systemd/system/getty@tty1.service.d
 echo '[Service]' >> ${system_mount_point}/etc/systemd/system/getty@tty1.service.d/autologin.conf
+echo 'ExecStart=' >> ${system_mount_point}/etc/systemd/system/getty@tty1.service.d/autologin.conf
 echo 'ExecStart=-/sbin/agetty --autologin root --noclear %I \$TERM' >> ${system_mount_point}/etc/systemd/system/getty@tty1.service.d/autologin.conf
 
 mkdir -p ${system_mount_point}/etc/systemd/system/serial-getty@ttyS0.service.d
 echo '[Service]' >> ${system_mount_point}/etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf
+echo 'ExecStart=' >> ${system_mount_point}/etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf
 echo 'ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud 115200,38400,9600 %I \$TERM' >> ${system_mount_point}/etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf
+
+mkdir -p ${system_mount_point}/etc/systemd/system/console-getty@tty1.service.d
+echo '[Service]' >> ${system_mount_point}/etc/systemd/system/console-getty@tty1.service.d/autologin.conf
+echo 'ExecStart=' >> ${system_mount_point}/etc/systemd/system/console-getty@tty1.service.d/autologin.conf
+echo 'ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud console 115200,38400,9600 %I \$TERM' >> ${system_mount_point}/etc/systemd/system/console-getty@tty1.service.d/autologin.conf
 
 # Prepare the system to test the driver
 cp -vf src/${DRIVER_FILE} ${system_mount_point}/root
@@ -67,7 +74,7 @@ echo "Booting system with custom kernel:"
 echo
 qemu-system-x86_64 \\
     -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \\
-    -append "root=/dev/sda console=ttyS0,9600 single" \\
+    -append "root=/dev/sda console=ttyS0,9600" \\
     -drive ${system_image},index=0,media=disk,format=raw \\
     --nographic
 EOF
