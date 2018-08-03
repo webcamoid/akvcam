@@ -60,7 +60,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     required_modules=\$(modinfo src/${DRIVER_FILE} | grep 'depends:' | awk '{print \$2}' | sed 's/,/ /g')
 
     for module in "\${required_modules}"; do
-        echo 'modprobe \${module}' >> ${system_mount_point}/root/driver_test.sh
+        echo 'modprobe \${module} >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
     done
 
     echo 'dmesg -C' >> ${system_mount_point}/root/driver_test.sh
