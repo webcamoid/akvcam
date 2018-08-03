@@ -79,7 +79,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     qemu-system-x86_64 \\
         -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \\
         -localtime \\
-        -append "root=/dev/sda console=ttyS0 systemd.unit=multi-user.target rw" \\
+        -append "root=/dev/sda console=ttyS0,9600 systemd.unit=multi-user.target rw" \\
         -hda ${system_image} \\
         --nographic \\
         -net nic,vlan=1,model=ne2k_pci \\
