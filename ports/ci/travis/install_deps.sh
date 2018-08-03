@@ -30,7 +30,7 @@ if [ ! -z "${USE_QEMU}" ]; then
         image=linux-image-unsigned-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_amd64.deb
     fi
 
-    if [ -z "${NEED_MODULES}" ]; then
+    if [ ! -z "${NEED_MODULES}" ]; then
         modules=linux-modules-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_amd64.deb
     fi
 fi
