@@ -40,15 +40,17 @@ mount -o loop ${system_image} ${system_mount_point}
 debootstrap --arch amd64 xenial ${system_mount_point}
 
 # Configure auto login with root user
-default_terminal=ttyS0
 sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
 sed -i 's/\/sbin\/agetty/\/sbin\/agetty --autologin root/' ${system_mount_point}/lib/systemd/system/*getty*.service
 sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
-mkdir -p ${system_mount_point}/etc/systemd/system/getty@\${default_terminal}.service.d
-echo '[Service]' >> ${system_mount_point}/etc/systemd/system/getty@\${default_terminal}.service.d/override.conf
-echo 'ExecStart=-/sbin/agetty --autologin root --noclear %I' >> ${system_mount_point}/etc/systemd/system/getty@\${default_terminal}.service.d/override.conf
 
-ls ${system_mount_point}/etc/systemd/system/getty@\${default_terminal}.service.d/override.conf
+mkdir -p ${system_mount_point}/etc/systemd/system/getty@tty1.service.d
+echo '[Service]' >> ${system_mount_point}/etc/systemd/system/getty@tty1.service.d/autologin.conf
+echo 'ExecStart=-/sbin/agetty --autologin root --noclear %I \$TERM' >> ${system_mount_point}/etc/systemd/system/getty@tty1.service.d/autologin.conf
+
+mkdir -p ${system_mount_point}/etc/systemd/system/getty@ttyS0.service.d
+echo '[Service]' >> ${system_mount_point}/etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf
+echo 'ExecStart=-/sbin/agetty --autologin root --noclear %I \$TERM' >> ${system_mount_point}/etc/systemd/system/serial-getty@tty0.service.d/autologin.conf
 
 # Prepare the system to test the driver
 cp -vf src/${DRIVER_FILE} ${system_mount_point}/root
