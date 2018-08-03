@@ -42,7 +42,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     # Install bootstrap system
     mkdir ${system_mount_point}
     mount -o loop ${system_image} ${system_mount_point}
-    debootstrap --components=main,universe,multiverse --include=v4l-utils --arch amd64 --variant=minbase xenial ${system_mount_point}
+    debootstrap --components=main,universe,multiverse --include=kmod,v4l-utils --arch amd64 --variant=minbase xenial ${system_mount_point}
 
     # Configure auto login with root user
     sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
