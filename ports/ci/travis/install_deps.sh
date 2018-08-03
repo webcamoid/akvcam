@@ -29,9 +29,13 @@ if [ ! -z "${USE_QEMU}" ]; then
     else
         image=linux-image-unsigned-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_amd64.deb
     fi
+
+    if [ -z "${NEED_MODULES}" ]; then
+        modules=linux-modules-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_amd64.deb
+    fi
 fi
 
-for package in ${image} ${headers} ${headers_generic}; do
+for package in ${image} ${headers} ${headers_generic} ${modules}; do
     ${EXEC} wget -c "${url}/${package}"
     ${EXEC} dpkg -i "${package}"
 done

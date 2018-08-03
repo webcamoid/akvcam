@@ -18,6 +18,10 @@ if [ ! -z "${USE_QEMU}" ]; then
     echo
     ls /boot/vmlinuz-* | sort
     echo
+    echo "Available kernel modules:"
+    echo
+    ls /lib/modules | sort
+    echo
     echo "Available QEMU images:"
     echo
     ls /usr/bin/qemu-system-* | sort
@@ -56,13 +60,9 @@ if [ ! -z "${USE_QEMU}" ]; then
     chmod +x ${system_mount_point}/root/driver_test.sh
 
     echo '[ "\$(tty)" != /dev/tty1 ] && exit' >> ${system_mount_point}/root/driver_test.sh
-
-    required_modules=\$(modinfo src/${DRIVER_FILE} | grep 'depends:' | awk '{print \$2}' | sed 's/,/ /g')
-
-    for module in "\${required_modules}"; do
-        echo 'modprobe \${module} >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
-    done
-
+    echo 'modprobe videodev >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
+    echo 'modprobe videobuf2-v4l2 >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
+    echo 'modprobe videobuf2-vmalloc >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
     echo 'dmesg -C' >> ${system_mount_point}/root/driver_test.sh
 
     if [ -z "${DEFERRED_LOG}" ]; then
