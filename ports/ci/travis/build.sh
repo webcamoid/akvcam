@@ -37,28 +37,26 @@ mkfs.ext4 ${system_image}
 # Install bootstrap system
 mkdir ${system_mount_point}
 mount -o loop ${system_image} ${system_mount_point}
-debootstrap --arch amd64 xenial ${system_mount_point}
+debootstrap --arch amd64 bionic ${system_mount_point}
 
 # Configure auto login with root user
 sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
+sed -i 's/\/sbin\/agetty/\/sbin\/agetty --autologin root/' ${system_mount_point}/lib/systemd/system/*getty*.service
 sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
 
 service_d=${system_mount_point}/etc/systemd/system/getty@tty1.service.d
 mkdir -p ${service_d}
 echo '[Service]' >> ${service_d}/autologin.conf
-echo 'ExecStart=' >> ${service_d}/autologin.conf
 echo 'ExecStart=-/sbin/agetty --autologin root --noclear %I \$TERM' >> ${service_d}/autologin.conf
 
 service_d=${system_mount_point}/etc/systemd/system/serial-getty@ttyS0.service.d
 mkdir -p ${service_d}
 echo '[Service]' >> ${service_d}/autologin.conf
-echo 'ExecStart=' >> ${service_d}/autologin.conf
 echo 'ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud 115200,38400,9600 %I \$TERM' >> ${service_d}/autologin.conf
 
 service_d=${system_mount_point}/etc/systemd/system/console-getty@tty1.service.d
 mkdir -p ${service_d}
 echo '[Service]' >> ${service_d}/autologin.conf
-echo 'ExecStart=' >> ${service_d}/autologin.conf
 echo 'ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud console 115200,38400,9600 %I \$TERM' >> ${service_d}/autologin.conf
 
 # Prepare the system to test the driver
@@ -70,7 +68,6 @@ echo 'dmesg -C' >> ${system_mount_point}/root/driver_test.sh
 echo 'insmod ${DRIVER_FILE}' >> ${system_mount_point}/root/driver_test.sh
 echo 'dmesg' >> ${system_mount_point}/root/driver_test.sh
 echo 'shutdown -h now' >> ${system_mount_point}/root/driver_test.sh
-umount ${system_mount_point}
 
 echo
 echo "Booting system with custom kernel:"
@@ -80,5 +77,6 @@ qemu-system-x86_64 \\
     -append "root=/dev/sda console=ttyS0,9600" \\
     -hda ${system_image} \\
     --nographic
+umount ${system_mount_point}
 EOF
 ${EXEC} bash ${BUILDSCRIPT}
