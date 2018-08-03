@@ -12,6 +12,7 @@ matrix:
       - KERNEL_VERSION_A=4.4.15
       - KERNEL_VERSION_B=040415
       - KERNEL_VERSION_C=201607111333
+      - USE_QEMU=1
   - os: linux
     sudo: required
     services:

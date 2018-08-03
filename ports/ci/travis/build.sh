@@ -41,47 +41,47 @@ if [ ! -z "${USE_QEMU}" ]; then
     # Install bootstrap system
     mkdir ${system_mount_point}
     mount -o loop ${system_image} ${system_mount_point}
-    debootstrap --arch amd64 bionic ${system_mount_point}
+    debootstrap --components=main,universe,multiverse --include=v4l-utils --arch amd64 --variant=minbase xenial ${system_mount_point}
 
     # Configure auto login with root user
     sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
     sed -i 's/\/sbin\/agetty/\/sbin\/agetty --autologin root/' ${system_mount_point}/lib/systemd/system/*getty*.service
     sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
 
-    service_d=${system_mount_point}/etc/systemd/system/getty@tty1.service.d
-    mkdir -p ${service_d}
-    echo '[Service]' >> ${service_d}/autologin.conf
-    echo 'ExecStart=-/sbin/agetty --autologin root --noclear %I \$TERM' >> ${service_d}/autologin.conf
-
-    service_d=${system_mount_point}/etc/systemd/system/serial-getty@ttyS0.service.d
-    mkdir -p ${service_d}
-    echo '[Service]' >> ${service_d}/autologin.conf
-    echo 'ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud 115200,38400,9600 %I \$TERM' >> ${service_d}/autologin.conf
-
-    service_d=${system_mount_point}/etc/systemd/system/console-getty@tty1.service.d
-    mkdir -p ${service_d}
-    echo '[Service]' >> ${service_d}/autologin.conf
-    echo 'ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud console 115200,38400,9600 %I \$TERM' >> ${service_d}/autologin.conf
-
     # Prepare the system to test the driver
     cp -vf src/${DRIVER_FILE} ${system_mount_point}/root
     echo './driver_test.sh' >> ${system_mount_point}/root/.profile
     touch ${system_mount_point}/root/driver_test.sh
     chmod +x ${system_mount_point}/root/driver_test.sh
+
+    required_modules=\$(modinfo src/${DRIVER_FILE} | grep 'depends:' | awk '{print \$2}' | sed 's/,/ /g')
+
+    for module in "\${required_modules}"; do
+        echo 'modprobe \${module}' >> ${system_mount_point}/root/driver_test.sh
+    done
+
     echo 'dmesg -C' >> ${system_mount_point}/root/driver_test.sh
     echo 'insmod ${DRIVER_FILE}' >> ${system_mount_point}/root/driver_test.sh
+    echo 'v4l2-ctl -d /dev/video0 --all' >> ${system_mount_point}/root/driver_test.sh
+    echo 'v4l2-compliance -d /dev/video0 -f' >> ${system_mount_point}/root/driver_test.sh
+    echo 'rmmod ${DRIVER_FILE}' >> ${system_mount_point}/root/driver_test.sh
     echo 'dmesg' >> ${system_mount_point}/root/driver_test.sh
     echo 'shutdown -h now' >> ${system_mount_point}/root/driver_test.sh
+
+    umount ${system_mount_point}
 
     echo
     echo "Booting system with custom kernel:"
     echo
     qemu-system-x86_64 \\
         -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \\
-        -append "root=/dev/sda console=ttyS0,9600" \\
+        -cpu host \\
+        -localtime \\
+        -append "root=/dev/sda console=ttyS0 systemd.unit=multi-user.target rw" \\
         -hda ${system_image} \\
-        --nographic
-    umount ${system_mount_point}
+        --nographic \\
+        -net nic,vlan=1,model=ne2k_pci \\
+        -net user,vlan=1
 fi
 EOF
 ${EXEC} bash ${BUILDSCRIPT}
