@@ -3,7 +3,7 @@
 DRIVER_FILE=akvcam.ko
 DEFERRED_LOG=1
 BUILDSCRIPT=dockerbuild.sh
-system_image=system-image.qcow2
+system_image=system-image.img
 system_mount_point=system-mount-point
 
 cat << EOF >> ${BUILDSCRIPT}
@@ -39,7 +39,7 @@ echo
 
 if [ ! -z "${USE_QEMU}" ]; then
     # Create the system image to boot with QEMU.
-    qemu-img create -f qcow2 ${system_image} 1g
+    qemu-img create -f raw ${system_image} 1g
     mkfs.ext4 ${system_image}
 
     # Install bootstrap system
@@ -100,7 +100,7 @@ if [ ! -z "${USE_QEMU}" ]; then
         -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \\
         -localtime \\
         -append "root=/dev/sda console=ttyS0,9600 systemd.unit=multi-user.target rw" \\
-        -hda ${system_image} \\
+        -drive file=${system_image},format=raw \\
         --nographic \\
         -net nic,vlan=1,model=ne2k_pci \\
         -net user,vlan=1
