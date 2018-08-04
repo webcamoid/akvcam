@@ -1,6 +1,5 @@
 #!/bin/bash
 
-EXEC="docker exec ${DOCKERSYS}"
 DRIVER_FILE=akvcam.ko
 DEFERRED_LOG=1
 BUILDSCRIPT=dockerbuild.sh
@@ -46,7 +45,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     # Install bootstrap system
     mkdir ${system_mount_point}
     mount -o loop ${system_image} ${system_mount_point}
-    debootstrap --components=main,universe,multiverse --include=kmod,v4l-utils --arch amd64 --variant=minbase xenial ${system_mount_point}
+    debootstrap --components=main,universe,multiverse --include=kmod,v4l-utils --arch ${SYSTEM_ARCH} --variant=minbase ${SYSTEM_VERSION} ${system_mount_point}
 
     # Copy kernel modules
     mkdir -p ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
@@ -65,9 +64,11 @@ if [ ! -z "${USE_QEMU}" ]; then
 
     echo '[ "\$(tty)" != /dev/tty1 ] && exit' >> ${system_mount_point}/root/driver_test.sh
     echo 'depmod -a >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
-    echo 'modprobe videodev >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
-    echo 'modprobe videobuf2-v4l2 >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
-    echo 'modprobe videobuf2-vmalloc >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
+    echo 'modprobe v4l2-common' >> ${system_mount_point}/root/driver_test.sh
+    echo 'modprobe videobuf2-core' >> ${system_mount_point}/root/driver_test.sh
+    echo 'modprobe videobuf2-v4l2' >> ${system_mount_point}/root/driver_test.sh
+    echo 'modprobe videobuf2-vmalloc' >> ${system_mount_point}/root/driver_test.sh
+    echo 'modprobe videodev' >> ${system_mount_point}/root/driver_test.sh
     echo 'dmesg -C' >> ${system_mount_point}/root/driver_test.sh
 
     if [ -z "${DEFERRED_LOG}" ]; then

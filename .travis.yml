@@ -8,7 +8,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:xenial
+      - SYSTEM_VERSION=xenial
       - KERNEL_VERSION_A=4.4.15
       - KERNEL_VERSION_B=040415
       - KERNEL_VERSION_C=201607111333
@@ -18,7 +18,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:xenial
+      - SYSTEM_VERSION=xenial
       - KERNEL_VERSION_A=4.6.4
       - KERNEL_VERSION_B=040604
       - KERNEL_VERSION_C=201607111332
@@ -28,7 +28,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:xenial
+      - SYSTEM_VERSION=xenial
       - KERNEL_VERSION_A=4.7.1
       - KERNEL_VERSION_B=040701
       - KERNEL_VERSION_C=201608160432
@@ -38,7 +38,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:xenial
+      - SYSTEM_VERSION=xenial
       - KERNEL_VERSION_A=4.8.1
       - KERNEL_VERSION_B=040801
       - KERNEL_VERSION_C=201610170913
@@ -48,7 +48,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:xenial
+      - SYSTEM_VERSION=xenial
       - KERNEL_VERSION_A=4.9.1
       - KERNEL_VERSION_B=040901
       - KERNEL_VERSION_C=201701060531
@@ -58,7 +58,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:xenial
+      - SYSTEM_VERSION=xenial
       - KERNEL_VERSION_A=4.10.1
       - KERNEL_VERSION_B=041001
       - KERNEL_VERSION_C=201702260735
@@ -68,7 +68,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:xenial
+      - SYSTEM_VERSION=xenial
       - KERNEL_VERSION_A=4.11.1
       - KERNEL_VERSION_B=041101
       - KERNEL_VERSION_C=201705140931
@@ -78,7 +78,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:xenial
+      - SYSTEM_VERSION=xenial
       - KERNEL_VERSION_A=4.12.1
       - KERNEL_VERSION_B=041201
       - KERNEL_VERSION_C=201707121132
@@ -88,7 +88,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:xenial
+      - SYSTEM_VERSION=xenial
       - KERNEL_VERSION_A=4.13.1
       - KERNEL_VERSION_B=041301
       - KERNEL_VERSION_C=201709100232
@@ -98,7 +98,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:xenial
+      - SYSTEM_VERSION=xenial
       - KERNEL_VERSION_A=4.14.1
       - KERNEL_VERSION_B=041401
       - KERNEL_VERSION_C=201711210430
@@ -108,7 +108,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:xenial
+      - SYSTEM_VERSION=xenial
       - KERNEL_VERSION_A=4.15.1
       - KERNEL_VERSION_B=041501
       - KERNEL_VERSION_C=201802031831
@@ -118,7 +118,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:xenial
+      - SYSTEM_VERSION=xenial
       - KERNEL_VERSION_A=4.16.1
       - KERNEL_VERSION_B=041601
       - KERNEL_VERSION_C=201804081334
@@ -128,17 +128,20 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - DOCKERSYS=ubuntu DOCKERIMG=ubuntu:bionic
+      - SYSTEM_VERSION=bionic
       - KERNEL_VERSION_A=4.17.1
       - KERNEL_VERSION_B=041701
       - KERNEL_VERSION_C=201806111730
       - UNSIGNED_IMG=1
+      - NEED_MODULES=1
 
 before_install:
-  - docker pull ${DOCKERIMG}
+  - docker pull ubuntu:${SYSTEM_VERSION}
   - docker ps -a
-  - docker run --privileged -it -d -v ${PWD}:/sources -w /sources --name ${DOCKERSYS} ${DOCKERIMG} /bin/sh
+  - docker run --privileged -it -d -v ${PWD}:/sources -w /sources --name ubuntu ubuntu:${SYSTEM_VERSION} /bin/sh
   - export KERNEL_VERSION=${KERNEL_VERSION_A}-${KERNEL_VERSION_B}
+  - export EXEC="docker exec ubuntu"
+  - export SYSTEM_ARCH=amd64
   - export USE_QEMU=1
 
 install:
