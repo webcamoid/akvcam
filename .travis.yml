@@ -12,7 +12,6 @@ matrix:
       - KERNEL_VERSION_A=4.4.15
       - KERNEL_VERSION_B=040415
       - KERNEL_VERSION_C=201607111333
-      - USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -140,6 +139,7 @@ before_install:
   - docker ps -a
   - docker run --privileged -it -d -v ${PWD}:/sources -w /sources --name ${DOCKERSYS} ${DOCKERIMG} /bin/sh
   - export KERNEL_VERSION=${KERNEL_VERSION_A}-${KERNEL_VERSION_B}
+  - export USE_QEMU=1
 
 install:
   - chmod +x ports/ci/travis/install_deps.sh

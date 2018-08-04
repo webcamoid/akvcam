@@ -50,7 +50,7 @@ if [ ! -z "${USE_QEMU}" ]; then
 
     # Copy kernel modules
     mkdir -p ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
-    cp -rvf /lib/modules/${KERNEL_VERSION}-generic/* ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
+    cp -rf /lib/modules/${KERNEL_VERSION}-generic/* ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
 
     # Configure auto login with root user
     sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
