@@ -128,7 +128,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - SYSTEM_VERSION=cosmic
+      - SYSTEM_VERSION=bionic
       - KERNEL_VERSION_A=4.17.1
       - KERNEL_VERSION_B=041701
       - KERNEL_VERSION_C=201806111730
