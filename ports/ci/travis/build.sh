@@ -3,7 +3,7 @@
 DRIVER_FILE=akvcam.ko
 DEFERRED_LOG=1
 BUILDSCRIPT=dockerbuild.sh
-system_image=system-image.img
+system_image=system-image.qcow2
 system_mount_point=system-mount-point
 
 cat << EOF >> ${BUILDSCRIPT}
@@ -39,8 +39,8 @@ echo
 
 if [ ! -z "${USE_QEMU}" ]; then
     # Create the system image to boot with QEMU.
-    qemu-img create ${system_image} 1g
-    mkfs.ext3 ${system_image}
+    qemu-img create -f qcow2 ${system_image} 1g
+    mkfs.ext4 ${system_image}
 
     # Install bootstrap system
     mkdir ${system_mount_point}
@@ -55,9 +55,6 @@ if [ ! -z "${USE_QEMU}" ]; then
     sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
     sed -i 's/\/sbin\/agetty/\/sbin\/agetty --autologin root/' ${system_mount_point}/lib/systemd/system/*getty*.service
     sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
-
-    rm -vf ${system_mount_point}/dev/console
-    ln -s ttyS0 ${system_mount_point}/dev/console
 
     # Prepare the system to test the driver
     cp -vf src/${DRIVER_FILE} ${system_mount_point}/root
