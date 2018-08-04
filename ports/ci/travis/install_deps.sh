@@ -15,7 +15,8 @@ ${EXEC} apt-get -y install \
 if [ ! -z "${USE_QEMU}" ]; then
 ${EXEC} apt-get -y install \
     debootstrap \
-    qemu
+    qemu-system-x86 \
+    qemu-utils
 fi
 
 url=http://kernel.ubuntu.com/~kernel-ppa/mainline/v${KERNEL_VERSION_A}
