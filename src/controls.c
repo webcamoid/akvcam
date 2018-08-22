@@ -245,13 +245,14 @@ int akvcam_controls_get_ext(akvcam_controls_t self,
         control->id = id;
         control->value = _control->value;
 
-        if (copy_to_user(controls->controls + i,
-                         control,
-                         sizeof(struct v4l2_ext_control)) != 0) {
-            result = -EIO;
+        if (!kernel)
+            if (copy_to_user(controls->controls + i,
+                             control,
+                             sizeof(struct v4l2_ext_control)) != 0) {
+                result = -EIO;
 
-            break;
-        }
+                break;
+            }
     }
 
     if (!kernel)
