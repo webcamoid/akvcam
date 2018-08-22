@@ -40,7 +40,7 @@ echo
 if [ ! -z "${USE_QEMU}" ]; then
     # Create the system image to boot with QEMU.
     qemu-img create -f raw ${system_image} 1g
-    mkfs.ext4 -F ${system_image}
+    mkfs.ext3 -F ${system_image}
 
     # Install bootstrap system
     mkdir ${system_mount_point}
