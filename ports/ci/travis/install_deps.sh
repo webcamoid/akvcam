@@ -10,8 +10,7 @@ ${EXEC} apt-get -y install \
     make \
     libelf-dev \
     kmod \
-    wget \
-    grub
+    wget
 
 if [ ! -z "${USE_QEMU}" ]; then
 ${EXEC} apt-get -y install \
@@ -40,5 +39,3 @@ for package in ${image} ${headers} ${headers_generic} ${modules}; do
     ${EXEC} wget -c "${url}/${package}"
     ${EXEC} dpkg -i "${package}"
 done
-
-${EXEC} update-grub
