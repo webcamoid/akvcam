@@ -24,8 +24,18 @@
 #define UNUSED(x) (void)(x)
 #define AKVCAM_MAX_STRING_SIZE 1024
 
+#define AKVCAM_CALLBACK(name, ...) \
+    typedef void (*akvcam_##name##_proc)(void *user_data, __VA_ARGS__); \
+    \
+    typedef struct \
+    { \
+        void *user_data; \
+        akvcam_##name##_proc callback; \
+    } akvcam_##name##_callback, *akvcam_##name##_callback_t;
+
 uint64_t akvcam_id(void);
 int akvcam_get_last_error(void);
 int akvcam_set_last_error(int error);
+const char *akvcam_string_from_ioctl(uint cmd);
 
 #endif // AKVCAM_UTILS_H

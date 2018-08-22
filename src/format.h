@@ -32,6 +32,7 @@ akvcam_format_t akvcam_format_new(__u32 fourcc,
                                   __u32 height,
                                   const struct v4l2_fract *frame_rate);
 void akvcam_format_delete(akvcam_format_t *self);
+
 void akvcam_format_copy(akvcam_format_t self, akvcam_format_t other);
 __u32 akvcam_format_fourcc(akvcam_format_t self);
 void akvcam_format_set_fourcc(akvcam_format_t self, __u32 fourcc);

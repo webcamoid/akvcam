@@ -23,30 +23,32 @@ TEMPLATE = lib
 
 lupdate_only {
     HEADERS += \
+        src/buffers.h \
         src/controls.h \
         src/device.h \
         src/driver.h \
-        src/fops.h \
+        src/events.h \
         src/format.h \
-        src/ioctl_ops.h \
+        src/ioctl.h \
         src/list.h \
         src/mutex.h \
+        src/node.h \
         src/object.h \
-        src/queue.h \
         src/utils.h
 
     SOURCES += \
+        src/buffers.c \
         src/controls.c \
         src/device.c \
         src/driver.c \
-        src/fops.c \
+        src/events.c \
         src/format.c \
-        src/ioctl_ops.c \
+        src/ioctl.c \
         src/list.c \
         src/module.c \
         src/mutex.c \
+        src/node.c \
         src/object.c \
-        src/queue.c \
         src/utils.c
 }
 
@@ -69,9 +71,14 @@ OTHER_FILES += \
 
 DUMMY_FILES = .
 makedriver.input = DUMMY_FILES
-makedriver.output = src/akvcam.ko
-makedriver.commands = cd src; make; cd ..
-makedriver.clean = src/*.ko src/*.o src/*.mod.c src/modules.order src/Module.symvers
+makedriver.output = $${PWD}/src/akvcam.ko
+makedriver.commands = cd $${PWD}/src; make; cd ..
+makedriver.clean = \
+    $${PWD}/src/*.ko \
+    $${PWD}/src/*.o \
+    $${PWD}/src/*.mod.c \
+    $${PWD}/src/modules.order \
+    $${PWD}/src/Module.symvers
 makedriver.CONFIG += no_link
 QMAKE_EXTRA_COMPILERS += makedriver
 PRE_TARGETDEPS += compiler_makedriver_make_all

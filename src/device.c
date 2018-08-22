@@ -18,124 +18,68 @@
 
 #include <linux/slab.h>
 #include <media/v4l2-device.h>
-#include <media/v4l2-ctrls.h>
 
 #include "device.h"
 #include "controls.h"
-#include "fops.h"
-#include "format.h"
-#include "ioctl_ops.h"
+#include "driver.h"
+#include "events.h"
 #include "list.h"
+#include "node.h"
 #include "object.h"
-#include "queue.h"
 #include "utils.h"
 
 struct akvcam_device
 {
     akvcam_object_t self;
+    akvcam_list_tt(akvcam_format_t) formats;
     akvcam_controls_t controls;
-    akvcam_list_t formats;
-    akvcam_format_t format;
-    akvcam_queue_t queue;
+    akvcam_list_tt(akvcam_node_t) nodes;
+    akvcam_node_t priority_node;
     struct v4l2_device v4l2_dev;
     struct video_device *vdev;
     AKVCAM_DEVICE_TYPE type;
+    enum v4l2_priority priority;
+    bool is_registered;
 };
 
-akvcam_device_t akvcam_device_new(const char *name,
-                                  AKVCAM_DEVICE_TYPE type,
-                                  struct akvcam_list *formats)
+void akvcam_device_controls_changed(akvcam_device_t self,
+                                    struct v4l2_event *event);
+
+akvcam_device_t akvcam_device_new(const char *name, AKVCAM_DEVICE_TYPE type)
 {
+    akvcam_controls_changed_callback controls_changed;
     akvcam_device_t self = kzalloc(sizeof(struct akvcam_device), GFP_KERNEL);
-
-    if (!self) {
-        akvcam_set_last_error(-ENOMEM);
-
-        goto akvcam_device_new_failed;
-    }
-
-    self->self =
-            akvcam_object_new(self, (akvcam_deleter_t) akvcam_device_delete);
-
-    if (!self->self)
-        goto akvcam_device_new_failed;
-
-    self->formats = formats;
-    akvcam_object_ref(AKVCAM_TO_OBJECT(formats));
-
-    if (!self->formats)
-        goto akvcam_device_new_failed;
-
-    self->format = akvcam_format_new(0, 0, 0, NULL);
-    akvcam_format_copy(self->format, akvcam_list_at(formats, 0));
-
-    if (!self->format)
-        goto akvcam_device_new_failed;
-
-    self->queue = akvcam_queue_new(self);
-
-    if (!self->queue)
-        goto akvcam_device_new_failed;
-
+    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_device_delete);
+    self->formats = akvcam_list_new();
     self->controls = akvcam_controls_new();
-
-    if (!self->controls)
-        goto akvcam_device_new_failed;
-
+    controls_changed.user_data = self;
+    controls_changed.callback =
+            (akvcam_controls_changed_proc) akvcam_device_controls_changed;
+    akvcam_controls_set_changed_callback(self->controls, controls_changed);
+    self->nodes = akvcam_list_new();
+    self->priority_node = NULL;
     self->type = type;
+    self->priority = V4L2_PRIORITY_DEFAULT;
+
     memset(&self->v4l2_dev, 0, sizeof(struct v4l2_device));
     snprintf(self->v4l2_dev.name,
              V4L2_DEVICE_NAME_SIZE,
              "akvcam-device-%llu", akvcam_id());
 
-    self->v4l2_dev.ctrl_handler = akvcam_controls_handler(self->controls);
     self->vdev = video_device_alloc();
-
-    if (!self->vdev) {
-        akvcam_set_last_error(-ENOMEM);
-
-        goto akvcam_device_new_failed;
-    }
-
-    self->vdev->queue = akvcam_queue_vb2_queue(self->queue);
-    self->vdev->lock = akvcam_queue_mutex(self->queue);
-    self->vdev->ioctl_ops = akvcam_ioctl_ops_get(type);
-
-    if (!self->vdev->ioctl_ops)
-        goto akvcam_device_new_failed;
-
     snprintf(self->vdev->name, 32, "%s", name);
     self->vdev->v4l2_dev = &self->v4l2_dev;
     self->vdev->vfl_type = VFL_TYPE_GRABBER;
     self->vdev->vfl_dir =
             type == AKVCAM_DEVICE_TYPE_OUTPUT? VFL_DIR_TX: VFL_DIR_RX;
     self->vdev->minor = -1;
-    self->vdev->fops = akvcam_fops_get();
+    self->vdev->fops = akvcam_node_fops();
     self->vdev->tvnorms = V4L2_STD_ALL;
-    self->vdev->release = video_device_release;
+    self->vdev->release = video_device_release_empty;
     video_set_drvdata(self->vdev, self);
-    akvcam_set_last_error(0);
+    self->is_registered = false;
 
     return self;
-
-akvcam_device_new_failed:
-    if (self) {
-        if (self->vdev) {
-            if(self->vdev->ioctl_ops)
-                kfree(self->vdev->ioctl_ops);
-
-            kfree(self->vdev);
-        }
-
-        akvcam_format_delete(&self->format);
-        akvcam_list_delete(&self->formats);
-        akvcam_controls_delete(&self->controls);
-        akvcam_queue_delete(&self->queue);
-        akvcam_object_free(&AKVCAM_TO_OBJECT(self));
-        kfree(self);
-    }
-
-    return NULL;
 }
 
 void akvcam_device_delete(akvcam_device_t *self)
@@ -147,18 +91,10 @@ void akvcam_device_delete(akvcam_device_t *self)
         return;
 
     akvcam_device_unregister(*self);
-
-    if ((*self)->vdev) {
-        if ((*self)->vdev->ioctl_ops)
-            kfree((*self)->vdev->ioctl_ops);
-
-        kfree((*self)->vdev);
-    }
-
-    akvcam_format_delete(&((*self)->format));
-    akvcam_list_delete(&((*self)->formats));
+    video_device_release((*self)->vdev);
+    akvcam_list_delete(&((*self)->nodes));
     akvcam_controls_delete(&((*self)->controls));
-    akvcam_queue_delete(&(*self)->queue);
+    akvcam_list_delete(&((*self)->formats));
     akvcam_object_free(&((*self)->self));
     kfree(*self);
     *self = NULL;
@@ -166,22 +102,30 @@ void akvcam_device_delete(akvcam_device_t *self)
 
 bool akvcam_device_register(akvcam_device_t self)
 {
-    int result = v4l2_device_register(NULL, &self->v4l2_dev);
+    int result;
+
+    if (self->is_registered)
+        return true;
+
+    result = v4l2_device_register(NULL, &self->v4l2_dev);
 
     if (!result)
         result = video_register_device(self->vdev, VFL_TYPE_GRABBER, -1);
 
     akvcam_set_last_error(result);
+    self->is_registered = result? false: true;
 
     return result? false: true;
 }
 
 void akvcam_device_unregister(akvcam_device_t self)
 {
-    if (self->vdev)
-        video_unregister_device(self->vdev);
+    if (!self->is_registered)
+        return;
 
+    video_unregister_device(self->vdev);
     v4l2_device_unregister(&self->v4l2_dev);
+    self->is_registered = false;
 }
 
 u16 akvcam_device_num(akvcam_device_t self)
@@ -192,18 +136,6 @@ u16 akvcam_device_num(akvcam_device_t self)
 AKVCAM_DEVICE_TYPE akvcam_device_type(akvcam_device_t self)
 {
     return self->type;
-}
-
-struct akvcam_controls *akvcam_device_controls_nr(akvcam_device_t self)
-{
-    return self->controls;
-}
-
-struct akvcam_controls *akvcam_device_controls(akvcam_device_t self)
-{
-    akvcam_object_ref(AKVCAM_TO_OBJECT(self->controls));
-
-    return self->controls;
 }
 
 struct akvcam_list *akvcam_device_formats_nr(akvcam_device_t self)
@@ -218,41 +150,79 @@ struct akvcam_list *akvcam_device_formats(akvcam_device_t self)
     return self->formats;
 }
 
-struct akvcam_format *akvcam_device_format_nr(akvcam_device_t self)
+struct akvcam_controls *akvcam_device_controls_nr(akvcam_device_t self)
 {
-    return self->format;
+    return self->controls;
 }
 
-struct akvcam_format *akvcam_device_format(akvcam_device_t self)
+struct akvcam_controls *akvcam_device_controls(akvcam_device_t self)
 {
-    akvcam_object_ref(AKVCAM_TO_OBJECT(self->format));
+    akvcam_object_ref(AKVCAM_TO_OBJECT(self->controls));
 
-    return self->format;
+    return self->controls;
 }
 
-struct video_device *akvcam_device_vdev(akvcam_device_t self)
+struct akvcam_list *akvcam_device_nodes_nr(akvcam_device_t self)
 {
-    return self->vdev;
+    return self->nodes;
 }
 
-size_t akvcam_device_sizeof()
+struct akvcam_list *akvcam_device_nodes(akvcam_device_t self)
+{
+    akvcam_object_ref(AKVCAM_TO_OBJECT(self->nodes));
+
+    return self->nodes;
+}
+
+enum v4l2_priority akvcam_device_priority(akvcam_device_t self)
+{
+    return self->priority;
+}
+
+struct akvcam_node *akvcam_device_priority_node(akvcam_device_t self)
+{
+    return self->priority_node;
+}
+
+void akvcam_device_set_priority(akvcam_device_t self,
+                                enum v4l2_priority priority,
+                                struct akvcam_node *node)
+{
+    self->priority = priority;
+    self->priority_node = node;
+}
+
+size_t akvcam_device_sizeof(void)
 {
     return sizeof(struct akvcam_device);
 }
 
+bool akvcam_device_are_equals(const akvcam_device_t device,
+                              const struct file *filp,
+                              size_t size)
+{
+    bool equals;
+    char *devname = kzalloc(1024, GFP_KERNEL);
+    snprintf(devname, 1024, "video%d", device->vdev->num);
+    equals = strcmp(devname, (char *) filp->f_path.dentry->d_iname) == 0;
+    kfree(devname);
+
+    return equals;
+}
+
 akvcam_device_t akvcam_device_from_file_nr(struct file *filp)
 {
-    struct video_device *vdev;
+    akvcam_list_element_t it;
 
-    if (!filp)
-        return NULL;
+    if (filp->private_data)
+        return akvcam_node_device_nr(filp->private_data);
 
-    vdev = video_devdata(filp);
+    it = akvcam_list_find(akvcam_driver_devices_nr(),
+                          filp,
+                          0,
+                          (akvcam_are_equals_t) akvcam_device_are_equals);
 
-    if (!vdev)
-        return NULL;
-
-    return video_get_drvdata(vdev);
+    return akvcam_list_element_data(it);
 }
 
 akvcam_device_t akvcam_device_from_file(struct file *filp)
@@ -267,22 +237,18 @@ akvcam_device_t akvcam_device_from_file(struct file *filp)
     return device;
 }
 
-akvcam_device_t akvcam_device_from_v4l2_fh_nr(struct v4l2_fh *fh)
+void akvcam_device_controls_changed(akvcam_device_t self,
+                                    struct v4l2_event *event)
 {
-    if (!fh || !fh->vdev)
-        return NULL;
+    akvcam_node_t node;
+    akvcam_list_element_t element = NULL;
 
-    return video_get_drvdata(fh->vdev);
-}
+    for (;;) {
+        node = akvcam_list_next(self->nodes, &element);
 
-akvcam_device_t akvcam_device_from_v4l2_fh(struct v4l2_fh *fh)
-{
-    akvcam_device_t device = akvcam_device_from_v4l2_fh_nr(fh);
+        if (!element)
+            break;
 
-    if (!device)
-        return NULL;
-
-    akvcam_object_ref(AKVCAM_TO_OBJECT(device));
-
-    return device;
+        akvcam_events_enqueue(akvcam_node_events_nr(node), event);
+    }
 }

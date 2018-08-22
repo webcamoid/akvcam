@@ -23,8 +23,10 @@
 
 #include "object.h"
 
-typedef bool (*akvcam_are_equals_t)(const void *data1,
-                                    const void *data2,
+#define akvcam_list_tt(type) akvcam_list_t
+
+typedef bool (*akvcam_are_equals_t)(const void *element_data,
+                                    const void *data,
                                     size_t size);
 struct akvcam_list;
 typedef struct akvcam_list *akvcam_list_t;
@@ -34,6 +36,7 @@ typedef struct akvcam_list_element *akvcam_list_element_t;
 // public
 akvcam_list_t akvcam_list_new(void);
 void akvcam_list_delete(akvcam_list_t *self);
+
 size_t akvcam_list_size(akvcam_list_t self);
 bool akvcam_list_empty(akvcam_list_t self);
 void *akvcam_list_at(akvcam_list_t self, size_t i);
@@ -54,6 +57,11 @@ akvcam_list_element_t akvcam_list_find(akvcam_list_t self,
                                        const void *data,
                                        size_t size,
                                        akvcam_are_equals_t equals);
+ssize_t akvcam_list_index_of(akvcam_list_t self,
+                             const void *data,
+                             size_t size,
+                             akvcam_are_equals_t equals);
 void *akvcam_list_next(akvcam_list_t self, akvcam_list_element_t *element);
+void *akvcam_list_element_data(akvcam_list_element_t element);
 
 #endif // AKVCAM_LIST_H

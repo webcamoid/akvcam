@@ -16,17 +16,19 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef AKVCAM_QUEUE_H
-#define AKVCAM_QUEUE_H
+#ifndef AKVCAM_IOCTL_H
+#define AKVCAM_IOCTL_H
 
-struct akvcam_queue;
-struct akvcam_device;
-typedef struct akvcam_queue *akvcam_queue_t;
+struct akvcam_ioctl;
+typedef struct akvcam_ioctl *akvcam_ioctl_t;
+struct akvcam_node;
 
-// public
-akvcam_queue_t akvcam_queue_new(struct akvcam_device *device);
-void akvcam_queue_delete(akvcam_queue_t *self);
-struct vb2_queue *akvcam_queue_vb2_queue(akvcam_queue_t self);
-struct mutex *akvcam_queue_mutex(akvcam_queue_t self);
+akvcam_ioctl_t akvcam_ioctl_new(void);
+void akvcam_ioctl_delete(akvcam_ioctl_t *self);
 
-#endif // AKVCAM_QUEUE_H
+int akvcam_ioctl_do(akvcam_ioctl_t self,
+                    struct akvcam_node *node,
+                    unsigned int cmd,
+                    void *arg);
+
+#endif // AKVCAM_IOCTL_H

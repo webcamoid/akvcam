@@ -20,6 +20,7 @@
 #define AKVCAM_DEVICE_H
 
 #include <linux/types.h>
+#include <linux/videodev2.h>
 
 typedef enum
 {
@@ -27,37 +28,36 @@ typedef enum
     AKVCAM_DEVICE_TYPE_OUTPUT,
 } AKVCAM_DEVICE_TYPE;
 
-struct akvcam_controls;
 struct akvcam_device;
-struct akvcam_format;
-struct akvcam_list;
-struct file;
-struct v4l2_fh;
-struct video_device;
 typedef struct akvcam_device *akvcam_device_t;
+struct akvcam_controls;
+struct akvcam_list;
+struct akvcam_node;
+struct file;
 
 // public
-akvcam_device_t akvcam_device_new(const char *name,
-                                  AKVCAM_DEVICE_TYPE type,
-                                  struct akvcam_list *formats);
+akvcam_device_t akvcam_device_new(const char *name, AKVCAM_DEVICE_TYPE type);
 void akvcam_device_delete(akvcam_device_t *self);
+
 bool akvcam_device_register(akvcam_device_t self);
 void akvcam_device_unregister(akvcam_device_t self);
 u16 akvcam_device_num(akvcam_device_t self);
 AKVCAM_DEVICE_TYPE akvcam_device_type(akvcam_device_t self);
-struct akvcam_controls *akvcam_device_controls_nr(akvcam_device_t self);
-struct akvcam_controls *akvcam_device_controls(akvcam_device_t self);
 struct akvcam_list *akvcam_device_formats_nr(akvcam_device_t self);
 struct akvcam_list *akvcam_device_formats(akvcam_device_t self);
-struct akvcam_format *akvcam_device_format_nr(akvcam_device_t self);
-struct akvcam_format *akvcam_device_format(akvcam_device_t self);
-struct video_device *akvcam_device_vdev(akvcam_device_t self);
+struct akvcam_controls *akvcam_device_controls_nr(akvcam_device_t self);
+struct akvcam_controls *akvcam_device_controls(akvcam_device_t self);
+struct akvcam_list *akvcam_device_nodes_nr(akvcam_device_t self);
+struct akvcam_list *akvcam_device_nodes(akvcam_device_t self);
+enum v4l2_priority akvcam_device_priority(akvcam_device_t self);
+struct akvcam_node *akvcam_device_priority_node(akvcam_device_t self);
+void akvcam_device_set_priority(akvcam_device_t self,
+                                enum v4l2_priority priority,
+                                struct akvcam_node *node);
 
 // public static
 size_t akvcam_device_sizeof(void);
 akvcam_device_t akvcam_device_from_file_nr(struct file *filp);
 akvcam_device_t akvcam_device_from_file(struct file *filp);
-akvcam_device_t akvcam_device_from_v4l2_fh_nr(struct v4l2_fh *fh);
-akvcam_device_t akvcam_device_from_v4l2_fh(struct v4l2_fh *fh);
 
 #endif //AKVCAM_ DEVICE_H

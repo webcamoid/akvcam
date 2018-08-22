@@ -36,7 +36,7 @@ struct akvcam_format
 typedef struct {
     __u32 fourcc;
     size_t bpp;
-    const char *str;
+    char str[32];
 } akvcam_format_globals, *akvcam_format_globals_t;
 
 #define AKVCAM_NUM_FORMATS 10
@@ -82,18 +82,7 @@ akvcam_format_t akvcam_format_new(__u32 fourcc,
                                   const struct v4l2_fract *frame_rate)
 {
     akvcam_format_t self = kzalloc(sizeof(struct akvcam_format), GFP_KERNEL);
-
-    if (!self) {
-        akvcam_set_last_error(-ENOMEM);
-
-        goto akvcam_format_new_failed;
-    }
-
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_format_delete);
-
-    if (!self->self)
-        goto akvcam_format_new_failed;
-
     self->fourcc = fourcc;
     self->width = width;
     self->height = height;
@@ -104,14 +93,6 @@ akvcam_format_t akvcam_format_new(__u32 fourcc,
         memset(&self->frame_rate, 0, sizeof(struct v4l2_fract));
 
     return self;
-
-akvcam_format_new_failed:
-    if (self) {
-        akvcam_object_free(&AKVCAM_TO_OBJECT(self));
-        kfree(self);
-    }
-
-    return NULL;
 }
 
 void akvcam_format_delete(akvcam_format_t *self)
@@ -281,7 +262,7 @@ struct akvcam_list *akvcam_format_pixel_formats(struct akvcam_list *formats)
 {
     akvcam_list_element_t element = NULL;
     akvcam_list_element_t it;
-    akvcam_list_t supported_formats = akvcam_list_new();
+    akvcam_list_tt(akvcam_format_t) supported_formats = akvcam_list_new();
     akvcam_format_t format = NULL;
     __u32 fourcc;
 
@@ -309,7 +290,8 @@ struct akvcam_list *akvcam_format_resolutions(struct akvcam_list *formats,
 {
     akvcam_list_element_t element = NULL;
     akvcam_list_element_t it;
-    akvcam_list_t supported_resolutions = akvcam_list_new();
+    akvcam_list_tt(struct v4l2_frmsize_discrete) supported_resolutions =
+            akvcam_list_new();
     akvcam_format_t format = NULL;
     struct v4l2_frmsize_discrete resolution;
 
@@ -346,7 +328,7 @@ struct akvcam_list *akvcam_format_frame_rates(struct akvcam_list *formats,
 {
     akvcam_list_element_t element = NULL;
     akvcam_list_element_t it;
-    akvcam_list_t supported_frame_rates = akvcam_list_new();
+    akvcam_list_tt(struct v4l2_fract) supported_frame_rates = akvcam_list_new();
     akvcam_format_t format = NULL;
     struct v4l2_fract frame_rate;
 

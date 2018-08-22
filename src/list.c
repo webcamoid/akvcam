@@ -40,27 +40,9 @@ struct akvcam_list
 akvcam_list_t akvcam_list_new()
 {
     akvcam_list_t self = kzalloc(sizeof(struct akvcam_list), GFP_KERNEL);
-
-    if (!self) {
-        akvcam_set_last_error(-ENOMEM);
-
-        goto akvcam_list_new_failed;
-    }
-
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_list_delete);
 
-    if (!self->self)
-        goto akvcam_list_new_failed;
-
     return self;
-
-akvcam_list_new_failed:
-    if (self) {
-        akvcam_object_free(&AKVCAM_TO_OBJECT(self));
-        kfree(self);
-    }
-
-    return NULL;
 }
 
 void akvcam_list_delete(akvcam_list_t *self)
@@ -227,11 +209,16 @@ void akvcam_list_erase(akvcam_list_t self, akvcam_list_element_t element)
 
             if (it->prev)
                 it->prev->next = it->next;
+            else
+                self->head = it->next;
 
             if (it->next)
                 it->next->prev = it->prev;
+            else
+                self->tail = it->prev;
 
             kfree(it);
+            self->size--;
 
             break;
         }
@@ -256,7 +243,9 @@ void akvcam_list_clear(akvcam_list_t self)
         element = next;
     }
 
-    memset(self, 0, sizeof(struct akvcam_list));
+    self->size = 0;
+    self->head = NULL;
+    self->tail = NULL;
 }
 
 akvcam_list_element_t akvcam_list_find(akvcam_list_t self,
@@ -267,11 +256,19 @@ akvcam_list_element_t akvcam_list_find(akvcam_list_t self,
     akvcam_list_element_t element;
     ssize_t i;
 
-    if (!self || self->size < 1 || !(size || equals))
+    if (!self || self->size < 1 || !(data || size || equals))
         return NULL;
 
-    if (memcmp(self->tail->data, data, size) == 0)
-        return self->tail;
+    if (equals) {
+        if (equals(self->tail->data, data, size))
+            return self->tail;
+    } else if (size) {
+        if (memcmp(self->tail->data, data, size) == 0)
+            return self->tail;
+    } else {
+        if (self->tail->data == data)
+            return self->tail;
+    }
 
     element = self->head;
 
@@ -279,14 +276,60 @@ akvcam_list_element_t akvcam_list_find(akvcam_list_t self,
         if (equals) {
             if (equals(element->data, data, size))
                 return element;
-        } else if (memcmp(element->data, data, size) == 0) {
-            return element;
+        } else if (size) {
+            if (memcmp(element->data, data, size) == 0)
+                return element;
+        } else {
+            if (element->data == data)
+                return element;
         }
 
         element = element->next;
     }
 
     return NULL;
+}
+
+ssize_t akvcam_list_index_of(akvcam_list_t self,
+                             const void *data,
+                             size_t size,
+                             akvcam_are_equals_t equals)
+{
+    akvcam_list_element_t element;
+    ssize_t i;
+
+    if (!self || self->size < 1 || !(data || size || equals))
+        return -1;
+
+    if (equals) {
+        if (equals(self->tail->data, data, size))
+            return (ssize_t) self->size - 1;
+    } else if (size) {
+        if (memcmp(self->tail->data, data, size) == 0)
+            return (ssize_t) self->size - 1;
+    } else {
+        if (self->tail->data == data)
+            return (ssize_t) self->size - 1;
+    }
+
+    element = self->head;
+
+    for (i = 0; i < (ssize_t) self->size - 1; i++) {
+        if (equals) {
+            if (equals(element->data, data, size))
+                return i;
+        } else if (size) {
+            if (memcmp(element->data, data, size) == 0)
+                return i;
+        } else {
+            if (element->data == data)
+                return i;
+        }
+
+        element = element->next;
+    }
+
+    return -1;
 }
 
 void *akvcam_list_next(akvcam_list_t self, akvcam_list_element_t *element)
@@ -303,4 +346,12 @@ void *akvcam_list_next(akvcam_list_t self, akvcam_list_element_t *element)
     *element = self->head;
 
     return self->head? self->head->data: NULL;
+}
+
+void *akvcam_list_element_data(akvcam_list_element_t element)
+{
+    if (!element)
+        return NULL;
+
+    return element->data;
 }

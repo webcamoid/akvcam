@@ -2,17 +2,18 @@ KERNEL_DIR ?= /lib/modules/$(shell uname -r)/build
 
 obj-m += akvcam.o
 akvcam-objs := \
+	module.o \
+	buffers.o \
 	controls.o \
 	device.o \
 	driver.o \
-	fops.o \
+	events.o \
 	format.o \
-	ioctl_ops.o \
+	ioctl.o \
 	list.o \
-	module.o \
 	mutex.o \
+	node.o \
 	object.o \
-	queue.o \
 	utils.o
 
 all:

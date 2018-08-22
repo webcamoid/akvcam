@@ -31,6 +31,7 @@ typedef struct akvcam_mutex *akvcam_mutex_t;
 // public
 akvcam_mutex_t akvcam_mutex_new(AKVCAM_MUTEX_MODE mode);
 void akvcam_mutex_delete(akvcam_mutex_t *self);
+
 void akvcam_mutex_lock(akvcam_mutex_t self);
 void akvcam_mutex_unlock(akvcam_mutex_t self);
 
