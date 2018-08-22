@@ -12,7 +12,6 @@ matrix:
       - REPOSITORY=v3.8.13.4
       - KERNEL_VERSION=3.8.13-03081304
       - KERNEL_VERSION_C=201805132216
-      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -23,7 +22,6 @@ matrix:
       - REPOSITORY=v3.9.11-saucy
       - KERNEL_VERSION=3.9.11-030911
       - KERNEL_VERSION_C=201307202035
-      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -34,7 +32,6 @@ matrix:
       - REPOSITORY=v3.10.108
       - KERNEL_VERSION=3.10.108-0310108
       - KERNEL_VERSION_C=201711050352
-      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -45,7 +42,6 @@ matrix:
       - REPOSITORY=v3.11.10.15-saucy
       - KERNEL_VERSION=3.11.10-03111015
       - KERNEL_VERSION_C=201408250535
-      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -56,7 +52,6 @@ matrix:
       - REPOSITORY=v3.12.74
       - KERNEL_VERSION=3.12.74-031274
       - KERNEL_VERSION_C=201705101001
-      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -67,7 +62,6 @@ matrix:
       - REPOSITORY=v3.13.11.11-trusty
       - KERNEL_VERSION=3.13.11-03131111
       - KERNEL_VERSION_C=201411111336
-      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -78,7 +72,6 @@ matrix:
       - REPOSITORY=v3.14.79
       - KERNEL_VERSION=3.14.79-031479
       - KERNEL_VERSION_C=201609110530
-      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -89,7 +82,6 @@ matrix:
       - REPOSITORY=v3.15.10-utopic
       - KERNEL_VERSION=3.15.10-031510
       - KERNEL_VERSION_C=201408132333
-      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
