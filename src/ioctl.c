@@ -260,8 +260,11 @@ int akvcam_ioctls_querycap(akvcam_node_t node,
     else
         capabilities = V4L2_CAP_VIDEO_CAPTURE;
 
-    capabilities |= V4L2_CAP_STREAMING
-                 |  V4L2_CAP_EXT_PIX_FORMAT;
+    capabilities |= V4L2_CAP_STREAMING;
+
+#ifdef V4L2_CAP_EXT_PIX_FORMAT
+    capabilities |= V4L2_CAP_EXT_PIX_FORMAT;
+#endif
 
 //    capabilities |= V4L2_CAP_READWRITE;
 
