@@ -19,7 +19,7 @@ ${EXEC} apt-get -y install \
     qemu-utils
 fi
 
-url=http://kernel.ubuntu.com/~kernel-ppa/mainline/v${KERNEL_VERSION_A}
+url=http://kernel.ubuntu.com/~kernel-ppa/mainline/${REPOSITORY}
 headers=linux-headers-${KERNEL_VERSION}_${KERNEL_VERSION}.${KERNEL_VERSION_C}_all.deb
 headers_generic=linux-headers-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${SYSTEM_ARCH}.deb
 
