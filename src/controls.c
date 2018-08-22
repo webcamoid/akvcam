@@ -227,27 +227,37 @@ int akvcam_controls_get_ext(akvcam_controls_t self,
         control = kzalloc(sizeof(struct v4l2_ext_control), GFP_KERNEL);
 
     for (i = 0; i < controls->count; i++) {
-        if (kernel)
+        if (kernel) {
             control = controls->controls + i;
-        else
-            copy_from_user(control,
-                           controls->controls + i,
-                           sizeof(struct v4l2_ext_control));
+        } else {
+            if (copy_from_user(control,
+                               controls->controls + i,
+                               sizeof(struct v4l2_ext_control)) != 0) {
+                result = -EIO;
+
+                break;
+            }
+        }
 
         id = control->id;
         _control = akvcam_controls_value_by_id(self, id);
         memset(control, 0, sizeof(struct v4l2_ext_control));
         control->id = id;
         control->value = _control->value;
-        copy_to_user(controls->controls + i,
-                     control,
-                     sizeof(struct v4l2_ext_control));
+
+        if (copy_to_user(controls->controls + i,
+                         control,
+                         sizeof(struct v4l2_ext_control)) != 0) {
+            result = -EIO;
+
+            break;
+        }
     }
 
     if (!kernel)
         kfree(control);
 
-    return 0;
+    return result;
 }
 
 int akvcam_controls_set(akvcam_controls_t self, struct v4l2_control *control)
@@ -296,12 +306,17 @@ int akvcam_controls_set_ext(akvcam_controls_t self,
         control = kzalloc(sizeof(struct v4l2_ext_control), GFP_KERNEL);
 
     for (i = 0; i < controls->count; i++) {
-        if (kernel)
+        if (kernel) {
             control = controls->controls + i;
-        else
-            copy_from_user(control,
-                           controls->controls + i,
-                           sizeof(struct v4l2_ext_control));
+        } else {
+            if (copy_from_user(control,
+                               controls->controls + i,
+                               sizeof(struct v4l2_ext_control)) != 0) {
+                result = -EIO;
+
+                break;
+            }
+        }
 
         _control = akvcam_controls_value_by_id(self, control->id);
         _control->value = control->value;
@@ -327,7 +342,7 @@ int akvcam_controls_set_ext(akvcam_controls_t self,
     if (!kernel)
         kfree(control);
 
-    return 0;
+    return result;
 }
 
 int akvcam_controls_try_ext(akvcam_controls_t self,
@@ -360,18 +375,23 @@ int akvcam_controls_try_ext(akvcam_controls_t self,
         control = kzalloc(sizeof(struct v4l2_ext_control), GFP_KERNEL);
 
     for (i = 0; i < controls->count; i++) {
-        if (kernel)
+        if (mode == AKVCAM_CONTROLS_FLAG_TRY)
+            controls->error_idx = (__u32) i;
+
+        if (kernel) {
             control = controls->controls + i;
-        else
-            copy_from_user(control,
-                           controls->controls + i,
-                           sizeof(struct v4l2_ext_control));
+        } else {
+            if (copy_from_user(control,
+                               controls->controls + i,
+                               sizeof(struct v4l2_ext_control)) != 0) {
+                result = -EIO;
+
+                break;
+            }
+        }
 
         *control->reserved2 = 0;
         _control = akvcam_controls_params_by_id(self, control->id);
-
-        if (mode == AKVCAM_CONTROLS_FLAG_TRY)
-            controls->error_idx = (__u32) i;
 
         if (!_control) {
             result = -EINVAL;

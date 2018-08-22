@@ -213,9 +213,16 @@ int akvcam_ioctl_do(akvcam_ioctl_t self,
             if (akvcam_ioctls_private[i].proc) {
                 size = akvcam_ioctls_private[i].data_size;
                 data = kzalloc(size, GFP_KERNEL);
-                copy_from_user(data, arg, size);
-                result = akvcam_ioctls_private[i].proc(node, data);
-                copy_to_user(arg, data, size);
+
+                if (copy_from_user(data, arg, size) != 0) {
+                    result = akvcam_ioctls_private[i].proc(node, data);
+
+                    if (copy_to_user(arg, data, size) != 0)
+                        result = -EIO;
+                } else {
+                    result = -EIO;
+                }
+
                 kfree(data);
 
                 return result;
