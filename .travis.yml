@@ -9,6 +9,61 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
+      - REPOSITORY=v3.15.10-utopic
+      - KERNEL_VERSION=3.15.10-031510
+      - KERNEL_VERSION_C=201408132333
+      - export USE_QEMU=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=xenial
+      - REPOSITORY=v3.16.57
+      - KERNEL_VERSION=3.16.57-031657
+      - KERNEL_VERSION_C=201806170831
+      - export USE_QEMU=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=xenial
+      - REPOSITORY=v3.17.8-vivid
+      - KERNEL_VERSION=3.17.8-031708
+      - KERNEL_VERSION_C=201501081837
+      - export USE_QEMU=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=xenial
+      - REPOSITORY=v3.18.119
+      - KERNEL_VERSION=3.18.119-0318119
+      - KERNEL_VERSION_C=201808171540
+      - export USE_QEMU=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=xenial
+      - REPOSITORY=v3.19.8-vivid
+      - KERNEL_VERSION=3.19.8-031908
+      - KERNEL_VERSION_C=201505110938
+      - export USE_QEMU=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=xenial
       - REPOSITORY=v4.0.1-wily
       - KERNEL_VERSION=4.0.1-040001
       - KERNEL_VERSION_C=201505081133
@@ -23,7 +78,6 @@ matrix:
       - REPOSITORY=v4.1.28
       - KERNEL_VERSION=4.1.28-040128
       - KERNEL_VERSION_C=201607131931
-      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
