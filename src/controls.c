@@ -57,8 +57,8 @@ static akvcam_control_params akvcam_controls_private[] = {
     {V4L2_CID_SATURATION,    V4L2_CTRL_TYPE_INTEGER,      "Saturation", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER},
     {V4L2_CID_HUE       ,    V4L2_CTRL_TYPE_INTEGER,             "Hue", -359, 359, 1, 0,     V4L2_CTRL_FLAG_SLIDER},
     {V4L2_CID_GAMMA     ,    V4L2_CTRL_TYPE_INTEGER,           "Gamma", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER},
-    {V4L2_CID_HFLIP     ,    V4L2_CTRL_TYPE_INTEGER, "Horizontal Flip",    0,   1, 1, 0,                         0},
-    {V4L2_CID_VFLIP     ,    V4L2_CTRL_TYPE_INTEGER,   "Vertical Flip",    0,   1, 1, 0,                         0},
+    {V4L2_CID_HFLIP     ,    V4L2_CTRL_TYPE_BOOLEAN, "Horizontal Flip",    0,   1, 1, 0,                         0},
+    {V4L2_CID_VFLIP     ,    V4L2_CTRL_TYPE_BOOLEAN,   "Vertical Flip",    0,   1, 1, 0,                         0},
     {0                  ,                         0,                "",    0,   0, 0, 0,                         0},
 };
 
