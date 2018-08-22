@@ -46,6 +46,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     mkdir ${system_mount_point}
     mount -o loop ${system_image} ${system_mount_point}
     debootstrap --components=main,universe,multiverse --include=systemd,kmod,v4l-utils --arch ${SYSTEM_ARCH} --variant=minbase ${SYSTEM_VERSION} ${system_mount_point}
+    mkdir -p ${system_mount_point}/dev
 
     # Copy kernel modules
     mkdir -p ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
