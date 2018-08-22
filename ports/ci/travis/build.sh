@@ -3,7 +3,6 @@
 DRIVER_FILE=akvcam.ko
 DEFERRED_LOG=1
 BUILDSCRIPT=dockerbuild.sh
-EXTRADEPS=systemd,kmod,v4l-utils,libssl1.1
 system_image=system-image.img
 system_mount_point=system-mount-point
 
@@ -46,7 +45,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     # Install bootstrap system
     mkdir ${system_mount_point}
     mount -o loop ${system_image} ${system_mount_point}
-    debootstrap --components=main,universe,multiverse --include=${EXTRADEPS} --arch ${SYSTEM_ARCH} --variant=minbase ${SYSTEM_VERSION} ${system_mount_point}
+    debootstrap --components=main,universe,multiverse --include=systemd,kmod,v4l-utils --arch ${SYSTEM_ARCH} --variant=minbase ${SYSTEM_VERSION} ${system_mount_point}
 
     # Copy kernel modules
     mkdir -p ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
