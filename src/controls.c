@@ -22,6 +22,10 @@
 #include "controls.h"
 #include "object.h"
 
+#ifndef V4L2_CTRL_FLAG_NEXT_COMPOUND
+#define V4L2_CTRL_FLAG_NEXT_COMPOUND 0x40000000
+#endif
+
 typedef struct
 {
     __u32 id;
