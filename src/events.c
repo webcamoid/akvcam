@@ -18,7 +18,6 @@
 
 #include <linux/slab.h>
 #include <linux/poll.h>
-#include <linux/eventpoll.h>
 #include <linux/sched.h>
 #include <linux/videodev2.h>
 
@@ -124,7 +123,7 @@ unsigned int akvcam_events_poll(akvcam_events_t self,
                                 struct poll_table_struct *wait)
 {
     if (self->n_events > 0)
-        return EPOLLPRI;
+        return POLLPRI;
 
     poll_wait(filp, &self->event_signaled, wait);
 
