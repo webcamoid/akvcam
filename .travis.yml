@@ -8,7 +8,7 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - SYSTEM_VERSION=xenial
+      - SYSTEM_VERSION=trusty
       - REPOSITORY=v3.15.10-utopic
       - KERNEL_VERSION=3.15.10-031510
       - KERNEL_VERSION_C=201408132333
@@ -265,7 +265,6 @@ matrix:
       - KERNEL_VERSION_C=201808151233
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
-      - export USE_QEMU=1
 
 before_install:
   - docker pull ubuntu:${SYSTEM_VERSION}
