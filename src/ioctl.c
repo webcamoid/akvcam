@@ -38,6 +38,10 @@
 #define DEFAULT_COLORSPACE V4L2_COLORSPACE_RAW
 #endif
 
+#ifndef V4L2_CAP_EXT_PIX_FORMAT
+#define V4L2_CAP_EXT_PIX_FORMAT 0x00200000
+#endif
+
 #define AKVCAM_HANDLER(cmd, proc, arg_type) \
     {cmd, (akvcam_proc_t) proc, sizeof(arg_type)}
 
@@ -264,11 +268,8 @@ int akvcam_ioctls_querycap(akvcam_node_t node,
     else
         capabilities = V4L2_CAP_VIDEO_CAPTURE;
 
-    capabilities |= V4L2_CAP_STREAMING;
-
-#ifdef V4L2_CAP_EXT_PIX_FORMAT
-    capabilities |= V4L2_CAP_EXT_PIX_FORMAT;
-#endif
+    capabilities |= V4L2_CAP_STREAMING
+                 |  V4L2_CAP_EXT_PIX_FORMAT;
 
 //    capabilities |= V4L2_CAP_READWRITE;
 
