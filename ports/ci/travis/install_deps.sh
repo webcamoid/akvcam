@@ -10,7 +10,8 @@ ${EXEC} apt-get -y install \
     make \
     libelf-dev \
     kmod \
-    wget
+    wget \
+    grub
 
 if [ ! -z "${USE_QEMU}" ]; then
 ${EXEC} apt-get -y install \
