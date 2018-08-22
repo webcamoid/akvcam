@@ -29,6 +29,10 @@
 #include "mutex.h"
 #include "object.h"
 
+#ifndef THIS_MODULE
+#define THIS_MODULE NULL
+#endif
+
 struct akvcam_node
 {
     akvcam_object_t self;

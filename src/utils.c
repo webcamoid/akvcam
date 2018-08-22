@@ -85,8 +85,12 @@ const char *akvcam_string_from_ioctl(uint cmd)
         {VIDIOC_QUERYMENU          , "VIDIOC_QUERYMENU"          },
         {VIDIOC_G_INPUT            , "VIDIOC_G_INPUT"            },
         {VIDIOC_S_INPUT            , "VIDIOC_S_INPUT"            },
+#ifdef VIDIOC_G_EDID
         {VIDIOC_G_EDID             , "VIDIOC_G_EDID"             },
+#endif
+#ifdef VIDIOC_S_EDID
         {VIDIOC_S_EDID             , "VIDIOC_S_EDID"             },
+#endif
         {VIDIOC_G_OUTPUT           , "VIDIOC_G_OUTPUT"           },
         {VIDIOC_S_OUTPUT           , "VIDIOC_S_OUTPUT"           },
         {VIDIOC_ENUMOUTPUT         , "VIDIOC_ENUMOUTPUT"         },
