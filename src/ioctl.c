@@ -19,7 +19,6 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
-#include <linux/videodev2.h>
 
 #include "ioctl.h"
 #include "buffers.h"
@@ -64,8 +63,10 @@ struct akvcam_ioctl
 };
 
 int akvcam_ioctls_querycap(akvcam_node_t node, struct v4l2_capability *arg);
+#ifdef VIDIOC_QUERY_EXT_CTRL
 int akvcam_ioctls_query_ext_ctrl(akvcam_node_t node,
                                  struct v4l2_query_ext_ctrl *control);
+#endif
 int akvcam_ioctls_g_ext_ctrls(akvcam_node_t node,
                               struct v4l2_ext_controls *controls);
 int akvcam_ioctls_s_ext_ctrls(akvcam_node_t node,
@@ -100,7 +101,9 @@ int akvcam_ioctls_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer);
 
 static akvcam_ioctl_handler akvcam_ioctls_private[] = {
     AKVCAM_HANDLER(VIDIOC_QUERYCAP           , akvcam_ioctls_querycap           , struct v4l2_capability        ),
+#ifdef VIDIOC_QUERY_EXT_CTRL
     AKVCAM_HANDLER(VIDIOC_QUERY_EXT_CTRL     , akvcam_ioctls_query_ext_ctrl     , struct v4l2_query_ext_ctrl    ),
+#endif
     AKVCAM_HANDLER(VIDIOC_G_EXT_CTRLS        , akvcam_ioctls_g_ext_ctrls        , struct v4l2_ext_controls      ),
     AKVCAM_HANDLER(VIDIOC_S_EXT_CTRLS        , akvcam_ioctls_s_ext_ctrls        , struct v4l2_ext_controls      ),
     AKVCAM_HANDLER(VIDIOC_TRY_EXT_CTRLS      , akvcam_ioctls_try_ext_ctrls      , struct v4l2_ext_controls      ),
@@ -269,6 +272,7 @@ int akvcam_ioctls_querycap(akvcam_node_t node,
     return 0;
 }
 
+#ifdef VIDIOC_QUERY_EXT_CTRL
 int akvcam_ioctls_query_ext_ctrl(akvcam_node_t node,
                                  struct v4l2_query_ext_ctrl *control)
 {
@@ -281,6 +285,7 @@ int akvcam_ioctls_query_ext_ctrl(akvcam_node_t node,
 
     return akvcam_controls_fill_ext(controls, control);
 }
+#endif
 
 int akvcam_ioctls_g_ext_ctrls(akvcam_node_t node,
                               struct v4l2_ext_controls *controls)

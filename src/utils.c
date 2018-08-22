@@ -52,7 +52,7 @@ int akvcam_set_last_error(int error)
 const char *akvcam_string_from_ioctl(uint cmd)
 {
     size_t i;
-    static char unknown[1024];    
+    static char unknown[1024];
     static akvcam_utils_ioctl_strings ioctl_strings[] = {
         {VIDIOC_QUERYCAP           , "VIDIOC_QUERYCAP"           },
         {VIDIOC_RESERVED           , "VIDIOC_RESERVED"           },
@@ -136,7 +136,9 @@ const char *akvcam_string_from_ioctl(uint cmd)
         {VIDIOC_DV_TIMINGS_CAP     , "VIDIOC_DV_TIMINGS_CAP"     },
         {VIDIOC_ENUM_FREQ_BANDS    , "VIDIOC_ENUM_FREQ_BANDS"    },
         {VIDIOC_DBG_G_CHIP_INFO    , "VIDIOC_DBG_G_CHIP_INFO"    },
+#ifdef VIDIOC_QUERY_EXT_CTRL
         {VIDIOC_QUERY_EXT_CTRL     , "VIDIOC_QUERY_EXT_CTRL"     },
+#endif
         {0                         , ""                          },
     };
 

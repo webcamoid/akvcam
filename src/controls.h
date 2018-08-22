@@ -19,7 +19,7 @@
 #ifndef AKVCAM_CONTROLS_H
 #define AKVCAM_CONTROLS_H
 
-#include <linux/types.h>
+#include <linux/videodev2.h>
 
 #include "utils.h"
 
@@ -32,10 +32,13 @@ struct akvcam_controls;
 typedef struct akvcam_controls *akvcam_controls_t;
 struct v4l2_queryctrl;
 struct v4l2_control;
-struct v4l2_query_ext_ctrl;
 struct v4l2_ext_controls;
 struct v4l2_event_ctrl;
 struct v4l2_event;
+
+#ifdef VIDIOC_QUERY_EXT_CTRL
+struct v4l2_query_ext_ctrl;
+#endif
 
 // public
 akvcam_controls_t akvcam_controls_new(void);
@@ -43,8 +46,10 @@ void akvcam_controls_delete(akvcam_controls_t *self);
 
 int akvcam_controls_fill(akvcam_controls_t self,
                          struct v4l2_queryctrl *control);
+#ifdef VIDIOC_QUERY_EXT_CTRL
 int akvcam_controls_fill_ext(akvcam_controls_t self,
                              struct v4l2_query_ext_ctrl *control);
+#endif
 int akvcam_controls_get(akvcam_controls_t self, struct v4l2_control *control);
 int akvcam_controls_get_ext(akvcam_controls_t self,
                             struct v4l2_ext_controls *controls,

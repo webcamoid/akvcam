@@ -18,7 +18,6 @@
 
 #include <linux/slab.h>
 #include <linux/uaccess.h>
-#include <linux/videodev2.h>
 
 #include "controls.h"
 #include "object.h"
@@ -108,26 +107,51 @@ void akvcam_controls_delete(akvcam_controls_t *self)
 int akvcam_controls_fill(akvcam_controls_t self,
                          struct v4l2_queryctrl *control)
 {
-    struct v4l2_query_ext_ctrl ext_control;
-    memset(&ext_control, 0, sizeof(struct v4l2_query_ext_ctrl));
-    ext_control.id = control->id;
+    size_t i;
+    __u32 id = control->id & V4L2_CTRL_ID_MASK;
+    bool next = control->id
+              & (V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND);
+    akvcam_control_params_t _control = NULL;
 
-    if (akvcam_controls_fill_ext(self, &ext_control) == -EINVAL)
+    if (self->n_controls < 1)
         return -EINVAL;
 
-    memset(control, 0, sizeof(struct v4l2_queryctrl));
-    control->id = ext_control.id;
-    control->type = ext_control.type;
-    snprintf((char *) control->name, 32, "%s", ext_control.name);
-    control->minimum = (__s32) ext_control.minimum;
-    control->maximum = (__s32) ext_control.maximum;
-    control->step = (__s32) ext_control.step;
-    control->default_value = (__s32) ext_control.default_value;
-    control->flags = ext_control.flags;
+    if (!id && next)
+        _control = akvcam_controls_private;
+    else
+        for (i = 0; i < self->n_controls; i++) {
+            akvcam_control_params_t ctrl = akvcam_controls_private + i;
 
-    return 0;
+            if (ctrl->id == id) {
+                if (!next)
+                    _control = ctrl;
+                else if (i + 1 < self->n_controls)
+                    _control = akvcam_controls_private + i + 1;
+                else
+                    return -EINVAL;
+
+                break;
+            }
+        }
+
+    if (_control) {
+        memset(control, 0, sizeof(struct v4l2_queryctrl));
+        control->id = _control->id;
+        control->type = _control->type;
+        snprintf((char *) control->name, 32, "%s", _control->name);
+        control->minimum = _control->minimum;
+        control->maximum = _control->maximum;
+        control->step = _control->step;
+        control->default_value = _control->default_value;
+        control->flags = _control->flags;
+
+        return 0;
+    }
+
+    return -EINVAL;
 }
 
+#ifdef VIDIOC_QUERY_EXT_CTRL
 int akvcam_controls_fill_ext(akvcam_controls_t self,
                              struct v4l2_query_ext_ctrl *control)
 {
@@ -174,6 +198,7 @@ int akvcam_controls_fill_ext(akvcam_controls_t self,
 
     return -EINVAL;
 }
+#endif
 
 int akvcam_controls_get(akvcam_controls_t self, struct v4l2_control *control)
 {
