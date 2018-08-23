@@ -8,181 +8,10 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.0.101-oneiric
-      - KERNEL_VERSION=3.0.101-0300101
-      - KERNEL_VERSION_C=201310220446
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.1.10-precise
-      - KERNEL_VERSION=3.1.10-030110
-      - KERNEL_VERSION_C=201201181135
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.2.101
-      - KERNEL_VERSION=3.2.101-0302101
-      - KERNEL_VERSION_C=201803192131
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.3.8-quantal
-      - KERNEL_VERSION=3.3.8-030308
-      - KERNEL_VERSION_C=201206041356
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.4.113
-      - KERNEL_VERSION=3.4.113-0304113
-      - KERNEL_VERSION_C=201610261546
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.5.7.33-quantal
-      - KERNEL_VERSION=3.5.7-03050733
-      - KERNEL_VERSION_C=201404040652
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.6.11-raring
-      - KERNEL_VERSION=3.6.11-030611
-      - KERNEL_VERSION_C=201212171335
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.7.10-raring
-      - KERNEL_VERSION=3.7.10-030710
-      - KERNEL_VERSION_C=201302271235
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.8.13.4
-      - KERNEL_VERSION=3.8.13-03081304
-      - KERNEL_VERSION_C=201805132216
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.9.11-saucy
-      - KERNEL_VERSION=3.9.11-030911
-      - KERNEL_VERSION_C=201307202035
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.10.108
-      - KERNEL_VERSION=3.10.108-0310108
-      - KERNEL_VERSION_C=201711050352
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.11.10.15-saucy
-      - KERNEL_VERSION=3.11.10-03111015
-      - KERNEL_VERSION_C=201408250535
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.12.74
-      - KERNEL_VERSION=3.12.74-031274
-      - KERNEL_VERSION_C=201705101001
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.13.11.11-trusty
-      - KERNEL_VERSION=3.13.11-03131111
-      - KERNEL_VERSION_C=201411111336
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.14.79
-      - KERNEL_VERSION=3.14.79-031479
-      - KERNEL_VERSION_C=201609110530
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=trusty
-      - REPOSITORY=v3.15.10-utopic
-      - KERNEL_VERSION=3.15.10-031510
-      - KERNEL_VERSION_C=201408132333
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
       - SYSTEM_VERSION=xenial
       - REPOSITORY=v3.16.57
       - KERNEL_VERSION=3.16.57-031657
       - KERNEL_VERSION_C=201806170831
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v3.17.8-vivid
-      - KERNEL_VERSION=3.17.8-031708
-      - KERNEL_VERSION_C=201501081837
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -202,193 +31,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v3.19.8-vivid
-      - KERNEL_VERSION=3.19.8-031908
-      - KERNEL_VERSION_C=201505110938
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.0.1-wily
-      - KERNEL_VERSION=4.0.1-040001
-      - KERNEL_VERSION_C=201505081133
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.1.28
-      - KERNEL_VERSION=4.1.28-040128
-      - KERNEL_VERSION_C=201607131931
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.2.4-wily
-      - KERNEL_VERSION=4.2.4-040204
-      - KERNEL_VERSION_C=201510261009
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.3.1-wily
-      - KERNEL_VERSION=4.3.1-040301
-      - KERNEL_VERSION_C=201512092023
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.4.15
-      - KERNEL_VERSION=4.4.15-040415
-      - KERNEL_VERSION_C=201607111333
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.5.4-yakkety
-      - KERNEL_VERSION=4.5.4-040504
-      - KERNEL_VERSION_C=201606100356
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.6.4
-      - KERNEL_VERSION=4.6.4-040604
-      - KERNEL_VERSION_C=201607111332
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.7.1
-      - KERNEL_VERSION=4.7.1-040701
-      - KERNEL_VERSION_C=201608160432
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.8.1
-      - KERNEL_VERSION=4.8.1-040801
-      - KERNEL_VERSION_C=201610170913
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.9.1
-      - KERNEL_VERSION=4.9.1-040901
-      - KERNEL_VERSION_C=201701060531
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.10.1
-      - KERNEL_VERSION=4.10.1-041001
-      - KERNEL_VERSION_C=201702260735
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.11.1
-      - KERNEL_VERSION=4.11.1-041101
-      - KERNEL_VERSION_C=201705140931
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.12.1
-      - KERNEL_VERSION=4.12.1-041201
-      - KERNEL_VERSION_C=201707121132
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.13.1
-      - KERNEL_VERSION=4.13.1-041301
-      - KERNEL_VERSION_C=201709100232
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.14.1
-      - KERNEL_VERSION=4.14.1-041401
-      - KERNEL_VERSION_C=201711210430
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.15.1
-      - KERNEL_VERSION=4.15.1-041501
-      - KERNEL_VERSION_C=201802031831
-      - export USE_QEMU=1
-  - os: linux
-    sudo: required
-    services:
-      - docker
-    compiler: gcc
-    env:
-      - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.16.1
-      - KERNEL_VERSION=4.16.1-041601
-      - KERNEL_VERSION_C=201804081334
+      - REPOSITORY=v4.4.151
+      - KERNEL_VERSION=4.4.151-0404151
+      - KERNEL_VERSION_C=201808220242
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -397,11 +42,10 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.17.1
-      - KERNEL_VERSION=4.17.1-041701
-      - KERNEL_VERSION_C=201806111730
-      - UNSIGNED_IMG=1
-      - NEED_MODULES=1
+      - REPOSITORY=v4.9.123
+      - KERNEL_VERSION=4.9.123-0409123
+      - KERNEL_VERSION_C=201808220630
+      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -409,11 +53,36 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.18.1
-      - KERNEL_VERSION=4.18.1-041801
-      - KERNEL_VERSION_C=201808151233
+      - REPOSITORY=v4.14.66
+      - KERNEL_VERSION=4.14.66-041466
+      - KERNEL_VERSION_C=201808220733
+      - export USE_QEMU=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=cosmic
+      - REPOSITORY=v4.17.18
+      - KERNEL_VERSION=4.17.18-041718
+      - KERNEL_VERSION_C=201808220323
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
+      - export USE_QEMU=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=cosmic
+      - REPOSITORY=v4.18.4
+      - KERNEL_VERSION=4.18.4-041804
+      - KERNEL_VERSION_C=201808220230
+      - UNSIGNED_IMG=1
+      - NEED_MODULES=1
+      - export USE_QEMU=1
 
 before_install:
   - docker pull ubuntu:${SYSTEM_VERSION}
