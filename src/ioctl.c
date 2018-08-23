@@ -448,7 +448,7 @@ int akvcam_ioctls_g_fmt(akvcam_node_t node, struct v4l2_format *format)
         return -EINVAL;
 
     current_format = akvcam_node_format_nr(node);
-    memset(&format->fmt.pix, 0, sizeof(struct v4l2_pix_format));
+    memset(&format->fmt, 0, 200);
     format->fmt.pix.width = akvcam_format_width(current_format);
     format->fmt.pix.height = akvcam_format_height(current_format);
     format->fmt.pix.pixelformat = akvcam_format_fourcc(current_format);
