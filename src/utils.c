@@ -65,7 +65,9 @@ const char *akvcam_string_from_ioctl(uint cmd)
         {VIDIOC_S_FBUF             , "VIDIOC_S_FBUF"             },
         {VIDIOC_OVERLAY            , "VIDIOC_OVERLAY"            },
         {VIDIOC_QBUF               , "VIDIOC_QBUF"               },
+#ifdef VIDIOC_EXPBUF
         {VIDIOC_EXPBUF             , "VIDIOC_EXPBUF"             },
+#endif
         {VIDIOC_DQBUF              , "VIDIOC_DQBUF"              },
         {VIDIOC_STREAMON           , "VIDIOC_STREAMON"           },
         {VIDIOC_STREAMOFF          , "VIDIOC_STREAMOFF"          },
