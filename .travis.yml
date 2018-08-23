@@ -9,6 +9,86 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=trusty
+      - REPOSITORY=v3.0.101-oneiric
+      - KERNEL_VERSION=3.0.101-0300101
+      - KERNEL_VERSION_C=201310220446
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=trusty
+      - REPOSITORY=v3.1.10-precise
+      - KERNEL_VERSION=3.1.10-030110
+      - KERNEL_VERSION_C=201201181135
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=trusty
+      - REPOSITORY=v3.2.101
+      - KERNEL_VERSION=3.2.101-0302101
+      - KERNEL_VERSION_C=201803192131
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=trusty
+      - REPOSITORY=v3.3.8-quantal
+      - KERNEL_VERSION=3.3.8-030308
+      - KERNEL_VERSION_C=201206041356
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=trusty
+      - REPOSITORY=v3.4.113
+      - KERNEL_VERSION=3.4.113-0304113
+      - KERNEL_VERSION_C=201610261546
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=trusty
+      - REPOSITORY=v3.5.7.33-quantal
+      - KERNEL_VERSION=3.5.7-03050733
+      - KERNEL_VERSION_C=201404040652
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=trusty
+      - REPOSITORY=v3.6.11-raring
+      - KERNEL_VERSION=3.6.11-030611
+      - KERNEL_VERSION_C=201212171335
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=trusty
+      - REPOSITORY=v3.7.10-raring
+      - KERNEL_VERSION=3.7.10-030710
+      - KERNEL_VERSION_C=201302271235
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=trusty
       - REPOSITORY=v3.8.13.4
       - KERNEL_VERSION=3.8.13-03081304
       - KERNEL_VERSION_C=201805132216
