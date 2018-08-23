@@ -131,8 +131,12 @@ const char *akvcam_string_from_ioctl(uint cmd)
         {VIDIOC_DQEVENT            , "VIDIOC_DQEVENT"            },
         {VIDIOC_SUBSCRIBE_EVENT    , "VIDIOC_SUBSCRIBE_EVENT"    },
         {VIDIOC_UNSUBSCRIBE_EVENT  , "VIDIOC_UNSUBSCRIBE_EVENT"  },
+#ifdef VIDIOC_CREATE_BUFS
         {VIDIOC_CREATE_BUFS        , "VIDIOC_CREATE_BUFS"        },
+#endif
+#ifdef VIDIOC_PREPARE_BUF
         {VIDIOC_PREPARE_BUF        , "VIDIOC_PREPARE_BUF"        },
+#endif
 #ifdef VIDIOC_G_SELECTION
         {VIDIOC_G_SELECTION        , "VIDIOC_G_SELECTION"        },
 #endif
@@ -142,7 +146,9 @@ const char *akvcam_string_from_ioctl(uint cmd)
 #ifdef VIDIOC_DECODER_CMD
         {VIDIOC_DECODER_CMD        , "VIDIOC_DECODER_CMD"        },
 #endif
+#ifdef VIDIOC_TRY_DECODER_CMD
         {VIDIOC_TRY_DECODER_CMD    , "VIDIOC_TRY_DECODER_CMD"    },
+#endif
 #ifdef VIDIOC_ENUM_DV_TIMINGS
         {VIDIOC_ENUM_DV_TIMINGS    , "VIDIOC_ENUM_DV_TIMINGS"    },
 #endif
