@@ -269,6 +269,7 @@ int akvcam_ioctls_querycap(akvcam_node_t node,
     printk(KERN_INFO "%s()\n", __FUNCTION__);
 
     device = akvcam_node_device_nr(node);
+    memset(capability, 0, sizeof(struct v4l2_capability));
 
     snprintf((char *) capability->driver, 16, "%s", akvcam_driver_name());
     snprintf((char *) capability->card, 32, "%s", akvcam_driver_description());
@@ -286,9 +287,10 @@ int akvcam_ioctls_querycap(akvcam_node_t node,
 
 //    capabilities |= V4L2_CAP_READWRITE;
 
+#ifdef V4L2_CAP_DEVICE_CAPS
     capability->capabilities = capabilities | V4L2_CAP_DEVICE_CAPS;
     capability->device_caps = capabilities;
-    memset(capability->reserved, 0, 3 * sizeof(__u32));
+#endif
 
     return 0;
 }

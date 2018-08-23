@@ -152,7 +152,9 @@ const char *akvcam_string_from_ioctl(uint cmd)
 #ifdef VIDIOC_DV_TIMINGS_CAP
         {VIDIOC_DV_TIMINGS_CAP     , "VIDIOC_DV_TIMINGS_CAP"     },
 #endif
+#ifdef VIDIOC_ENUM_FREQ_BANDS
         {VIDIOC_ENUM_FREQ_BANDS    , "VIDIOC_ENUM_FREQ_BANDS"    },
+#endif
 #ifdef VIDIOC_DBG_G_CHIP_INFO
         {VIDIOC_DBG_G_CHIP_INFO    , "VIDIOC_DBG_G_CHIP_INFO"    },
 #endif
