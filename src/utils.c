@@ -133,13 +133,25 @@ const char *akvcam_string_from_ioctl(uint cmd)
         {VIDIOC_UNSUBSCRIBE_EVENT  , "VIDIOC_UNSUBSCRIBE_EVENT"  },
         {VIDIOC_CREATE_BUFS        , "VIDIOC_CREATE_BUFS"        },
         {VIDIOC_PREPARE_BUF        , "VIDIOC_PREPARE_BUF"        },
+#ifdef VIDIOC_G_SELECTION
         {VIDIOC_G_SELECTION        , "VIDIOC_G_SELECTION"        },
+#endif
+#ifdef VIDIOC_S_SELECTION
         {VIDIOC_S_SELECTION        , "VIDIOC_S_SELECTION"        },
+#endif
+#ifdef VIDIOC_DECODER_CMD
         {VIDIOC_DECODER_CMD        , "VIDIOC_DECODER_CMD"        },
+#endif
         {VIDIOC_TRY_DECODER_CMD    , "VIDIOC_TRY_DECODER_CMD"    },
+#ifdef VIDIOC_ENUM_DV_TIMINGS
         {VIDIOC_ENUM_DV_TIMINGS    , "VIDIOC_ENUM_DV_TIMINGS"    },
+#endif
+#ifdef VIDIOC_QUERY_DV_TIMINGS
         {VIDIOC_QUERY_DV_TIMINGS   , "VIDIOC_QUERY_DV_TIMINGS"   },
+#endif
+#ifdef VIDIOC_DV_TIMINGS_CAP
         {VIDIOC_DV_TIMINGS_CAP     , "VIDIOC_DV_TIMINGS_CAP"     },
+#endif
         {VIDIOC_ENUM_FREQ_BANDS    , "VIDIOC_ENUM_FREQ_BANDS"    },
 #ifdef VIDIOC_DBG_G_CHIP_INFO
         {VIDIOC_DBG_G_CHIP_INFO    , "VIDIOC_DBG_G_CHIP_INFO"    },
