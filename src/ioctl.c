@@ -503,7 +503,7 @@ int akvcam_ioctls_try_fmt(akvcam_node_t node, struct v4l2_format *format)
 
     akvcam_format_delete(&temp_format);
 
-    memset(&format->fmt.pix, 0, sizeof(struct v4l2_pix_format));
+    memset(&format->fmt, 0, 200);
     format->fmt.pix.width = akvcam_format_width(nearest_format);
     format->fmt.pix.height = akvcam_format_height(nearest_format);
     format->fmt.pix.pixelformat = akvcam_format_fourcc(nearest_format);
