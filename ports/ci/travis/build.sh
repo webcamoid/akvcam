@@ -40,7 +40,7 @@ echo
 if [ ! -z "${USE_QEMU}" ]; then
     # Create the system image to boot with QEMU.
     qemu-img create -f raw ${system_image} 1g
-    mkfs.ext3 -F ${system_image}
+    mkfs.ext4 -F ${system_image}
 
     # Install bootstrap system
     mkdir ${system_mount_point}
@@ -93,6 +93,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     echo 'shutdown -h now' >> ${system_mount_point}/root/driver_test.sh
 
     umount ${system_mount_point}
+    fsck.ext4 -F ${system_image}
 
     echo
     echo "Booting system with custom kernel:"

@@ -56,6 +56,8 @@ matrix:
       - REPOSITORY=v4.14.66
       - KERNEL_VERSION=4.14.66-041466
       - KERNEL_VERSION_C=201808220733
+      - UNSIGNED_IMG=1
+      - NEED_MODULES=1
       - export USE_QEMU=1
   - os: linux
     sudo: required
