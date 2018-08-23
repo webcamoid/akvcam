@@ -219,6 +219,7 @@ int akvcam_controls_get_ext(akvcam_controls_t self,
                             struct v4l2_ext_controls *controls,
                             uint32_t flags)
 {
+#ifdef VIDIOC_QUERY_EXT_CTRL
     size_t i;
     __u32 id;
     struct v4l2_ext_control *control = NULL;
@@ -268,6 +269,9 @@ int akvcam_controls_get_ext(akvcam_controls_t self,
         kfree(control);
 
     return result;
+#else
+    return -ENOTTY;
+#endif
 }
 
 int akvcam_controls_set(akvcam_controls_t self, struct v4l2_control *control)
