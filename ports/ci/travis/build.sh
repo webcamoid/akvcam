@@ -50,7 +50,7 @@ if [ ! -z "${USE_QEMU}" ]; then
 
     # Copy kernel modules
     mkdir -p ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
-    cp -rf /lib/modules/${KERNEL_VERSION}-generic/* ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
+    cp -rvf /lib/modules/${KERNEL_VERSION}-generic/* ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
 
     # Configure auto login with root user
     sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
@@ -93,7 +93,6 @@ if [ ! -z "${USE_QEMU}" ]; then
     echo 'shutdown -h now' >> ${system_mount_point}/root/driver_test.sh
 
     umount ${system_mount_point}
-    fsck.ext4 -F ${system_image}
 
     echo
     echo "Booting system with custom kernel:"
