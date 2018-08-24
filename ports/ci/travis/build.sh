@@ -45,12 +45,12 @@ if [ ! -z "${USE_QEMU}" ]; then
     # Install bootstrap system
     mkdir ${system_mount_point}
     mount -o loop ${system_image} ${system_mount_point}
-    debootstrap --components=main,universe,multiverse --include=systemd,kmod,v4l-utils --arch ${SYSTEM_ARCH} --variant=minbase ${SYSTEM_VERSION} ${system_mount_point}
+    debootstrap --components=main,universe,multiverse --include=systemd,systemd-sysv,kmod,v4l-utils --arch ${SYSTEM_ARCH} --variant=minbase ${SYSTEM_VERSION} ${system_mount_point}
     mkdir -p ${system_mount_point}/{dev,proc,sys}
 
     # Copy kernel modules
     mkdir -p ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
-    cp -rvf /lib/modules/${KERNEL_VERSION}-generic/* ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
+    cp -rf /lib/modules/${KERNEL_VERSION}-generic/* ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
 
     # Configure auto login with root user
     sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
@@ -99,7 +99,9 @@ if [ ! -z "${USE_QEMU}" ]; then
     echo
     qemu-system-x86_64 \\
         -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \\
+        -initrd /boot/initrd.img-${KERNEL_VERSION}-generic \\
         -localtime \\
+        -m 512M \\
         -append "root=/dev/sda console=ttyS0,9600 systemd.unit=multi-user.target rw" \\
         -drive file=${system_image},format=raw \\
         --nographic \\

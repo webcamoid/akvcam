@@ -53,12 +53,12 @@ lupdate_only {
 }
 
 KERNEL_RELEASE = $$system(uname -r)
-isEmpty(LINUXINCLUDES): LINUXINCLUDES = /usr/lib/modules/$${KERNEL_RELEASE}/build
+isEmpty(KERNEL_DIR): KERNEL_DIR = /lib/modules/$${KERNEL_RELEASE}/build
 
 INCLUDEPATH += \
-    $${LINUXINCLUDES}/include \
-    $${LINUXINCLUDES}/include/linux \
-    $${LINUXINCLUDES}/arch/x86/include
+    $${KERNEL_DIR}/include \
+    $${KERNEL_DIR}/include/linux \
+    $${KERNEL_DIR}/arch/x86/include
 
 DEFINES += \
     __KERNEL__ \
@@ -72,7 +72,7 @@ OTHER_FILES += \
 DUMMY_FILES = .
 makedriver.input = DUMMY_FILES
 makedriver.output = $${PWD}/src/akvcam.ko
-makedriver.commands = cd $${PWD}/src; make; cd ..
+makedriver.commands = cd $${PWD}/src; make KERNEL_DIR=$${KERNEL_DIR}; cd ..
 makedriver.clean = \
     $${PWD}/src/*.ko \
     $${PWD}/src/*.o \
