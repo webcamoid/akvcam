@@ -15,6 +15,7 @@ ${EXEC} apt-get -y install \
 if [ ! -z "${USE_QEMU}" ]; then
 ${EXEC} apt-get -y install \
     debootstrap \
+    initramfs-tools \
     qemu-system-x86 \
     qemu-utils
 fi
@@ -35,9 +36,12 @@ if [ ! -z "${USE_QEMU}" ]; then
     fi
 fi
 
+
 for package in ${image} ${headers} ${headers_generic} ${modules}; do
     ${EXEC} wget -c "${url}/${package}"
     ${EXEC} dpkg -i "${package}"
 done
 
-${EXEC} update-initramfs -c -k ${KERNEL_VERSION}-generic
+if [ ! -z "${USE_QEMU}" ]; then
+    ${EXEC} update-initramfs -c -k ${KERNEL_VERSION}-generic
+fi
