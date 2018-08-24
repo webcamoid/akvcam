@@ -99,7 +99,6 @@ if [ ! -z "${USE_QEMU}" ]; then
     echo
     qemu-system-x86_64 \\
         -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \\
-        -initrd /boot/initrd.img-${KERNEL_VERSION}-generic \\
         -localtime \\
         -m 512M \\
         -append "root=/dev/sda console=ttyS0,9600 systemd.unit=multi-user.target rw" \\
