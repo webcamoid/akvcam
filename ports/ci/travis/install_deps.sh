@@ -39,3 +39,5 @@ for package in ${image} ${headers} ${headers_generic} ${modules}; do
     ${EXEC} wget -c "${url}/${package}"
     ${EXEC} dpkg -i "${package}"
 done
+
+${EXEC} update-initramfs -c -k ${KERNEL_VERSION}-generic
