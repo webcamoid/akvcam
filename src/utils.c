@@ -20,7 +20,7 @@
 
 #include "utils.h"
 
-static struct
+static struct akvcam_utils
 {
     uint64_t id;
     int last_error;
@@ -65,9 +65,7 @@ const char *akvcam_string_from_ioctl(uint cmd)
         {VIDIOC_S_FBUF             , "VIDIOC_S_FBUF"             },
         {VIDIOC_OVERLAY            , "VIDIOC_OVERLAY"            },
         {VIDIOC_QBUF               , "VIDIOC_QBUF"               },
-#ifdef VIDIOC_EXPBUF
         {VIDIOC_EXPBUF             , "VIDIOC_EXPBUF"             },
-#endif
         {VIDIOC_DQBUF              , "VIDIOC_DQBUF"              },
         {VIDIOC_STREAMON           , "VIDIOC_STREAMON"           },
         {VIDIOC_STREAMOFF          , "VIDIOC_STREAMOFF"          },
@@ -87,12 +85,8 @@ const char *akvcam_string_from_ioctl(uint cmd)
         {VIDIOC_QUERYMENU          , "VIDIOC_QUERYMENU"          },
         {VIDIOC_G_INPUT            , "VIDIOC_G_INPUT"            },
         {VIDIOC_S_INPUT            , "VIDIOC_S_INPUT"            },
-#ifdef VIDIOC_G_EDID
         {VIDIOC_G_EDID             , "VIDIOC_G_EDID"             },
-#endif
-#ifdef VIDIOC_S_EDID
         {VIDIOC_S_EDID             , "VIDIOC_S_EDID"             },
-#endif
         {VIDIOC_G_OUTPUT           , "VIDIOC_G_OUTPUT"           },
         {VIDIOC_S_OUTPUT           , "VIDIOC_S_OUTPUT"           },
         {VIDIOC_ENUMOUTPUT         , "VIDIOC_ENUMOUTPUT"         },
@@ -131,39 +125,17 @@ const char *akvcam_string_from_ioctl(uint cmd)
         {VIDIOC_DQEVENT            , "VIDIOC_DQEVENT"            },
         {VIDIOC_SUBSCRIBE_EVENT    , "VIDIOC_SUBSCRIBE_EVENT"    },
         {VIDIOC_UNSUBSCRIBE_EVENT  , "VIDIOC_UNSUBSCRIBE_EVENT"  },
-#ifdef VIDIOC_CREATE_BUFS
         {VIDIOC_CREATE_BUFS        , "VIDIOC_CREATE_BUFS"        },
-#endif
-#ifdef VIDIOC_PREPARE_BUF
         {VIDIOC_PREPARE_BUF        , "VIDIOC_PREPARE_BUF"        },
-#endif
-#ifdef VIDIOC_G_SELECTION
         {VIDIOC_G_SELECTION        , "VIDIOC_G_SELECTION"        },
-#endif
-#ifdef VIDIOC_S_SELECTION
         {VIDIOC_S_SELECTION        , "VIDIOC_S_SELECTION"        },
-#endif
-#ifdef VIDIOC_DECODER_CMD
         {VIDIOC_DECODER_CMD        , "VIDIOC_DECODER_CMD"        },
-#endif
-#ifdef VIDIOC_TRY_DECODER_CMD
         {VIDIOC_TRY_DECODER_CMD    , "VIDIOC_TRY_DECODER_CMD"    },
-#endif
-#ifdef VIDIOC_ENUM_DV_TIMINGS
         {VIDIOC_ENUM_DV_TIMINGS    , "VIDIOC_ENUM_DV_TIMINGS"    },
-#endif
-#ifdef VIDIOC_QUERY_DV_TIMINGS
         {VIDIOC_QUERY_DV_TIMINGS   , "VIDIOC_QUERY_DV_TIMINGS"   },
-#endif
-#ifdef VIDIOC_DV_TIMINGS_CAP
         {VIDIOC_DV_TIMINGS_CAP     , "VIDIOC_DV_TIMINGS_CAP"     },
-#endif
-#ifdef VIDIOC_ENUM_FREQ_BANDS
         {VIDIOC_ENUM_FREQ_BANDS    , "VIDIOC_ENUM_FREQ_BANDS"    },
-#endif
-#ifdef VIDIOC_DBG_G_CHIP_INFO
         {VIDIOC_DBG_G_CHIP_INFO    , "VIDIOC_DBG_G_CHIP_INFO"    },
-#endif
 #ifdef VIDIOC_QUERY_EXT_CTRL
         {VIDIOC_QUERY_EXT_CTRL     , "VIDIOC_QUERY_EXT_CTRL"     },
 #endif

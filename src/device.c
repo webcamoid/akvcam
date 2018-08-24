@@ -70,12 +70,8 @@ akvcam_device_t akvcam_device_new(const char *name, AKVCAM_DEVICE_TYPE type)
     snprintf(self->vdev->name, 32, "%s", name);
     self->vdev->v4l2_dev = &self->v4l2_dev;
     self->vdev->vfl_type = VFL_TYPE_GRABBER;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 7, 0)
     self->vdev->vfl_dir =
             type == AKVCAM_DEVICE_TYPE_OUTPUT? VFL_DIR_TX: VFL_DIR_RX;
-#endif
-
     self->vdev->minor = -1;
     self->vdev->fops = akvcam_node_fops();
     self->vdev->tvnorms = V4L2_STD_ALL;
