@@ -17,12 +17,19 @@
  */
 
 #include <linux/slab.h>
+#include <linux/version.h>
 #include <linux/videodev2.h>
 
 #include "format.h"
 #include "list.h"
 #include "object.h"
 #include "utils.h"
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)
+#define DEFAULT_COLORSPACE V4L2_COLORSPACE_SRGB
+#else
+#define DEFAULT_COLORSPACE V4L2_COLORSPACE_RAW
+#endif
 
 struct akvcam_format
 {
@@ -358,4 +365,44 @@ struct akvcam_list *akvcam_format_frame_rates(struct akvcam_list *formats,
     }
 
     return supported_frame_rates;
+}
+
+akvcam_format_t akvcam_format_from_v4l2_nr(struct akvcam_list *formats,
+                                           struct v4l2_format *format)
+{
+    akvcam_list_element_t element = NULL;
+    akvcam_format_t akformat = NULL;
+
+    for (;;) {
+        akformat = akvcam_list_next(formats, &element);
+
+        if (!element)
+            break;
+
+        if (format->fmt.pix.width == akvcam_format_width(akformat)
+            && format->fmt.pix.height == akvcam_format_height(akformat)
+            && format->fmt.pix.pixelformat == akvcam_format_fourcc(akformat)
+            && format->fmt.pix.field == V4L2_FIELD_NONE
+            && format->fmt.pix.bytesperline == (__u32) akvcam_format_bypl(akformat)
+            && format->fmt.pix.sizeimage == (__u32) akvcam_format_size(akformat)
+            && format->fmt.pix.colorspace == DEFAULT_COLORSPACE) {
+            return akformat;
+        }
+    }
+
+    return NULL;
+}
+
+akvcam_format_t akvcam_format_from_v4l2(struct akvcam_list *formats,
+                                        struct v4l2_format *format)
+{
+    akvcam_format_t akformat =
+            akvcam_format_from_v4l2_nr(formats, format);
+
+    if (!akformat)
+        return NULL;
+
+    akvcam_object_ref(AKVCAM_TO_OBJECT(akformat));
+
+    return akformat;
 }

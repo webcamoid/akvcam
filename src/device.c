@@ -20,6 +20,7 @@
 #include <media/v4l2-device.h>
 
 #include "device.h"
+#include "buffers.h"
 #include "controls.h"
 #include "driver.h"
 #include "events.h"
@@ -35,11 +36,13 @@ struct akvcam_device
     akvcam_controls_t controls;
     akvcam_list_tt(akvcam_node_t) nodes;
     akvcam_node_t priority_node;
+    akvcam_buffers_t buffers;
     struct v4l2_device v4l2_dev;
     struct video_device *vdev;
     AKVCAM_DEVICE_TYPE type;
     enum v4l2_priority priority;
     bool is_registered;
+    bool streaming;
 };
 
 void akvcam_device_controls_changed(akvcam_device_t self,
@@ -78,6 +81,7 @@ akvcam_device_t akvcam_device_new(const char *name, AKVCAM_DEVICE_TYPE type)
     self->vdev->release = video_device_release_empty;
     video_set_drvdata(self->vdev, self);
     self->is_registered = false;
+    self->buffers = akvcam_buffers_new(self);
 
     return self;
 }
@@ -90,6 +94,7 @@ void akvcam_device_delete(akvcam_device_t *self)
     if (akvcam_object_unref((*self)->self) > 0)
         return;
 
+    akvcam_buffers_delete(&((*self)->buffers));
     akvcam_device_unregister(*self);
     video_device_release((*self)->vdev);
     akvcam_list_delete(&((*self)->nodes));
@@ -174,9 +179,16 @@ struct akvcam_list *akvcam_device_nodes(akvcam_device_t self)
     return self->nodes;
 }
 
-enum v4l2_priority akvcam_device_priority(akvcam_device_t self)
+struct akvcam_buffers *akvcam_device_buffers_nr(akvcam_device_t self)
 {
-    return self->priority;
+    return self->buffers;
+}
+
+struct akvcam_buffers *akvcam_device_buffers(akvcam_device_t self)
+{
+    akvcam_object_ref(AKVCAM_TO_OBJECT(self->buffers));
+
+    return self->buffers;
 }
 
 struct akvcam_node *akvcam_device_priority_node(akvcam_device_t self)
@@ -190,6 +202,16 @@ void akvcam_device_set_priority(akvcam_device_t self,
 {
     self->priority = priority;
     self->priority_node = node;
+}
+
+enum v4l2_priority akvcam_device_priority(akvcam_device_t self)
+{
+    return self->priority;
+}
+
+void akvcam_device_set_streaming(akvcam_device_t self, bool streaming)
+{
+    self->streaming = streaming;
 }
 
 size_t akvcam_device_sizeof(void)

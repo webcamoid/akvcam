@@ -11,6 +11,7 @@ akvcam-objs := \
 	format.o \
 	ioctl.o \
 	list.o \
+	mmap.o \
 	mutex.o \
 	node.o \
 	object.o \

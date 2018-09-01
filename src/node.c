@@ -26,6 +26,7 @@
 #include "format.h"
 #include "ioctl.h"
 #include "list.h"
+#include "mmap.h"
 #include "mutex.h"
 #include "object.h"
 
@@ -34,7 +35,6 @@ struct akvcam_node
     akvcam_object_t self;
     akvcam_device_t device;
     akvcam_format_t format;
-    akvcam_buffers_t buffers;
     akvcam_events_t events;
     akvcam_ioctl_t ioctls;
     akvcam_mutex_t mutex;
@@ -44,14 +44,10 @@ static struct v4l2_file_operations akvcam_fops;
 
 akvcam_node_t akvcam_node_new(struct akvcam_device *device)
 {
-    enum v4l2_buf_type buffer_type;
     akvcam_node_t self = kzalloc(sizeof(struct akvcam_node), GFP_KERNEL);
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_node_delete);
     self->device = device;
     self->events = akvcam_events_new();
-    buffer_type = akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_OUTPUT?
-                V4L2_BUF_TYPE_VIDEO_OUTPUT: V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    self->buffers = akvcam_buffers_new(buffer_type);
     self->format = akvcam_format_new(0, 0, 0, NULL);
     akvcam_format_copy(self->format,
                        akvcam_list_at(akvcam_device_formats_nr(device), 0));
@@ -63,6 +59,7 @@ akvcam_node_t akvcam_node_new(struct akvcam_device *device)
 
 void akvcam_node_delete(akvcam_node_t *self)
 {
+    akvcam_buffers_t buffers;
     akvcam_node_t priority_node;
 
     if (!self || !*self)
@@ -71,6 +68,8 @@ void akvcam_node_delete(akvcam_node_t *self)
     if (akvcam_object_unref((*self)->self) > 0)
         return;
 
+    buffers = akvcam_device_buffers_nr((*self)->device);
+    akvcam_buffers_deallocate(buffers, *self);
     priority_node = akvcam_device_priority_node((*self)->device);
 
     if (priority_node == *self)
@@ -80,7 +79,6 @@ void akvcam_node_delete(akvcam_node_t *self)
 
     akvcam_mutex_delete(&((*self)->mutex));
     akvcam_ioctl_delete(&((*self)->ioctls));
-    akvcam_buffers_delete(&((*self)->buffers));
     akvcam_format_delete(&((*self)->format));
     akvcam_events_delete(&((*self)->events));
     akvcam_object_free(&((*self)->self));
@@ -110,18 +108,6 @@ struct akvcam_format *akvcam_node_format(akvcam_node_t self)
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->format));
 
     return self->format;
-}
-
-struct akvcam_buffers *akvcam_node_buffers_nr(akvcam_node_t self)
-{
-    return self->buffers;
-}
-
-struct akvcam_buffers *akvcam_node_buffers(akvcam_node_t self)
-{
-    akvcam_object_ref(AKVCAM_TO_OBJECT(self->buffers));
-
-    return self->buffers;
 }
 
 struct akvcam_events *akvcam_node_events_nr(akvcam_node_t self)
@@ -165,9 +151,18 @@ ssize_t akvcam_node_read(struct file *filp,
                          size_t size,
                          loff_t *offset)
 {
+    akvcam_device_t device;
+    akvcam_buffers_t buffers;
     printk(KERN_INFO "%s()\n", __FUNCTION__);
+    device = akvcam_device_from_file_nr(filp);
+    buffers = akvcam_device_buffers_nr(device);
 
-    return 0;
+    if (akvcam_buffers_size(buffers) > 0)
+        return -EBUSY;
+
+    // FIXME: Fill frame here.
+
+    return (ssize_t) size;
 }
 
 ssize_t akvcam_node_write(struct file *filp,
@@ -196,6 +191,13 @@ unsigned int akvcam_node_poll(struct file *filp, struct poll_table_struct *wait)
     printk(KERN_INFO "%s()\n", __FUNCTION__);
 
     return akvcam_events_poll(node->events, filp, wait);
+}
+
+int akvcam_node_mmap(struct file *filp, struct vm_area_struct *vma)
+{
+    printk(KERN_INFO "%s()\n", __FUNCTION__);
+
+    return akvcam_mmap_do(filp, vma);
 }
 
 int akvcam_node_release(struct file *filp)
@@ -227,11 +229,12 @@ int akvcam_node_release(struct file *filp)
 }
 
 static struct v4l2_file_operations akvcam_fops = {
-    .owner          = THIS_MODULE        ,
-    .open           = akvcam_node_open   ,
-    .read           = akvcam_node_read   ,
-    .write          = akvcam_node_write  ,
-    .unlocked_ioctl = akvcam_node_ioctl  ,
-    .poll           = akvcam_node_poll   ,
-    .release        = akvcam_node_release,
+    .owner             = THIS_MODULE                  ,
+    .open              = akvcam_node_open             ,
+    .read              = akvcam_node_read             ,
+    .write             = akvcam_node_write            ,
+    .unlocked_ioctl    = akvcam_node_ioctl            ,
+    .poll              = akvcam_node_poll             ,
+    .mmap              = akvcam_node_mmap             ,
+    .release           = akvcam_node_release          ,
 };

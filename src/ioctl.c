@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
+#include <linux/uvcvideo.h>
 
 #include "ioctl.h"
 #include "buffers.h"
@@ -102,6 +103,11 @@ int akvcam_ioctls_unsubscribe_event(akvcam_node_t node,
 int akvcam_ioctls_dqevent(akvcam_node_t node, struct v4l2_event *event);
 int akvcam_ioctls_reqbufs(akvcam_node_t node, struct v4l2_requestbuffers *request);
 int akvcam_ioctls_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer);
+int akvcam_ioctl_create_bufs(akvcam_node_t node, struct v4l2_create_buffers *buffers);
+int akvcam_ioctl_qbuf(akvcam_node_t node, struct v4l2_buffer *buffer);
+int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer);
+int akvcam_ioctl_streamon(akvcam_node_t node, const int *type);
+int akvcam_ioctl_streamoff(akvcam_node_t node, const int *type);
 
 static akvcam_ioctl_handler akvcam_ioctls_private[] = {
     AKVCAM_HANDLER(VIDIOC_QUERYCAP           , akvcam_ioctls_querycap           , struct v4l2_capability        ),
@@ -132,6 +138,11 @@ static akvcam_ioctl_handler akvcam_ioctls_private[] = {
     AKVCAM_HANDLER(VIDIOC_DQEVENT            , akvcam_ioctls_dqevent            , struct v4l2_event             ),
     AKVCAM_HANDLER(VIDIOC_REQBUFS            , akvcam_ioctls_reqbufs            , struct v4l2_requestbuffers    ),
     AKVCAM_HANDLER(VIDIOC_QUERYBUF           , akvcam_ioctls_querybuf           , struct v4l2_buffer            ),
+    AKVCAM_HANDLER(VIDIOC_CREATE_BUFS        , akvcam_ioctl_create_bufs         , struct v4l2_create_buffers    ),
+    AKVCAM_HANDLER(VIDIOC_QBUF               , akvcam_ioctl_qbuf                , struct v4l2_buffer            ),
+    AKVCAM_HANDLER(VIDIOC_DQBUF              , akvcam_ioctl_dqbuf               , struct v4l2_buffer            ),
+    AKVCAM_HANDLER(VIDIOC_STREAMON           , akvcam_ioctl_streamon            , const int                     ),
+    AKVCAM_HANDLER(VIDIOC_STREAMOFF          , akvcam_ioctl_streamoff           , const int                     ),
 
     AKVCAM_HANDLER_IGNORE(VIDIOC_CROPCAP),
     AKVCAM_HANDLER_IGNORE(VIDIOC_DBG_G_REGISTER),
@@ -264,9 +275,9 @@ int akvcam_ioctls_querycap(akvcam_node_t node,
     else
         capabilities = V4L2_CAP_VIDEO_CAPTURE;
 
-    capabilities |= V4L2_CAP_STREAMING
+    capabilities |= V4L2_CAP_READWRITE
+                 |  V4L2_CAP_STREAMING
                  |  V4L2_CAP_EXT_PIX_FORMAT;
-//    capabilities |= V4L2_CAP_READWRITE;
 
     capability->capabilities = capabilities | V4L2_CAP_DEVICE_CAPS;
     capability->device_caps = capabilities;
@@ -746,16 +757,93 @@ int akvcam_ioctls_dqevent(akvcam_node_t node, struct v4l2_event *event)
 
 int akvcam_ioctls_reqbufs(akvcam_node_t node, struct v4l2_requestbuffers *request)
 {
+    akvcam_device_t device;
     akvcam_buffers_t buffers;
     printk(KERN_INFO "%s()\n", __FUNCTION__);
-    buffers = akvcam_node_buffers_nr(node);
+    device = akvcam_node_device_nr(node);
+    buffers = akvcam_device_buffers_nr(device);
 
-    return akvcam_buffers_allocate(buffers, request)? 0: -EINVAL;
+    return akvcam_buffers_allocate(buffers, node, request);
 }
 
 int akvcam_ioctls_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer)
 {
+    akvcam_device_t device;
+    akvcam_buffers_t buffers;
     printk(KERN_INFO "%s()\n", __FUNCTION__);
+    device = akvcam_node_device_nr(node);
+    buffers = akvcam_device_buffers_nr(device);
 
-    return ENOTTY;
+    return akvcam_buffers_fill(buffers, buffer)? 0: -EINVAL;
+}
+
+int akvcam_ioctl_create_bufs(akvcam_node_t node, struct v4l2_create_buffers *buffers)
+{
+    akvcam_device_t device;
+    akvcam_buffers_t buffs;
+    printk(KERN_INFO "%s()\n", __FUNCTION__);
+    device = akvcam_node_device_nr(node);
+    buffs = akvcam_device_buffers_nr(device);
+
+    return akvcam_buffers_create(buffs, node, buffers);
+}
+
+int akvcam_ioctl_qbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
+{
+    akvcam_device_t device;
+    akvcam_buffers_t buffers;
+    printk(KERN_INFO "%s()\n", __FUNCTION__);
+    device = akvcam_node_device_nr(node);
+    buffers = akvcam_device_buffers_nr(device);
+
+    return akvcam_buffers_queue(buffers, buffer);
+}
+
+int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
+{
+    akvcam_device_t device;
+    akvcam_buffers_t buffers;
+    printk(KERN_INFO "%s()\n", __FUNCTION__);
+    device = akvcam_node_device_nr(node);
+    buffers = akvcam_device_buffers_nr(device);
+
+    return akvcam_buffers_dequeue(buffers, buffer);
+}
+
+int akvcam_ioctl_streamon(akvcam_node_t node, const int *type)
+{
+    akvcam_device_t device;
+    int device_type;
+
+    printk(KERN_INFO "%s()\n", __FUNCTION__);
+    device = akvcam_node_device_nr(node);
+    device_type = akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_OUTPUT?
+                V4L2_BUF_TYPE_VIDEO_OUTPUT:
+                V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+    if (*type != device_type)
+        return -EINVAL;
+
+    akvcam_device_set_streaming(device, true);
+
+    return 0;
+}
+
+int akvcam_ioctl_streamoff(akvcam_node_t node, const int *type)
+{
+    akvcam_device_t device;
+    int device_type;
+
+    printk(KERN_INFO "%s()\n", __FUNCTION__);
+    device = akvcam_node_device_nr(node);
+    device_type = akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_OUTPUT?
+                V4L2_BUF_TYPE_VIDEO_OUTPUT:
+                V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+    if (*type != device_type)
+        return -EINVAL;
+
+    akvcam_device_set_streaming(device, false);
+
+    return 0;
 }

@@ -40,6 +40,8 @@ void akvcam_list_delete(akvcam_list_t *self);
 size_t akvcam_list_size(akvcam_list_t self);
 bool akvcam_list_empty(akvcam_list_t self);
 void *akvcam_list_at(akvcam_list_t self, size_t i);
+void *akvcam_list_front(akvcam_list_t self);
+void *akvcam_list_back(akvcam_list_t self);
 bool akvcam_list_push_back(akvcam_list_t self,
                            void *data,
                            akvcam_deleter_t deleter);

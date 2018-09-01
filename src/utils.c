@@ -16,6 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/uvcvideo.h>
 #include <linux/videodev2.h>
 
 #include "utils.h"
@@ -139,6 +140,8 @@ const char *akvcam_string_from_ioctl(uint cmd)
 #ifdef VIDIOC_QUERY_EXT_CTRL
         {VIDIOC_QUERY_EXT_CTRL     , "VIDIOC_QUERY_EXT_CTRL"     },
 #endif
+        {UVCIOC_CTRL_MAP           , "UVCIOC_CTRL_MAP"           },
+        {UVCIOC_CTRL_QUERY         , "UVCIOC_CTRL_QUERY"         },
         {0                         , ""                          },
     };
 

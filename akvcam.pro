@@ -31,12 +31,14 @@ lupdate_only {
         src/format.h \
         src/ioctl.h \
         src/list.h \
+        src/mmap.h \
         src/mutex.h \
         src/node.h \
         src/object.h \
         src/utils.h
 
     SOURCES += \
+        src/module.c \
         src/buffers.c \
         src/controls.c \
         src/device.c \
@@ -45,7 +47,7 @@ lupdate_only {
         src/format.c \
         src/ioctl.c \
         src/list.c \
-        src/module.c \
+        src/mmap.c \
         src/mutex.c \
         src/node.c \
         src/object.c \
@@ -64,7 +66,8 @@ DEFINES += \
     __KERNEL__ \
     KBUILD_MODNAME=\"\\\"\\\"\" \
     CONFIG_PCI \
-    CONFIG_HZ=0
+    CONFIG_HZ=0 \
+    CONFIG_PAGE_OFFSET=0
 
 OTHER_FILES += \
     src/Makefile
@@ -84,5 +87,3 @@ QMAKE_EXTRA_COMPILERS += makedriver
 PRE_TARGETDEPS += compiler_makedriver_make_all
 
 # sudo modprobe videodev
-# sudo modprobe videobuf2-v4l2
-# sudo modprobe videobuf2-vmalloc

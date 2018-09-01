@@ -33,6 +33,7 @@ typedef struct akvcam_device *akvcam_device_t;
 struct akvcam_controls;
 struct akvcam_list;
 struct akvcam_node;
+struct akvcam_buffers;
 struct file;
 
 // public
@@ -49,11 +50,15 @@ struct akvcam_controls *akvcam_device_controls_nr(akvcam_device_t self);
 struct akvcam_controls *akvcam_device_controls(akvcam_device_t self);
 struct akvcam_list *akvcam_device_nodes_nr(akvcam_device_t self);
 struct akvcam_list *akvcam_device_nodes(akvcam_device_t self);
+struct akvcam_buffers *akvcam_device_buffers_nr(akvcam_device_t self);
+struct akvcam_buffers *akvcam_device_buffers(akvcam_device_t self);
 enum v4l2_priority akvcam_device_priority(akvcam_device_t self);
 struct akvcam_node *akvcam_device_priority_node(akvcam_device_t self);
 void akvcam_device_set_priority(akvcam_device_t self,
                                 enum v4l2_priority priority,
                                 struct akvcam_node *node);
+enum v4l2_priority akvcam_device_priority(akvcam_device_t self);
+void akvcam_device_set_streaming(akvcam_device_t self, bool streaming);
 
 // public static
 size_t akvcam_device_sizeof(void);

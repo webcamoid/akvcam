@@ -83,21 +83,37 @@ void *akvcam_list_at(akvcam_list_t self, size_t i)
     if (!self)
         return NULL;
 
-    if (i >= self->size)
+    if (i >= self->size || self->size < 1)
         return NULL;
 
-    if (i == 0)
-        return self->head->data;
+    if (i == 0) {
+        element = self->head;
+    } else if (i == self->size - 1) {
+        element = self->tail;
+    } else {
+        element = self->head;
 
-    if (i == self->size - 1)
-        return self->tail;
-
-    element = self->head;
-
-    for (e = 0; e < i; e++)
-        element = element->next;
+        for (e = 0; e < i; e++)
+            element = element->next;
+    }
 
     return element->data;
+}
+
+void *akvcam_list_front(akvcam_list_t self)
+{
+    if (!self || self->size < 1)
+        return NULL;
+
+    return self->head->data;
+}
+
+void *akvcam_list_back(akvcam_list_t self)
+{
+    if (!self || self->size < 1)
+        return NULL;
+
+    return self->tail->data;
 }
 
 bool akvcam_list_push_back(akvcam_list_t self,

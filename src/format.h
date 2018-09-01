@@ -22,9 +22,10 @@
 #include <linux/types.h>
 
 struct akvcam_format;
+typedef struct akvcam_format *akvcam_format_t;
 struct akvcam_list;
 struct v4l2_fract;
-typedef struct akvcam_format *akvcam_format_t;
+struct v4l2_format;
 
 // public
 akvcam_format_t akvcam_format_new(__u32 fourcc,
@@ -63,5 +64,9 @@ struct akvcam_list *akvcam_format_frame_rates(struct akvcam_list *formats,
                                               __u32 fourcc,
                                               __u32 width,
                                               __u32 height);
+akvcam_format_t akvcam_format_from_v4l2_nr(struct akvcam_list *formats,
+                                           struct v4l2_format *format);
+akvcam_format_t akvcam_format_from_v4l2(struct akvcam_list *formats,
+                                        struct v4l2_format *format);
 
 #endif // AKVCAM_FORMAT_H

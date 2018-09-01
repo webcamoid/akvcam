@@ -16,27 +16,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef AKVCAM_NODE_H
-#define AKVCAM_NODE_H
+#ifndef AKVCAM_MMAP_H
+#define AKVCAM_MMAP_H
 
-struct akvcam_node;
-typedef struct akvcam_node *akvcam_node_t;
-struct akvcam_device;
-struct akvcam_format;
-struct akvcam_events;
+struct file;
+struct vm_area_struct;
 
-// public
-akvcam_node_t akvcam_node_new(struct akvcam_device *device);
-void akvcam_node_delete(akvcam_node_t *self);
+int akvcam_mmap_do(struct file *filp, struct vm_area_struct *vma);
 
-struct akvcam_device *akvcam_node_device_nr(akvcam_node_t self);
-struct akvcam_device *akvcam_node_device(akvcam_node_t self);
-struct akvcam_format *akvcam_node_format_nr(akvcam_node_t self);
-struct akvcam_format *akvcam_node_format(akvcam_node_t self);
-struct akvcam_events *akvcam_node_events_nr(akvcam_node_t self);
-struct akvcam_events *akvcam_node_events(akvcam_node_t self);
-
-// static
-struct v4l2_file_operations *akvcam_node_fops(void);
-
-#endif // AKVCAM_NODE_H
+#endif // AKVCAM_MMAP_H
