@@ -75,7 +75,6 @@ akvcam_controls_t akvcam_controls_new(void)
     size_t i;
     akvcam_controls_t self = kzalloc(sizeof(struct akvcam_controls), GFP_KERNEL);
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_controls_delete);
-    memset(&self->controls_changed, 0, sizeof(akvcam_controls_changed_callback));
 
     // Check the number of controls available.
     self->n_controls = 0;
@@ -337,6 +336,7 @@ int akvcam_controls_set_ext(akvcam_controls_t self,
 
         if (self->controls_changed.callback) {
             control_params = akvcam_controls_params_by_id(self, control->id);
+            memset(&event, 0, sizeof(struct v4l2_event));
             event.type = V4L2_EVENT_CTRL;
             event.id = control->id;
             event.u.ctrl.changes = V4L2_EVENT_CTRL_CH_VALUE;

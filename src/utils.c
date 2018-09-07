@@ -55,6 +55,8 @@ const char *akvcam_string_from_ioctl(uint cmd)
     size_t i;
     static char unknown[1024];
     static akvcam_utils_ioctl_strings ioctl_strings[] = {
+        {UVCIOC_CTRL_MAP           , "UVCIOC_CTRL_MAP"           },
+        {UVCIOC_CTRL_QUERY         , "UVCIOC_CTRL_QUERY"         },
         {VIDIOC_QUERYCAP           , "VIDIOC_QUERYCAP"           },
         {VIDIOC_RESERVED           , "VIDIOC_RESERVED"           },
         {VIDIOC_ENUM_FMT           , "VIDIOC_ENUM_FMT"           },
@@ -140,8 +142,6 @@ const char *akvcam_string_from_ioctl(uint cmd)
 #ifdef VIDIOC_QUERY_EXT_CTRL
         {VIDIOC_QUERY_EXT_CTRL     , "VIDIOC_QUERY_EXT_CTRL"     },
 #endif
-        {UVCIOC_CTRL_MAP           , "UVCIOC_CTRL_MAP"           },
-        {UVCIOC_CTRL_QUERY         , "UVCIOC_CTRL_QUERY"         },
         {0                         , ""                          },
     };
 

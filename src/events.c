@@ -24,6 +24,7 @@
 #include "events.h"
 #include "list.h"
 #include "object.h"
+#include "rbuffer.h"
 
 #define AKVCAM_EVENTS_QUEUE_MAX 32
 
@@ -31,11 +32,8 @@ struct akvcam_events
 {
     akvcam_object_t self;
     akvcam_list_tt(struct v4l2_event_subscription) subscriptions;
+    akvcam_rbuffer_tt(struct v4l2_event) events;
     wait_queue_head_t event_signaled;
-    struct v4l2_event *events_buffer;
-    size_t read;
-    size_t write;
-    size_t n_events;
     __u32 sequence;
 };
 
@@ -48,13 +46,11 @@ akvcam_events_t akvcam_events_new(void)
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_events_delete);
     self->subscriptions = akvcam_list_new();
     init_waitqueue_head(&self->event_signaled);
-    self->events_buffer = kzalloc(AKVCAM_EVENTS_QUEUE_MAX
-                                  * sizeof(struct v4l2_event),
-                                  GFP_KERNEL);
-
-    self->read = 0;
-    self->write = 0;
-    self->n_events = 0;
+    self->events = akvcam_rbuffer_new();
+    akvcam_rbuffer_resize(self->events,
+                          AKVCAM_EVENTS_QUEUE_MAX,
+                          sizeof(struct v4l2_event),
+                          AKVCAM_RBUFFER_MEMORY_TYPE_KMALLOC);
     self->sequence = 0;
 
     return self;
@@ -68,7 +64,7 @@ void akvcam_events_delete(akvcam_events_t *self)
     if (akvcam_object_unref((*self)->self) > 0)
         return;
 
-    kfree((*self)->events_buffer);
+    akvcam_rbuffer_delete(&((*self)->events));
     akvcam_list_delete(&((*self)->subscriptions));
     akvcam_object_free(&((*self)->self));
     kfree(*self);
@@ -112,9 +108,7 @@ void akvcam_events_unsubscribe(akvcam_events_t self,
 void akvcam_events_unsubscribe_all(akvcam_events_t self)
 {
     akvcam_list_clear(self->subscriptions);
-    self->read = 0;
-    self->write = 0;
-    self->n_events = 0;
+    akvcam_rbuffer_clear(self->events);
     self->sequence = 0;
 }
 
@@ -122,8 +116,8 @@ unsigned int akvcam_events_poll(akvcam_events_t self,
                                 struct file *filp,
                                 struct poll_table_struct *wait)
 {
-    if (self->n_events > 0)
-        return POLLPRI;
+    if (akvcam_rbuffer_data_size(self->events) > 0)
+        return POLLIN | POLLPRI | POLLRDNORM;
 
     poll_wait(filp, &self->event_signaled, wait);
 
@@ -137,32 +131,25 @@ bool akvcam_events_check(const struct v4l2_event_subscription *sub,
     return sub->type == event->type && sub->id == event->id;
 }
 
-bool akvcam_events_enqueue(akvcam_events_t self, struct v4l2_event *event)
+bool akvcam_events_enqueue(akvcam_events_t self,
+                           const struct v4l2_event *event)
 {
     struct v4l2_event *qevent;
 
-    // Check if someone is subscribed to this event.
-    if (!akvcam_list_find(self->subscriptions,
-                          event,
-                          0,
-                          (akvcam_are_equals_t) akvcam_events_check)) {
-        return false;
+    if (event->type != V4L2_EVENT_FRAME_SYNC) {
+        // Check if someone is subscribed to this event.
+        if (!akvcam_list_find(self->subscriptions,
+                              event,
+                              0,
+                              (akvcam_are_equals_t) akvcam_events_check)) {
+            return false;
+        }
     }
 
-    // Buffer is full, advance the read pointer.
-    if (self->n_events == AKVCAM_EVENTS_QUEUE_MAX)
-        self->read = (self->read + 1) % AKVCAM_EVENTS_QUEUE_MAX;
-
-    // Put a new event in the queue, discard old events if necessary.
-    qevent = self->events_buffer + self->write;
-    memcpy(qevent, event, sizeof(struct v4l2_event));
+    qevent = akvcam_rbuffer_queue(self->events, event);
     qevent->sequence = self->sequence++;
     ktime_get_ts(&qevent->timestamp);
     memset(&qevent->reserved, 0, 8 * sizeof(__u32));
-    self->write = (self->write + 1) % AKVCAM_EVENTS_QUEUE_MAX;
-
-    if (self->n_events < AKVCAM_EVENTS_QUEUE_MAX)
-        self->n_events++;
 
     // Inform about the new event.
     wake_up_all(&self->event_signaled);
@@ -172,61 +159,39 @@ bool akvcam_events_enqueue(akvcam_events_t self, struct v4l2_event *event)
 
 bool akvcam_events_dequeue(akvcam_events_t self, struct v4l2_event *event)
 {
-    struct v4l2_event *qevent;
-
-    if (self->n_events < 1)
+    if (akvcam_rbuffer_data_size(self->events) < 1)
         return false;
 
-    qevent = self->events_buffer + self->read;
-    memcpy(event, qevent, sizeof(struct v4l2_event));
-    self->read = (self->read + 1) % AKVCAM_EVENTS_QUEUE_MAX;
-    event->pending = (__u32) --self->n_events;
+    akvcam_rbuffer_dequeue(self->events, event, false, false);
+    event->pending = (__u32) akvcam_rbuffer_n_data(self->events);
 
     return true;
 }
 
 bool akvcam_events_available(akvcam_events_t self)
 {
-    return self->n_events > 0;
+    return akvcam_rbuffer_data_size(self->events) > 0;
 }
 
 void akvcam_events_remove_unsub(akvcam_events_t self,
                                 struct v4l2_event_subscription *sub)
 {
-    size_t i;
-    size_t read;
-    akvcam_list_element_t it = NULL;
-    struct v4l2_event *event;
-    struct v4l2_event *subscribed_event;
-    akvcam_list_t subscribed_events = akvcam_list_new();
+    struct v4l2_event event;
+    akvcam_rbuffer_tt(struct v4l2_event) subscribed_events =
+            akvcam_rbuffer_new();
 
-    for (i = 0; i < self->n_events; i++) {
-        read = (i + self->read) % AKVCAM_EVENTS_QUEUE_MAX;
-        event = self->events_buffer + read;
+    akvcam_rbuffer_resize(subscribed_events,
+                          akvcam_rbuffer_n_elements(self->events),
+                          akvcam_rbuffer_element_size(self->events),
+                          AKVCAM_RBUFFER_MEMORY_TYPE_KMALLOC);
 
-        if (sub->type != event->type || sub->id !=  event->id)
-            akvcam_list_push_back(subscribed_events, event, NULL);
+    while (akvcam_rbuffer_data_size(self->events) > 0) {
+        akvcam_rbuffer_dequeue(self->events, &event, false, false);
+
+        if (sub->type != event.type || sub->id !=  event.id)
+            akvcam_rbuffer_queue(subscribed_events, &event);
     }
 
-    if (akvcam_list_size(subscribed_events) != self->n_events) {
-        for (i = 0;; i++) {
-            event = akvcam_list_next(subscribed_events, &it);
-
-            if (!it)
-                break;
-
-            read = (i + self->read) % AKVCAM_EVENTS_QUEUE_MAX;
-            subscribed_event = self->events_buffer + read;
-
-            if (subscribed_event != event)
-                memcpy(subscribed_event,
-                       event,
-                       sizeof(struct v4l2_event));
-        }
-
-        self->n_events = akvcam_list_size(subscribed_events);
-        self->write = (self->read + self->n_events) % AKVCAM_EVENTS_QUEUE_MAX;
-    }
-
-    akvcam_list_delete(&subscribed_events);
+    akvcam_rbuffer_copy(self->events, subscribed_events);
+    akvcam_rbuffer_delete(&subscribed_events);
 }

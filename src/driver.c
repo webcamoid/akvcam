@@ -21,10 +21,10 @@
 #include <linux/videodev2.h>
 
 #include "driver.h"
+#include "buffers.h"
 #include "device.h"
 #include "format.h"
 #include "list.h"
-#include "utils.h"
 
 typedef struct
 {
@@ -49,6 +49,7 @@ int akvcam_driver_init(const char *name, const char *description)
 {
     akvcam_device_t device;
     akvcam_list_tt(akvcam_format_t) formats;
+    akvcam_buffers_t buffers;
     struct v4l2_fract frame_rate = {30, 1};
     akvcam_format_t format;
 
@@ -61,17 +62,25 @@ int akvcam_driver_init(const char *name, const char *description)
     snprintf(akvcam_driver_global->description, AKVCAM_MAX_STRING_SIZE, "%s", description);
     akvcam_driver_global->devices = akvcam_list_new();
 
-    device = akvcam_device_new("akvcam-device", AKVCAM_DEVICE_TYPE_CAPTURE);
+    device = akvcam_device_new("akvcam-device",
+                               AKVCAM_DEVICE_TYPE_CAPTURE,
+                               AKVCAM_RW_MODE_READWRITE
+                               | AKVCAM_RW_MODE_MMAP
+                               | AKVCAM_RW_MODE_USERPTR);
     akvcam_list_push_back(akvcam_driver_global->devices,
                           device,
                           (akvcam_deleter_t) akvcam_device_delete);
 
     formats = akvcam_device_formats_nr(device);
-
     format = akvcam_format_new(V4L2_PIX_FMT_RGB24, 640, 480, &frame_rate);
     akvcam_list_push_back(formats,
                           format,
                           (akvcam_deleter_t) akvcam_format_delete);
+
+    akvcam_format_copy(akvcam_device_format_nr(device), format);
+
+    buffers = akvcam_device_buffers_nr(device);
+    akvcam_buffers_resize_rw(buffers, 1);
 
     akvcam_driver_register();
 

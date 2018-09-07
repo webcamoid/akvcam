@@ -31,7 +31,6 @@
 #include "list.h"
 #include "node.h"
 #include "object.h"
-#include "utils.h"
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)
 #define DEFAULT_COLORSPACE V4L2_COLORSPACE_SRGB
@@ -108,6 +107,8 @@ int akvcam_ioctl_qbuf(akvcam_node_t node, struct v4l2_buffer *buffer);
 int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer);
 int akvcam_ioctl_streamon(akvcam_node_t node, const int *type);
 int akvcam_ioctl_streamoff(akvcam_node_t node, const int *type);
+int akvcam_ioctl_uvc_ctrl_map(akvcam_node_t node,
+                              struct uvc_xu_control_mapping *controls);
 
 static akvcam_ioctl_handler akvcam_ioctls_private[] = {
     AKVCAM_HANDLER(VIDIOC_QUERYCAP           , akvcam_ioctls_querycap           , struct v4l2_capability        ),
@@ -143,6 +144,7 @@ static akvcam_ioctl_handler akvcam_ioctls_private[] = {
     AKVCAM_HANDLER(VIDIOC_DQBUF              , akvcam_ioctl_dqbuf               , struct v4l2_buffer            ),
     AKVCAM_HANDLER(VIDIOC_STREAMON           , akvcam_ioctl_streamon            , const int                     ),
     AKVCAM_HANDLER(VIDIOC_STREAMOFF          , akvcam_ioctl_streamoff           , const int                     ),
+    AKVCAM_HANDLER(UVCIOC_CTRL_MAP           , akvcam_ioctl_uvc_ctrl_map        , struct uvc_xu_control_mapping ),
 
     AKVCAM_HANDLER_IGNORE(VIDIOC_CROPCAP),
     AKVCAM_HANDLER_IGNORE(VIDIOC_DBG_G_REGISTER),
@@ -275,9 +277,14 @@ int akvcam_ioctls_querycap(akvcam_node_t node,
     else
         capabilities = V4L2_CAP_VIDEO_CAPTURE;
 
-    capabilities |= V4L2_CAP_READWRITE
-                 |  V4L2_CAP_STREAMING
-                 |  V4L2_CAP_EXT_PIX_FORMAT;
+    if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE)
+        capabilities |= V4L2_CAP_READWRITE;
+
+    if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_MMAP
+        || akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_USERPTR)
+        capabilities |= V4L2_CAP_STREAMING;
+
+    capabilities |= V4L2_CAP_EXT_PIX_FORMAT;
 
     capability->capabilities = capabilities | V4L2_CAP_DEVICE_CAPS;
     capability->device_caps = capabilities;
@@ -452,7 +459,7 @@ int akvcam_ioctls_g_fmt(akvcam_node_t node, struct v4l2_format *format)
     if (format->type != type)
         return -EINVAL;
 
-    current_format = akvcam_node_format_nr(node);
+    current_format = akvcam_device_format_nr(device);
     memset(&format->fmt, 0, 200);
     format->fmt.pix.width = akvcam_format_width(current_format);
     format->fmt.pix.height = akvcam_format_height(current_format);
@@ -467,17 +474,24 @@ int akvcam_ioctls_g_fmt(akvcam_node_t node, struct v4l2_format *format)
 
 int akvcam_ioctls_s_fmt(akvcam_node_t node, struct v4l2_format *format)
 {
+    akvcam_device_t device;
     akvcam_format_t current_format;
+    akvcam_buffers_t buffers;
     int result;
 
     printk(KERN_INFO "%s()\n", __FUNCTION__);
+    device = akvcam_node_device_nr(node);
     result = akvcam_ioctls_try_fmt(node, format);
 
     if (!result) {
-        current_format = akvcam_node_format_nr(node);
+        current_format = akvcam_device_format_nr(device);
         akvcam_format_set_fourcc(current_format, format->fmt.pix.pixelformat);
         akvcam_format_set_width(current_format, format->fmt.pix.width);
         akvcam_format_set_height(current_format, format->fmt.pix.height);
+
+        buffers = akvcam_device_buffers_nr(device);
+        akvcam_buffers_resize_rw(buffers,
+                                 akvcam_buffers_size(buffers));
     }
 
     return result;
@@ -498,6 +512,9 @@ int akvcam_ioctls_try_fmt(akvcam_node_t node, struct v4l2_format *format)
 
     if (format->type != type)
         return -EINVAL;
+
+    if (akvcam_device_streaming(device))
+        return -EBUSY;
 
     temp_format = akvcam_format_new(format->fmt.pix.pixelformat,
                                     format->fmt.pix.width,
@@ -524,7 +541,9 @@ int akvcam_ioctls_g_parm(akvcam_node_t node, struct v4l2_streamparm *param)
 {
     akvcam_device_t device;
     akvcam_format_t format;
+    akvcam_buffers_t buffers;
     enum v4l2_buf_type type;
+    __u32 *n_buffers;
 
     printk(KERN_INFO "%s()\n", __FUNCTION__);
     device = akvcam_node_device_nr(node);
@@ -535,7 +554,7 @@ int akvcam_ioctls_g_parm(akvcam_node_t node, struct v4l2_streamparm *param)
         return -EINVAL;
 
     memset(&param->parm, 0, 200);
-    format = akvcam_node_format_nr(node);
+    format = akvcam_device_format_nr(device);
 
     if (param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
         param->parm.output.capability = V4L2_CAP_TIMEPERFRAME;
@@ -543,12 +562,19 @@ int akvcam_ioctls_g_parm(akvcam_node_t node, struct v4l2_streamparm *param)
                 akvcam_format_frame_rate(format)->denominator;
         param->parm.output.timeperframe.denominator =
                 akvcam_format_frame_rate(format)->numerator;
+        n_buffers = &param->parm.output.writebuffers;
     } else {
         param->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
         param->parm.capture.timeperframe.numerator =
                 akvcam_format_frame_rate(format)->denominator;
         param->parm.capture.timeperframe.denominator =
                 akvcam_format_frame_rate(format)->numerator;
+        n_buffers = &param->parm.capture.readbuffers;
+    }
+
+    if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE) {
+        buffers = akvcam_device_buffers_nr(device);
+        *n_buffers = (__u32) akvcam_buffers_size(buffers);
     }
 
     return 0;
@@ -560,7 +586,10 @@ int akvcam_ioctls_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
     akvcam_list_tt(akvcam_format_t) formats;
     akvcam_format_t format;
     akvcam_format_t nearest_format;
+    akvcam_buffers_t buffers;
     enum v4l2_buf_type type;
+    __u32 total_buffers = 0;
+    __u32 *n_buffers;
 
     printk(KERN_INFO "%s()\n", __FUNCTION__);
     device = akvcam_node_device_nr(node);
@@ -571,7 +600,7 @@ int akvcam_ioctls_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
         return -EINVAL;
 
     format = akvcam_format_new(0, 0, 0, NULL);
-    akvcam_format_copy(format, akvcam_node_format_nr(node));
+    akvcam_format_copy(format, akvcam_device_format_nr(device));
 
     if (param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
         akvcam_format_frame_rate(format)->numerator =
@@ -583,6 +612,7 @@ int akvcam_ioctls_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
                 param->parm.capture.timeperframe.denominator;
         akvcam_format_frame_rate(format)->denominator =
                 param->parm.capture.timeperframe.numerator;
+        total_buffers = param->parm.capture.readbuffers;
     }
 
     formats = akvcam_device_formats_nr(device);
@@ -595,7 +625,7 @@ int akvcam_ioctls_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
     }
 
     akvcam_format_delete(&format);
-    akvcam_format_copy(akvcam_node_format_nr(node), nearest_format);
+    akvcam_format_copy(akvcam_device_format_nr(device), nearest_format);
     memset(&param->parm, 0, 200);
 
     if (param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
@@ -604,12 +634,23 @@ int akvcam_ioctls_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
                 akvcam_format_frame_rate(nearest_format)->denominator;
         param->parm.output.timeperframe.denominator =
                 akvcam_format_frame_rate(nearest_format)->numerator;
+        n_buffers = &param->parm.output.writebuffers;
     } else {
         param->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
         param->parm.capture.timeperframe.numerator =
                 akvcam_format_frame_rate(nearest_format)->denominator;
         param->parm.capture.timeperframe.denominator =
                 akvcam_format_frame_rate(nearest_format)->numerator;
+        n_buffers = &param->parm.capture.readbuffers;
+    }
+
+    if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE) {
+        buffers = akvcam_device_buffers_nr(device);
+
+        if (total_buffers)
+            akvcam_buffers_resize_rw(buffers, param->parm.capture.readbuffers);
+        else
+            *n_buffers = (__u32) akvcam_buffers_size(buffers);
     }
 
     return 0;
@@ -709,7 +750,8 @@ int akvcam_ioctls_subscribe_event(akvcam_node_t node,
     struct v4l2_event control_event;
     printk(KERN_INFO "%s()\n", __FUNCTION__);
 
-    if (event->type != V4L2_EVENT_CTRL)
+    if (event->type != V4L2_EVENT_CTRL
+        && event->type != V4L2_EVENT_FRAME_SYNC)
         return -EINVAL;
 
     device = akvcam_node_device_nr(node);
@@ -721,7 +763,8 @@ int akvcam_ioctls_subscribe_event(akvcam_node_t node,
     events = akvcam_node_events_nr(node);
     akvcam_events_subscribe(events, event);
 
-    if (event->flags & V4L2_EVENT_SUB_FL_SEND_INITIAL)
+    if (event->type == V4L2_EVENT_CTRL
+        && event->flags & V4L2_EVENT_SUB_FL_SEND_INITIAL)
         if (akvcam_controls_generate_event(controls, event->id, &control_event))
             akvcam_events_enqueue(events, &control_event);
 
@@ -846,4 +889,12 @@ int akvcam_ioctl_streamoff(akvcam_node_t node, const int *type)
     akvcam_device_set_streaming(device, false);
 
     return 0;
+}
+
+int akvcam_ioctl_uvc_ctrl_map(akvcam_node_t node,
+                              struct uvc_xu_control_mapping *controls)
+{
+    printk(KERN_INFO "%s()\n", __FUNCTION__);
+
+    return -ENOENT;
 }

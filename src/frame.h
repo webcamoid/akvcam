@@ -16,24 +16,26 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef AKVCAM_NODE_H
-#define AKVCAM_NODE_H
+#ifndef AKVCAM_FRAME_H
+#define AKVCAM_FRAME_H
 
-struct akvcam_node;
-typedef struct akvcam_node *akvcam_node_t;
-struct akvcam_device;
-struct akvcam_events;
+#include <linux/types.h>
 
-// public
-akvcam_node_t akvcam_node_new(struct akvcam_device *device);
-void akvcam_node_delete(akvcam_node_t *self);
+struct akvcam_frame;
+typedef struct akvcam_frame *akvcam_frame_t;
+struct akvcam_format;
 
-struct akvcam_device *akvcam_node_device_nr(akvcam_node_t self);
-struct akvcam_device *akvcam_node_device(akvcam_node_t self);
-struct akvcam_events *akvcam_node_events_nr(akvcam_node_t self);
-struct akvcam_events *akvcam_node_events(akvcam_node_t self);
+akvcam_frame_t akvcam_frame_new(struct akvcam_format *format,
+                                const void *data,
+                                size_t size);
+void akvcam_frame_delete(akvcam_frame_t *self);
 
-// static
-struct v4l2_file_operations *akvcam_node_fops(void);
+void akvcam_frame_copy(akvcam_frame_t self, akvcam_frame_t other);
+struct akvcam_format *akvcam_frame_format_nr(akvcam_frame_t self);
+struct akvcam_format *akvcam_frame_format(akvcam_frame_t self);
+void *akvcam_frame_data(akvcam_frame_t self);
+size_t akvcam_frame_size(akvcam_frame_t self);
+void akvcam_frame_resize(akvcam_frame_t self, size_t size);
+void akvcam_frame_clear(akvcam_frame_t self);
 
-#endif // AKVCAM_NODE_H
+#endif // AKVCAM_FRAME_H

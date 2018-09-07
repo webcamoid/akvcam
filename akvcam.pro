@@ -29,12 +29,14 @@ lupdate_only {
         src/driver.h \
         src/events.h \
         src/format.h \
+        src/frame.h \
         src/ioctl.h \
         src/list.h \
         src/mmap.h \
         src/mutex.h \
         src/node.h \
         src/object.h \
+        src/rbuffer.h \
         src/utils.h
 
     SOURCES += \
@@ -45,12 +47,14 @@ lupdate_only {
         src/driver.c \
         src/events.c \
         src/format.c \
+        src/frame.c \
         src/ioctl.c \
         src/list.c \
         src/mmap.c \
         src/mutex.c \
         src/node.c \
         src/object.c \
+        src/rbuffer.c \
         src/utils.c
 }
 

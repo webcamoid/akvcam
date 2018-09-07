@@ -21,13 +21,17 @@
 
 #include <linux/types.h>
 
+#include "utils.h"
+
 struct akvcam_buffers;
 typedef struct akvcam_buffers *akvcam_buffers_t;
 struct akvcam_device;
+struct akvcam_frame;
 struct akvcam_node;
 struct v4l2_buffer;
 struct v4l2_requestbuffers;
 struct v4l2_create_buffers;
+struct v4l2_event;
 
 akvcam_buffers_t akvcam_buffers_new(struct akvcam_device *device);
 void akvcam_buffers_delete(akvcam_buffers_t *self);
@@ -43,6 +47,16 @@ bool akvcam_buffers_fill(akvcam_buffers_t self, struct v4l2_buffer *buffer);
 int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer);
 int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer);
 void *akvcam_buffers_data(akvcam_buffers_t self, __u32 offset);
+bool akvcam_buffers_allocated(akvcam_buffers_t self);
 size_t akvcam_buffers_size(akvcam_buffers_t self);
+bool akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size);
+ssize_t akvcam_buffers_read_rw(akvcam_buffers_t self, void *data, size_t size);
+void akvcam_buffers_write_frame(akvcam_buffers_t self,
+                                struct akvcam_frame *frame);
+
+// signals
+AKVCAM_CALLBACK(frame_ready, struct v4l2_event *event)
+void akvcam_buffers_set_frame_ready_callback(akvcam_buffers_t self,
+                                             akvcam_frame_ready_callback callback);
 
 #endif // AKVCAM_BUFFERS_H

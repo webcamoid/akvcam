@@ -16,7 +16,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/delay.h>
+#include <linux/random.h>
 #include <linux/slab.h>
+#include <linux/kthread.h>
 #include <media/v4l2-device.h>
 
 #include "device.h"
@@ -24,44 +27,57 @@
 #include "controls.h"
 #include "driver.h"
 #include "events.h"
+#include "format.h"
+#include "frame.h"
 #include "list.h"
 #include "node.h"
 #include "object.h"
-#include "utils.h"
 
 struct akvcam_device
 {
     akvcam_object_t self;
     akvcam_list_tt(akvcam_format_t) formats;
+    akvcam_format_t format;
     akvcam_controls_t controls;
     akvcam_list_tt(akvcam_node_t) nodes;
     akvcam_node_t priority_node;
     akvcam_buffers_t buffers;
     struct v4l2_device v4l2_dev;
     struct video_device *vdev;
+    struct task_struct *thread;
     AKVCAM_DEVICE_TYPE type;
+    AKVCAM_RW_MODE rw_mode;
     enum v4l2_priority priority;
     bool is_registered;
     bool streaming;
 };
 
-void akvcam_device_controls_changed(akvcam_device_t self,
-                                    struct v4l2_event *event);
+typedef int (*akvacam_thread_t)(void *data);
 
-akvcam_device_t akvcam_device_new(const char *name, AKVCAM_DEVICE_TYPE type)
+void akvcam_device_event_received(akvcam_device_t self,
+                                  struct v4l2_event *event);
+int akvcam_device_send_frames(akvcam_device_t self);
+
+akvcam_device_t akvcam_device_new(const char *name,
+                                  AKVCAM_DEVICE_TYPE type,
+                                  AKVCAM_RW_MODE rw_mode)
 {
     akvcam_controls_changed_callback controls_changed;
+    akvcam_frame_ready_callback frame_ready;
+
     akvcam_device_t self = kzalloc(sizeof(struct akvcam_device), GFP_KERNEL);
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_device_delete);
     self->formats = akvcam_list_new();
+    self->format = akvcam_format_new(0, 0, 0, NULL);
     self->controls = akvcam_controls_new();
     controls_changed.user_data = self;
     controls_changed.callback =
-            (akvcam_controls_changed_proc) akvcam_device_controls_changed;
+            (akvcam_controls_changed_proc) akvcam_device_event_received;
     akvcam_controls_set_changed_callback(self->controls, controls_changed);
     self->nodes = akvcam_list_new();
     self->priority_node = NULL;
     self->type = type;
+    self->rw_mode = rw_mode;
     self->priority = V4L2_PRIORITY_DEFAULT;
 
     memset(&self->v4l2_dev, 0, sizeof(struct v4l2_device));
@@ -81,7 +97,12 @@ akvcam_device_t akvcam_device_new(const char *name, AKVCAM_DEVICE_TYPE type)
     self->vdev->release = video_device_release_empty;
     video_set_drvdata(self->vdev, self);
     self->is_registered = false;
+
     self->buffers = akvcam_buffers_new(self);
+    frame_ready.user_data = self;
+    frame_ready.callback =
+            (akvcam_frame_ready_proc) akvcam_device_event_received;
+    akvcam_buffers_set_frame_ready_callback(self->buffers, frame_ready);
 
     return self;
 }
@@ -99,6 +120,7 @@ void akvcam_device_delete(akvcam_device_t *self)
     video_device_release((*self)->vdev);
     akvcam_list_delete(&((*self)->nodes));
     akvcam_controls_delete(&((*self)->controls));
+    akvcam_format_delete(&((*self)->format));
     akvcam_list_delete(&((*self)->formats));
     akvcam_object_free(&((*self)->self));
     kfree(*self);
@@ -143,6 +165,11 @@ AKVCAM_DEVICE_TYPE akvcam_device_type(akvcam_device_t self)
     return self->type;
 }
 
+AKVCAM_RW_MODE akvcam_device_rw_mode(akvcam_device_t self)
+{
+    return self->rw_mode;
+}
+
 struct akvcam_list *akvcam_device_formats_nr(akvcam_device_t self)
 {
     return self->formats;
@@ -153,6 +180,18 @@ struct akvcam_list *akvcam_device_formats(akvcam_device_t self)
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->formats));
 
     return self->formats;
+}
+
+struct akvcam_format *akvcam_device_format_nr(akvcam_device_t self)
+{
+    return self->format;
+}
+
+struct akvcam_format *akvcam_device_format(akvcam_device_t self)
+{
+    akvcam_object_ref(AKVCAM_TO_OBJECT(self->format));
+
+    return self->format;
 }
 
 struct akvcam_controls *akvcam_device_controls_nr(akvcam_device_t self)
@@ -209,8 +248,24 @@ enum v4l2_priority akvcam_device_priority(akvcam_device_t self)
     return self->priority;
 }
 
+bool akvcam_device_streaming(akvcam_device_t self)
+{
+    return self->streaming;
+}
+
 void akvcam_device_set_streaming(akvcam_device_t self, bool streaming)
 {
+    if (!self->streaming && streaming) {
+        self->thread = kthread_run((akvacam_thread_t)
+                                   akvcam_device_send_frames,
+                                   self,
+                                   "akvcam-thread-%llu",
+                                   akvcam_id());
+    } else if (self->streaming && !streaming) {
+        kthread_stop(self->thread);
+        self->thread = NULL;
+    }
+
     self->streaming = streaming;
 }
 
@@ -259,8 +314,8 @@ akvcam_device_t akvcam_device_from_file(struct file *filp)
     return device;
 }
 
-void akvcam_device_controls_changed(akvcam_device_t self,
-                                    struct v4l2_event *event)
+void akvcam_device_event_received(akvcam_device_t self,
+                                  struct v4l2_event *event)
 {
     akvcam_node_t node;
     akvcam_list_element_t element = NULL;
@@ -273,4 +328,25 @@ void akvcam_device_controls_changed(akvcam_device_t self,
 
         akvcam_events_enqueue(akvcam_node_events_nr(node), event);
     }
+}
+
+int akvcam_device_send_frames(akvcam_device_t self)
+{
+    akvcam_frame_t frame;
+    struct v4l2_fract *frame_rate = akvcam_format_frame_rate(self->format);
+    unsigned int tsleep = 1000 * frame_rate->denominator;
+
+    if (frame_rate->numerator)
+        tsleep /= frame_rate->numerator;
+
+    while (!kthread_should_stop()) {        
+        frame = akvcam_frame_new(self->format, NULL, 0);
+        get_random_bytes_arch(akvcam_frame_data(frame),
+                              (int) akvcam_frame_size(frame));
+        akvcam_buffers_write_frame(self->buffers, frame);
+        akvcam_frame_delete(&frame);
+        msleep_interruptible(tsleep);
+    }
+
+    return 0;
 }

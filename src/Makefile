@@ -9,12 +9,14 @@ akvcam-objs := \
 	driver.o \
 	events.o \
 	format.o \
+	frame.o \
 	ioctl.o \
 	list.o \
 	mmap.o \
 	mutex.o \
 	node.o \
 	object.o \
+	rbuffer.o \
 	utils.o
 
 all:

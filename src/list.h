@@ -22,12 +22,10 @@
 #include <linux/types.h>
 
 #include "object.h"
+#include "utils.h"
 
 #define akvcam_list_tt(type) akvcam_list_t
 
-typedef bool (*akvcam_are_equals_t)(const void *element_data,
-                                    const void *data,
-                                    size_t size);
 struct akvcam_list;
 typedef struct akvcam_list *akvcam_list_t;
 struct akvcam_list_element;

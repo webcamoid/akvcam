@@ -19,7 +19,6 @@
 #include <linux/slab.h>
 
 #include "list.h"
-#include "utils.h"
 
 typedef struct akvcam_list_element
 {

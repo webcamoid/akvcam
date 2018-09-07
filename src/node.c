@@ -34,7 +34,6 @@ struct akvcam_node
 {
     akvcam_object_t self;
     akvcam_device_t device;
-    akvcam_format_t format;
     akvcam_events_t events;
     akvcam_ioctl_t ioctls;
     akvcam_mutex_t mutex;
@@ -48,9 +47,6 @@ akvcam_node_t akvcam_node_new(struct akvcam_device *device)
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_node_delete);
     self->device = device;
     self->events = akvcam_events_new();
-    self->format = akvcam_format_new(0, 0, 0, NULL);
-    akvcam_format_copy(self->format,
-                       akvcam_list_at(akvcam_device_formats_nr(device), 0));
     self->ioctls = akvcam_ioctl_new();
     self->mutex = akvcam_mutex_new(AKVCAM_MUTEX_MODE_PERFORMANCE);
 
@@ -79,7 +75,6 @@ void akvcam_node_delete(akvcam_node_t *self)
 
     akvcam_mutex_delete(&((*self)->mutex));
     akvcam_ioctl_delete(&((*self)->ioctls));
-    akvcam_format_delete(&((*self)->format));
     akvcam_events_delete(&((*self)->events));
     akvcam_object_free(&((*self)->self));
     kfree(*self);
@@ -96,18 +91,6 @@ struct akvcam_device *akvcam_node_device(akvcam_node_t self)
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->device));
 
     return self->device;
-}
-
-struct akvcam_format *akvcam_node_format_nr(akvcam_node_t self)
-{
-    return self->format;
-}
-
-struct akvcam_format *akvcam_node_format(akvcam_node_t self)
-{
-    akvcam_object_ref(AKVCAM_TO_OBJECT(self->format));
-
-    return self->format;
 }
 
 struct akvcam_events *akvcam_node_events_nr(akvcam_node_t self)
@@ -137,6 +120,8 @@ int akvcam_node_open(struct file *filp)
     if (!device)
         return -ENOTTY;
 
+    //filp->f_flags & O_NONBLOCK
+
     filp->private_data = akvcam_node_new(device);
     nodes = akvcam_device_nodes_nr(device);
     akvcam_list_push_back(nodes,
@@ -157,12 +142,13 @@ ssize_t akvcam_node_read(struct file *filp,
     device = akvcam_device_from_file_nr(filp);
     buffers = akvcam_device_buffers_nr(device);
 
-    if (akvcam_buffers_size(buffers) > 0)
+    if (akvcam_buffers_allocated(buffers))
         return -EBUSY;
 
-    // FIXME: Fill frame here.
+    if (offset)
+        *offset = 0;
 
-    return (ssize_t) size;
+    return akvcam_buffers_read_rw(buffers, data, size);
 }
 
 ssize_t akvcam_node_write(struct file *filp,

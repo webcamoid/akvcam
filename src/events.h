@@ -39,7 +39,8 @@ void akvcam_events_unsubscribe_all(akvcam_events_t self);
 unsigned int akvcam_events_poll(akvcam_events_t self,
                                 struct file *filp,
                                 struct poll_table_struct *wait);
-bool akvcam_events_enqueue(akvcam_events_t self, struct v4l2_event *event);
+bool akvcam_events_enqueue(akvcam_events_t self,
+                           const struct v4l2_event *event);
 bool akvcam_events_dequeue(akvcam_events_t self, struct v4l2_event *event);
 bool akvcam_events_available(akvcam_events_t self);
 
