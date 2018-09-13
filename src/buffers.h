@@ -23,6 +23,8 @@
 
 #include "utils.h"
 
+#define AKVCAM_BUFFERS_MIN 4
+
 struct akvcam_buffers;
 typedef struct akvcam_buffers *akvcam_buffers_t;
 struct akvcam_device;
@@ -51,8 +53,10 @@ bool akvcam_buffers_allocated(akvcam_buffers_t self);
 size_t akvcam_buffers_size(akvcam_buffers_t self);
 bool akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size);
 ssize_t akvcam_buffers_read_rw(akvcam_buffers_t self, void *data, size_t size);
-void akvcam_buffers_write_frame(akvcam_buffers_t self,
+bool akvcam_buffers_write_frame(akvcam_buffers_t self,
                                 struct akvcam_frame *frame);
+void akvcam_buffers_notify_frame(akvcam_buffers_t self);
+void akvcam_buffers_reset_sequence(akvcam_buffers_t self);
 
 // signals
 AKVCAM_CALLBACK(frame_ready, struct v4l2_event *event)

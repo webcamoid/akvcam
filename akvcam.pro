@@ -69,9 +69,10 @@ INCLUDEPATH += \
 DEFINES += \
     __KERNEL__ \
     KBUILD_MODNAME=\"\\\"\\\"\" \
-    CONFIG_PCI \
+    CONFIG_COMPAT \
     CONFIG_HZ=0 \
-    CONFIG_PAGE_OFFSET=0
+    CONFIG_PAGE_OFFSET=0 \
+    CONFIG_PCI
 
 OTHER_FILES += \
     src/Makefile

@@ -80,7 +80,7 @@ int akvcam_driver_init(const char *name, const char *description)
     akvcam_format_copy(akvcam_device_format_nr(device), format);
 
     buffers = akvcam_device_buffers_nr(device);
-    akvcam_buffers_resize_rw(buffers, 1);
+    akvcam_buffers_resize_rw(buffers, AKVCAM_BUFFERS_MIN);
 
     akvcam_driver_register();
 

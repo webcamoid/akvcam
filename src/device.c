@@ -256,6 +256,7 @@ bool akvcam_device_streaming(akvcam_device_t self)
 void akvcam_device_set_streaming(akvcam_device_t self, bool streaming)
 {
     if (!self->streaming && streaming) {
+        akvcam_buffers_reset_sequence(self->buffers);
         self->thread = kthread_run((akvacam_thread_t)
                                    akvcam_device_send_frames,
                                    self,
@@ -330,21 +331,31 @@ void akvcam_device_event_received(akvcam_device_t self,
     }
 }
 
+bool akvcam_device_prepare_frame(akvcam_device_t self)
+{
+    bool result;
+
+    akvcam_frame_t frame = akvcam_frame_new(self->format, NULL, 0);
+    get_random_bytes_arch(akvcam_frame_data(frame),
+                          (int) akvcam_frame_size(frame));
+    result = akvcam_buffers_write_frame(self->buffers, frame);
+    akvcam_frame_delete(&frame);
+
+    return result;
+}
+
 int akvcam_device_send_frames(akvcam_device_t self)
 {
-    akvcam_frame_t frame;
     struct v4l2_fract *frame_rate = akvcam_format_frame_rate(self->format);
-    unsigned int tsleep = 1000 * frame_rate->denominator;
+    __u32 tsleep = 1000 * frame_rate->denominator;
 
     if (frame_rate->numerator)
         tsleep /= frame_rate->numerator;
 
     while (!kthread_should_stop()) {        
-        frame = akvcam_frame_new(self->format, NULL, 0);
-        get_random_bytes_arch(akvcam_frame_data(frame),
-                              (int) akvcam_frame_size(frame));
-        akvcam_buffers_write_frame(self->buffers, frame);
-        akvcam_frame_delete(&frame);
+        if (akvcam_device_prepare_frame(self))
+            akvcam_buffers_notify_frame(self->buffers);
+
         msleep_interruptible(tsleep);
     }
 

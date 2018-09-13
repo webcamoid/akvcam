@@ -72,6 +72,7 @@ void akvcam_device_set_priority(akvcam_device_t self,
 enum v4l2_priority akvcam_device_priority(akvcam_device_t self);
 bool akvcam_device_streaming(akvcam_device_t self);
 void akvcam_device_set_streaming(akvcam_device_t self, bool streaming);
+bool akvcam_device_prepare_frame(akvcam_device_t self);
 
 // public static
 size_t akvcam_device_sizeof(void);

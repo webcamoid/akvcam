@@ -142,6 +142,9 @@ size_t akvcam_rbuffer_data_size(akvcam_rbuffer_t self)
 
 size_t akvcam_rbuffer_n_elements(akvcam_rbuffer_t self)
 {
+    if (self->step < 1)
+        return 0;
+
     return self->size / self->step;
 }
 
@@ -152,6 +155,9 @@ size_t akvcam_rbuffer_element_size(akvcam_rbuffer_t self)
 
 size_t akvcam_rbuffer_n_data(akvcam_rbuffer_t self)
 {
+    if (self->step < 1)
+        return 0;
+
     return self->data_size / self->step;
 }
 

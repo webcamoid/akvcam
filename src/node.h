@@ -19,6 +19,8 @@
 #ifndef AKVCAM_NODE_H
 #define AKVCAM_NODE_H
 
+#include <linux/types.h>
+
 struct akvcam_node;
 typedef struct akvcam_node *akvcam_node_t;
 struct akvcam_device;
@@ -32,6 +34,8 @@ struct akvcam_device *akvcam_node_device_nr(akvcam_node_t self);
 struct akvcam_device *akvcam_node_device(akvcam_node_t self);
 struct akvcam_events *akvcam_node_events_nr(akvcam_node_t self);
 struct akvcam_events *akvcam_node_events(akvcam_node_t self);
+bool akvcam_node_non_blocking(akvcam_node_t self);
+void akvcam_node_set_non_blocking(akvcam_node_t self, bool non_blocking);
 
 // static
 struct v4l2_file_operations *akvcam_node_fops(void);

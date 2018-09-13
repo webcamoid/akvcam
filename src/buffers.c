@@ -35,6 +35,7 @@ typedef struct
 {
     struct v4l2_buffer buffer;
     char *data;
+    bool ready;
 } akvcam_buffer, *akvcam_buffer_t;
 
 struct akvcam_buffers
@@ -45,6 +46,7 @@ struct akvcam_buffers
     akvcam_rbuffer_tt(akvcam_buffer_t | char) buffers;
     akvcam_frame_ready_callback frame_ready;
     akvcam_node_t main_node;
+    size_t rw_buffer_size;
     AKVCAM_RW_MODE rw_mode;
     __u32 sequence;
 };
@@ -61,6 +63,7 @@ akvcam_buffers_t akvcam_buffers_new(struct akvcam_device *device)
     self->type = akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_OUTPUT?
                 V4L2_BUF_TYPE_VIDEO_OUTPUT: V4L2_BUF_TYPE_VIDEO_CAPTURE;
     self->rw_mode = akvcam_device_rw_mode(device);
+    self->rw_buffer_size = AKVCAM_BUFFERS_MIN;
 
     return self;
 }
@@ -100,17 +103,17 @@ int akvcam_buffers_allocate(akvcam_buffers_t self,
     if (self->main_node && self->main_node != node)
         return -EBUSY;
 
+    if (params->count < 1) {
+        self->main_node = NULL;
+        akvcam_buffers_resize_rw(self, self->rw_buffer_size);
+
+        return 0;
+    }
+
     akvcam_rbuffer_resize(self->buffers,
                           params->count,
                           sizeof(akvcam_buffer),
                           AKVCAM_RBUFFER_MEMORY_TYPE_KMALLOC);
-
-    if (params->count < 1) {
-        self->main_node = NULL;
-        akvcam_buffers_resize_rw(self, 1);
-
-        return 0;
-    }
 
     self->main_node = node;
     format = akvcam_device_format_nr(self->device);
@@ -142,7 +145,7 @@ void akvcam_buffers_deallocate(akvcam_buffers_t self, struct akvcam_node *node)
 {
     if (node && node == self->main_node) {
         self->main_node = NULL;
-        akvcam_buffers_resize_rw(self, 1);
+        akvcam_buffers_resize_rw(self, self->rw_buffer_size);
     }
 }
 
@@ -177,6 +180,9 @@ int akvcam_buffers_create(akvcam_buffers_t self,
     if (self->main_node && self->main_node != node)
         return -EBUSY;
 
+    if (buffers->count < 1)
+        return 0;
+
     if (!self->main_node)
         buffers->index = 0;
 
@@ -184,9 +190,6 @@ int akvcam_buffers_create(akvcam_buffers_t self,
                           buffers->count + buffers->index,
                           sizeof(akvcam_buffer),
                           AKVCAM_RBUFFER_MEMORY_TYPE_KMALLOC);
-
-    if (buffers->count < 1)
-        return 0;
 
     self->main_node = node;
     buffer_length = akvcam_format_size(format);
@@ -282,7 +285,7 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
     akvcam_buffer_t akbuffer =
             akvcam_rbuffer_dequeue(self->buffers, NULL, true, false);
 
-    if (!akbuffer)
+    if (!akbuffer/* || !akbuffer->ready*/)
         return -EAGAIN;
 
     if (akbuffer->buffer.type != buffer->type)
@@ -295,14 +298,12 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
     case V4L2_MEMORY_MMAP:
         akbuffer->buffer.flags |= V4L2_BUF_FLAG_MAPPED
                                |  V4L2_BUF_FLAG_QUEUED
-                               |  V4L2_BUF_FLAG_DONE
                                |  V4L2_BUF_FLAG_KEYFRAME;
 
         break;
 
     case V4L2_MEMORY_USERPTR:
         akbuffer->buffer.flags |= V4L2_BUF_FLAG_QUEUED
-                               |  V4L2_BUF_FLAG_DONE
                                |  V4L2_BUF_FLAG_KEYFRAME;
 
         break;
@@ -312,6 +313,7 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
     }
 
     memcpy(buffer, &akbuffer->buffer, sizeof(struct v4l2_buffer));
+    akbuffer->ready = false;
 
     return 0;
 }
@@ -355,6 +357,9 @@ bool akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size)
     if (self->main_node)
         return false;
 
+    if (!(self->rw_mode & AKVCAM_RW_MODE_READWRITE))
+        return false;
+
     if (size < 1)
         size = 1;
 
@@ -364,6 +369,8 @@ bool akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size)
                           size,
                           akvcam_format_size(format),
                           AKVCAM_RBUFFER_MEMORY_TYPE_VMALLOC);
+
+    self->rw_buffer_size = size;
 
     return true;
 }
@@ -379,15 +386,12 @@ ssize_t akvcam_buffers_read_rw(akvcam_buffers_t self, void *data, size_t size)
     return (ssize_t) size;
 }
 
-void akvcam_buffers_write_frame(akvcam_buffers_t self,
+bool akvcam_buffers_write_frame(akvcam_buffers_t self,
                                 struct akvcam_frame *frame)
 {
     akvcam_buffer_t akbuffer;
-    struct v4l2_event event;
     size_t length;
     void *data;
-    bool queued = false;
-    __u32 sequence = self->sequence;
 
     if (self->main_node) {
         akbuffer = akvcam_rbuffer_queue(self->buffers, NULL);
@@ -402,10 +406,10 @@ void akvcam_buffers_write_frame(akvcam_buffers_t self,
                 memcpy(akbuffer->data, data, length);
 
             do_gettimeofday(&akbuffer->buffer.timestamp);
-            akbuffer->buffer.sequence = sequence;
-            queued = true;
+            akbuffer->buffer.sequence = self->sequence;
+            akbuffer->ready = true;
 
-            break;
+            return true;
 
         case V4L2_MEMORY_USERPTR:
             data = akvcam_frame_data(frame);
@@ -416,10 +420,10 @@ void akvcam_buffers_write_frame(akvcam_buffers_t self,
                 copy_to_user((void *) akbuffer->buffer.m.userptr, data, length);
 
             do_gettimeofday(&akbuffer->buffer.timestamp);
-            akbuffer->buffer.sequence = sequence;
-            queued = true;
+            akbuffer->buffer.sequence = self->sequence;
+            akbuffer->ready = true;
 
-            break;
+            return true;
 
         default:
             break;
@@ -428,19 +432,30 @@ void akvcam_buffers_write_frame(akvcam_buffers_t self,
         akvcam_rbuffer_queue_bytes(self->buffers,
                                    akvcam_frame_data(frame),
                                    akvcam_frame_size(frame));
-        queued = true;
+
+        return true;
     }
 
-    if (queued) {
-        if (self->frame_ready.callback) {
-            memset(&event, 0, sizeof(struct v4l2_event));
-            event.type = V4L2_EVENT_FRAME_SYNC;
-            event.u.frame_sync.frame_sequence = sequence;
-            self->frame_ready.callback(self->frame_ready.user_data, &event);
-        }
+    return false;
+}
 
-        self->sequence++;
+void akvcam_buffers_notify_frame(akvcam_buffers_t self)
+{
+    struct v4l2_event event;
+
+    if (self->frame_ready.callback) {
+        memset(&event, 0, sizeof(struct v4l2_event));
+        event.type = V4L2_EVENT_FRAME_SYNC;
+        event.u.frame_sync.frame_sequence = self->sequence;
+        self->frame_ready.callback(self->frame_ready.user_data, &event);
     }
+
+    self->sequence++;
+}
+
+void akvcam_buffers_reset_sequence(akvcam_buffers_t self)
+{
+    self->sequence = 0;
 }
 
 bool akvcam_buffers_is_supported(akvcam_buffers_t self, enum v4l2_memory type)
