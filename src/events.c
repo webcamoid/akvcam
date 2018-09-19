@@ -117,7 +117,7 @@ __poll_t akvcam_events_poll(akvcam_events_t self,
                             struct poll_table_struct *wait)
 {
     if (akvcam_rbuffer_data_size(self->events) > 0)
-        return EPOLLIN | EPOLLPRI | EPOLLRDNORM;
+        return AK_EPOLLIN | AK_EPOLLPRI | AK_EPOLLRDNORM;
 
     poll_wait(filp, &self->event_signaled, wait);
 

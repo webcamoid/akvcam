@@ -19,7 +19,7 @@
 #ifndef AKVCAM_IOCTL_H
 #define AKVCAM_IOCTL_H
 
-#include <linux/compiler_types.h>
+#include <linux/types.h>
 
 struct akvcam_ioctl;
 typedef struct akvcam_ioctl *akvcam_ioctl_t;

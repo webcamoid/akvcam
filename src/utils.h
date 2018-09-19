@@ -41,13 +41,14 @@
     } akvcam_##name##_callback, *akvcam_##name##_callback_t;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 16, 0)
-typedef unsigned __bitwise __poll_t;
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
-#define EPOLLIN		(__force __poll_t) 0x00000001
-#define EPOLLPRI	(__force __poll_t) 0x00000002
-#define EPOLLRDNORM	(__force __poll_t) 0x00000040
+    #define __poll_t       unsigned int
+    #define AK_EPOLLIN     POLLIN
+    #define AK_EPOLLPRI    POLLPRI
+    #define AK_EPOLLRDNORM POLLRDNORM
+#else
+    #define AK_EPOLLIN     EPOLLIN
+    #define AK_EPOLLPRI    EPOLLPRI
+    #define AK_EPOLLRDNORM EPOLLRDNORM
 #endif
 
 typedef bool (*akvcam_are_equals_t)(const void *element_data,

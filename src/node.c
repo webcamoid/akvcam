@@ -208,7 +208,7 @@ static __poll_t akvcam_node_poll(struct file *filp,
 
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE
         && !akvcam_buffers_allocated(buffers))
-        return EPOLLIN | EPOLLPRI | EPOLLRDNORM;
+        return AK_EPOLLIN | AK_EPOLLPRI | AK_EPOLLRDNORM;
 
     return akvcam_events_poll(node->events, filp, wait);
 }
