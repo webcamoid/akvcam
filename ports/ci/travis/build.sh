@@ -49,7 +49,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     # Install bootstrap system
     mkdir ${system_mount_point}
     mount -o loop ${system_image} ${system_mount_point}
-    debootstrap --components=main,universe,multiverse --include=systemd,systemd-sysv,kmod,v4l-utils --arch ${SYSTEM_ARCH} --variant=minbase ${SYSTEM_VERSION} ${system_mount_point}
+    debootstrap --components=main,universe,multiverse --include=autofs,kmod,systemd,systemd-sysv,v4l-utils --arch ${SYSTEM_ARCH} --variant=minbase ${SYSTEM_VERSION} ${system_mount_point}
     mkdir -p ${system_mount_point}/{dev,proc,sys}
 
     # Copy kernel modules
