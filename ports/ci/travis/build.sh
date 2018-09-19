@@ -56,6 +56,9 @@ if [ ! -z "${USE_QEMU}" ]; then
     mkdir -p ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
     cp -rf /lib/modules/${KERNEL_VERSION}-generic/* ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
 
+    # Blacklist conflicting modules
+    echo "blacklist autofs4" > ${system_mount_point}/etc/modprobe.d/blacklist-autofs4.conf
+
     # Configure auto login with root user
     sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
     sed -i 's/\/sbin\/agetty/\/sbin\/agetty --autologin root/' ${system_mount_point}/lib/systemd/system/*getty*.service
