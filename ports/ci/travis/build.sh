@@ -33,7 +33,7 @@ fi
 
 # Build the driver and show it's info.
 cd src
-make KERNEL_DIR=/usr/src/linux-headers-${KERNEL_VERSION}-generic
+make KERNEL_DIR=/usr/src/linux-headers-${KERNEL_VERSION}-generic USE_SPARSE=1
 cd ..
 echo
 echo "Driver info:"
@@ -55,9 +55,6 @@ if [ ! -z "${USE_QEMU}" ]; then
     # Copy kernel modules
     mkdir -p ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
     cp -rf /lib/modules/${KERNEL_VERSION}-generic/* ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
-
-    # Blacklist conflicting modules
-    echo "blacklist autofs4" > ${system_mount_point}/etc/modprobe.d/blacklist-autofs4.conf
 
     # Configure auto login with root user
     sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
