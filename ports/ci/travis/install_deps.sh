@@ -10,6 +10,7 @@ ${EXEC} apt-get -y install \
     make \
     libelf-dev \
     kmod \
+    sparse \
     wget
 
 if [ ! -z "${USE_QEMU}" ]; then

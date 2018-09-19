@@ -12,7 +12,6 @@ matrix:
       - REPOSITORY=v3.16.57
       - KERNEL_VERSION=3.16.57-031657
       - KERNEL_VERSION_C=201806170831
-      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -20,10 +19,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v3.18.119
-      - KERNEL_VERSION=3.18.119-0318119
-      - KERNEL_VERSION_C=201808171540
-      - export USE_QEMU=1
+      - REPOSITORY=v3.18.122
+      - KERNEL_VERSION=3.18.122-0318122
+      - KERNEL_VERSION_C=201809091618
   - os: linux
     sudo: required
     services:
@@ -31,10 +29,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.4.151
-      - KERNEL_VERSION=4.4.151-0404151
-      - KERNEL_VERSION_C=201808220242
-      - export USE_QEMU=1
+      - REPOSITORY=v4.4.156
+      - KERNEL_VERSION=4.4.156-0404156
+      - KERNEL_VERSION_C=201809150434
   - os: linux
     sudo: required
     services:
@@ -42,10 +39,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.9.123
-      - KERNEL_VERSION=4.9.123-0409123
-      - KERNEL_VERSION_C=201808220630
-      - export USE_QEMU=1
+      - REPOSITORY=v4.9.127
+      - KERNEL_VERSION=4.9.127-0409127
+      - KERNEL_VERSION_C=201809150838
   - os: linux
     sudo: required
     services:
@@ -53,12 +49,11 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.14.66
-      - KERNEL_VERSION=4.14.66-041466
-      - KERNEL_VERSION_C=201808220733
+      - REPOSITORY=v4.14.70
+      - KERNEL_VERSION=4.14.70-041470
+      - KERNEL_VERSION_C=201809150531
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
-      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -66,12 +61,11 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=cosmic
-      - REPOSITORY=v4.17.18
-      - KERNEL_VERSION=4.17.18-041718
-      - KERNEL_VERSION_C=201808220323
+      - REPOSITORY=v4.17.19
+      - KERNEL_VERSION=4.17.19-041719
+      - KERNEL_VERSION_C=201808240919
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
-      - export USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -79,12 +73,11 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=cosmic
-      - REPOSITORY=v4.18.4
-      - KERNEL_VERSION=4.18.4-041804
-      - KERNEL_VERSION_C=201808220230
+      - REPOSITORY=v4.18.8
+      - KERNEL_VERSION=4.18.8-041808
+      - KERNEL_VERSION_C=201809150431
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
-      - export USE_QEMU=1
 
 before_install:
   - docker pull ubuntu:${SYSTEM_VERSION}
@@ -92,6 +85,7 @@ before_install:
   - docker run --privileged -it -d -v ${PWD}:/sources -w /sources --name ubuntu ubuntu:${SYSTEM_VERSION} /bin/sh
   - export EXEC="docker exec ubuntu"
   - export SYSTEM_ARCH=amd64
+  - export USE_QEMU=1
 
 install:
   - chmod +x ports/ci/travis/install_deps.sh
