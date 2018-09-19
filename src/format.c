@@ -60,7 +60,7 @@ static akvcam_format_globals akvcam_format_globals_formats[] = {
     {V4L2_PIX_FMT_NV21  , 12, "NV21" }
 };
 
-akvcam_format_globals_t akvcam_format_globals_by_fourcc(__u32 fourcc)
+static akvcam_format_globals_t akvcam_format_globals_by_fourcc(__u32 fourcc)
 {
     size_t i;
 
@@ -71,7 +71,7 @@ akvcam_format_globals_t akvcam_format_globals_by_fourcc(__u32 fourcc)
     return NULL;
 }
 
-akvcam_format_globals_t akvcam_format_globals_by_str(const char *str)
+static akvcam_format_globals_t akvcam_format_globals_by_str(const char *str)
 {
     size_t i;
 

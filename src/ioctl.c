@@ -1,4 +1,4 @@
-﻿/* akvcam, virtual camera for Linux.
+/* akvcam, virtual camera for Linux.
  * Copyright (C) 2018  Gonzalo Exequiel Pedone
  *
  * This program is free software; you can redistribute it and/or modify
@@ -218,7 +218,7 @@ void akvcam_ioctl_delete(akvcam_ioctl_t *self)
 int akvcam_ioctl_do(akvcam_ioctl_t self,
                     struct akvcam_node *node,
                     unsigned int cmd,
-                    void *arg)
+                    void __user *arg)
 {
     size_t i;
     size_t size;
@@ -517,7 +517,7 @@ int akvcam_ioctls_s_fmt(akvcam_node_t node, struct v4l2_format *format)
 
         buffers = akvcam_device_buffers_nr(device);
         akvcam_buffers_resize_rw(buffers,
-                                 akvcam_buffers_size(buffers));
+                                 akvcam_buffers_size_rw(buffers));
     }
 
     return result;
@@ -600,7 +600,7 @@ int akvcam_ioctls_g_parm(akvcam_node_t node, struct v4l2_streamparm *param)
 
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE) {
         buffers = akvcam_device_buffers_nr(device);
-        *n_buffers = (__u32) akvcam_buffers_size(buffers);
+        *n_buffers = (__u32) akvcam_buffers_size_rw(buffers);
     }
 
     return 0;
@@ -673,10 +673,12 @@ int akvcam_ioctls_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE) {
         buffers = akvcam_device_buffers_nr(device);
 
-        if (total_buffers)
-            akvcam_buffers_resize_rw(buffers, total_buffers);
-        else
-            *n_buffers = (__u32) akvcam_buffers_size(buffers);
+        if (total_buffers) {
+            if (akvcam_buffers_resize_rw(buffers, total_buffers))
+                *n_buffers = total_buffers;
+        } else {
+            *n_buffers = (__u32) akvcam_buffers_size_rw(buffers);
+        }
     }
 
     return 0;
@@ -807,7 +809,7 @@ int akvcam_ioctls_unsubscribe_event(akvcam_node_t node,
     akvcam_device_t device;
     akvcam_events_t events;
 
-    printk(KERN_INFO "%s()\n", __FUNCTION__);    
+    printk(KERN_INFO "%s()\n", __FUNCTION__);
     device = akvcam_node_device_nr(node);
 
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE)
@@ -883,11 +885,27 @@ int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
 {
     akvcam_device_t device;
     akvcam_buffers_t buffers;
+    void *data;
+    int result;
+
     printk(KERN_INFO "%s()\n", __FUNCTION__);
     device = akvcam_node_device_nr(node);
     buffers = akvcam_device_buffers_nr(device);
+    result = akvcam_buffers_dequeue(buffers, buffer);
 
-    return akvcam_buffers_dequeue(buffers, buffer);
+    if (result == 0
+        && buffer->m.userptr
+        && buffer->length > 1
+        && buffer->memory == V4L2_MEMORY_USERPTR) {
+        data = akvcam_buffers_buffers_data(buffers, buffer);
+
+        if (data)
+            copy_to_user((char __user *) buffer->m.userptr,
+                         data,
+                         buffer->length);
+    }
+
+    return result;
 }
 
 int akvcam_ioctl_streamon(akvcam_node_t node, const int *type)

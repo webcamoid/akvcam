@@ -275,9 +275,9 @@ size_t akvcam_device_sizeof(void)
     return sizeof(struct akvcam_device);
 }
 
-bool akvcam_device_are_equals(const akvcam_device_t device,
-                              const struct file *filp,
-                              size_t size)
+static bool akvcam_device_are_equals(const akvcam_device_t device,
+                                     const struct file *filp,
+                                     size_t size)
 {
     bool equals;
     char *devname = kzalloc(1024, GFP_KERNEL);
@@ -352,7 +352,7 @@ int akvcam_device_send_frames(akvcam_device_t self)
     if (frame_rate->numerator)
         tsleep /= frame_rate->numerator;
 
-    while (!kthread_should_stop()) {        
+    while (!kthread_should_stop()) {
         if (akvcam_device_prepare_frame(self))
             akvcam_buffers_notify_frame(self->buffers);
 

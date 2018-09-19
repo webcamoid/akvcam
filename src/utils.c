@@ -33,7 +33,7 @@ typedef struct
     char  str[32];
 } akvcam_utils_ioctl_strings, *akvcam_utils_ioctl_strings_t;
 
-uint64_t akvcam_id()
+uint64_t akvcam_id(void)
 {
     return akvcam_utils_private.id++;
 }

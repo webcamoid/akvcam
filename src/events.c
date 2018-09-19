@@ -112,21 +112,21 @@ void akvcam_events_unsubscribe_all(akvcam_events_t self)
     self->sequence = 0;
 }
 
-unsigned int akvcam_events_poll(akvcam_events_t self,
-                                struct file *filp,
-                                struct poll_table_struct *wait)
+__poll_t akvcam_events_poll(akvcam_events_t self,
+                            struct file *filp,
+                            struct poll_table_struct *wait)
 {
     if (akvcam_rbuffer_data_size(self->events) > 0)
-        return POLLIN | POLLPRI | POLLRDNORM;
+        return EPOLLIN | EPOLLPRI | EPOLLRDNORM;
 
     poll_wait(filp, &self->event_signaled, wait);
 
     return 0;
 }
 
-bool akvcam_events_check(const struct v4l2_event_subscription *sub,
-                         const struct v4l2_event *event,
-                         size_t size)
+static bool akvcam_events_check(const struct v4l2_event_subscription *sub,
+                                const struct v4l2_event *event,
+                                size_t size)
 {
     return sub->type == event->type && sub->id == event->id;
 }
@@ -162,7 +162,7 @@ bool akvcam_events_dequeue(akvcam_events_t self, struct v4l2_event *event)
     if (akvcam_rbuffer_data_size(self->events) < 1)
         return false;
 
-    akvcam_rbuffer_dequeue(self->events, event, false, false);
+    akvcam_rbuffer_dequeue(self->events, event, false);
     event->pending = (__u32) akvcam_rbuffer_n_data(self->events);
 
     return true;
@@ -186,7 +186,7 @@ void akvcam_events_remove_unsub(akvcam_events_t self,
                           AKVCAM_RBUFFER_MEMORY_TYPE_KMALLOC);
 
     while (akvcam_rbuffer_data_size(self->events) > 0) {
-        akvcam_rbuffer_dequeue(self->events, &event, false, false);
+        akvcam_rbuffer_dequeue(self->events, &event, false);
 
         if (sub->type != event.type || sub->id !=  event.id)
             akvcam_rbuffer_queue(subscribed_events, &event);

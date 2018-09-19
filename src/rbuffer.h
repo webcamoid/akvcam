@@ -53,13 +53,11 @@ void *akvcam_rbuffer_queue_bytes(akvcam_rbuffer_t self,
                                  size_t size);
 void *akvcam_rbuffer_dequeue(akvcam_rbuffer_t self,
                              void *data,
-                             bool keep,
-                             bool user);
+                             bool keep);
 void *akvcam_rbuffer_dequeue_bytes(akvcam_rbuffer_t self,
                                    void *data,
                                    size_t *size,
-                                   bool keep,
-                                   bool user);
+                                   bool keep);
 void akvcam_rbuffer_clear(akvcam_rbuffer_t self);
 void *akvcam_rbuffer_ptr_at(akvcam_rbuffer_t self, size_t i);
 void *akvcam_rbuffer_ptr_front(akvcam_rbuffer_t self);

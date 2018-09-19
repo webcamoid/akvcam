@@ -36,7 +36,7 @@ struct akvcam_list
     akvcam_list_element_t tail;
 };
 
-akvcam_list_t akvcam_list_new()
+akvcam_list_t akvcam_list_new(void)
 {
     akvcam_list_t self = kzalloc(sizeof(struct akvcam_list), GFP_KERNEL);
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_list_delete);

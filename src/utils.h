@@ -20,14 +20,18 @@
 #define AKVCAM_UTILS_H
 
 #include <linux/types.h>
+#include <linux/version.h>
 
 #define UNUSED(x) (void)(x)
 #define AKVCAM_MAX_STRING_SIZE 1024
 
-#define AKVCAM_BETWEEN(min, value, max) \
+#define akvcam_min(value1, value2) \
+    ((value1) < (value2)? (value1): (value2))
+
+#define akvcam_between(min, value, max) \
     ((value) >= (min) && (value) <= (max))
 
-#define AKVCAM_CALLBACK(name, ...) \
+#define akvcam_callback(name, ...) \
     typedef void (*akvcam_##name##_proc)(void *user_data, __VA_ARGS__); \
     \
     typedef struct \
@@ -35,6 +39,16 @@
         void *user_data; \
         akvcam_##name##_proc callback; \
     } akvcam_##name##_callback, *akvcam_##name##_callback_t;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 16, 0)
+typedef unsigned __bitwise __poll_t;
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
+#define EPOLLIN		(__force __poll_t) 0x00000001
+#define EPOLLPRI	(__force __poll_t) 0x00000002
+#define EPOLLRDNORM	(__force __poll_t) 0x00000040
+#endif
 
 typedef bool (*akvcam_are_equals_t)(const void *element_data,
                                     const void *data,

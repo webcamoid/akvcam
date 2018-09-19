@@ -86,7 +86,7 @@ void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
 {
     char *new_data;
     size_t new_size = n_elements * element_size;
-    size_t data_size = min(self->data_size, new_size);
+    size_t data_size = akvcam_min(self->data_size, new_size);
     size_t left_size;
 
     if (new_size == self->size)
@@ -110,7 +110,7 @@ void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
     new_data = akvcam_rbuffer_alloc(memory_type, new_size);
 
     if (self->data) {
-        left_size = min(self->size - self->read, data_size);
+        left_size = akvcam_min(self->size - self->read, data_size);
 
         if (left_size > 0)
             memcpy(new_data, self->data + self->read, left_size);
@@ -177,11 +177,11 @@ void *akvcam_rbuffer_queue_bytes(akvcam_rbuffer_t self,
     if (self->size < 1)
         return NULL;
 
-    size = min(size, self->size);
+    size = akvcam_min(size, self->size);
     output_data = self->data + self->write;
 
     if (data) {
-        right_size = min(self->size - self->write, size);
+        right_size = akvcam_min(self->size - self->write, size);
 
         if (right_size > 0)
             memcpy(output_data, data, right_size);
@@ -193,10 +193,10 @@ void *akvcam_rbuffer_queue_bytes(akvcam_rbuffer_t self,
     }
 
     move_read =
-            AKVCAM_BETWEEN(self->write, self->read, self->write + size - 1)
+            akvcam_between(self->write, self->read, self->write + size - 1)
             && self->data_size > 0;
     self->write = (self->write + size) % self->size;
-    self->data_size = min(self->data_size + size, self->size);
+    self->data_size = akvcam_min(self->data_size + size, self->size);
 
     if (move_read)
         self->read = self->write;
@@ -206,19 +206,17 @@ void *akvcam_rbuffer_queue_bytes(akvcam_rbuffer_t self,
 
 void *akvcam_rbuffer_dequeue(akvcam_rbuffer_t self,
                              void *data,
-                             bool keep,
-                             bool user)
+                             bool keep)
 {
     size_t size = self->step;
 
-    return akvcam_rbuffer_dequeue_bytes(self, data, &size, keep, user);
+    return akvcam_rbuffer_dequeue_bytes(self, data, &size, keep);
 }
 
 void *akvcam_rbuffer_dequeue_bytes(akvcam_rbuffer_t self,
                                    void *data,
                                    size_t *size,
-                                   bool keep,
-                                   bool user)
+                                   bool keep)
 {
     void *input_data;
     size_t left_size;
@@ -226,29 +224,19 @@ void *akvcam_rbuffer_dequeue_bytes(akvcam_rbuffer_t self,
     if (self->data_size < 1)
         return NULL;
 
-    *size = min(*size, self->data_size);
+    *size = akvcam_min(*size, self->data_size);
     input_data = self->data + self->read;
 
     if (data) {
-        left_size = min(self->size - self->read, *size);
+        left_size = akvcam_min(self->size - self->read, *size);
 
-        if (left_size > 0) {
-            if (user)
-                copy_to_user(data, input_data, left_size);
-            else
-                memcpy(data, input_data, left_size);
-        }
+        if (left_size > 0)
+            memcpy(data, input_data, left_size);
 
-        if (*size > left_size) {
-            if (user)
-                copy_to_user((char *) data + left_size,
-                             self->data,
-                             *size - left_size);
-            else
-                memcpy((char *) data + left_size,
-                       self->data,
-                       *size - left_size);
-        }
+        if (*size > left_size)
+            memcpy((char *) data + left_size,
+                   self->data,
+                   *size - left_size);
     }
 
     self->read = (self->read + *size) % self->size;

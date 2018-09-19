@@ -19,6 +19,8 @@
 #ifndef AKVCAM_IOCTL_H
 #define AKVCAM_IOCTL_H
 
+#include <linux/compiler_types.h>
+
 struct akvcam_ioctl;
 typedef struct akvcam_ioctl *akvcam_ioctl_t;
 struct akvcam_node;
@@ -29,6 +31,6 @@ void akvcam_ioctl_delete(akvcam_ioctl_t *self);
 int akvcam_ioctl_do(akvcam_ioctl_t self,
                     struct akvcam_node *node,
                     unsigned int cmd,
-                    void *arg);
+                    void __user *arg);
 
 #endif // AKVCAM_IOCTL_H

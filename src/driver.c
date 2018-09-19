@@ -39,7 +39,7 @@ static akvcam_driver_t akvcam_driver_global = NULL;
 bool akvcam_driver_register(void);
 void akvcam_driver_unregister(void);
 
-void akvcam_driver_delete(void *dummy)
+static void akvcam_driver_delete(void *dummy)
 {
     UNUSED(dummy);
     akvcam_driver_uninit();
@@ -52,6 +52,7 @@ int akvcam_driver_init(const char *name, const char *description)
     akvcam_buffers_t buffers;
     struct v4l2_fract frame_rate = {30, 1};
     akvcam_format_t format;
+    AKVCAM_RW_MODE mode = 0;
 
     if (akvcam_driver_global)
         return -EINVAL;
@@ -62,11 +63,13 @@ int akvcam_driver_init(const char *name, const char *description)
     snprintf(akvcam_driver_global->description, AKVCAM_MAX_STRING_SIZE, "%s", description);
     akvcam_driver_global->devices = akvcam_list_new();
 
+//    mode |= AKVCAM_RW_MODE_READWRITE;
+    mode |= AKVCAM_RW_MODE_MMAP;
+    mode |= AKVCAM_RW_MODE_USERPTR;
+
     device = akvcam_device_new("akvcam-device",
                                AKVCAM_DEVICE_TYPE_CAPTURE,
-                               AKVCAM_RW_MODE_READWRITE
-                               | AKVCAM_RW_MODE_MMAP
-                               | AKVCAM_RW_MODE_USERPTR);
+                               mode);
     akvcam_list_push_back(akvcam_driver_global->devices,
                           device,
                           (akvcam_deleter_t) akvcam_device_delete);

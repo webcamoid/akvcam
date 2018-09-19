@@ -33,7 +33,6 @@ lupdate_only {
         src/ioctl.h \
         src/list.h \
         src/mmap.h \
-        src/mutex.h \
         src/node.h \
         src/object.h \
         src/rbuffer.h \
@@ -51,7 +50,6 @@ lupdate_only {
         src/ioctl.c \
         src/list.c \
         src/mmap.c \
-        src/mutex.c \
         src/node.c \
         src/object.c \
         src/rbuffer.c \
@@ -60,6 +58,8 @@ lupdate_only {
 
 KERNEL_RELEASE = $$system(uname -r)
 isEmpty(KERNEL_DIR): KERNEL_DIR = /lib/modules/$${KERNEL_RELEASE}/build
+!isEmpty(USE_SPARSE): USE_SPARSE_VAR = USE_SPARSE=1
+isEmpty(SPARSE_MODE): SPARSE_MODE=2
 
 INCLUDEPATH += \
     $${KERNEL_DIR}/include \
@@ -80,7 +80,13 @@ OTHER_FILES += \
 DUMMY_FILES = .
 makedriver.input = DUMMY_FILES
 makedriver.output = $${PWD}/src/akvcam.ko
-makedriver.commands = cd $${PWD}/src; make KERNEL_DIR=$${KERNEL_DIR}; cd ..
+makedriver.commands = \
+    cd $${PWD}/src; \
+    make \
+        KERNEL_DIR=$${KERNEL_DIR} \
+        $${USE_SPARSE_VAR} \
+        SPARSE_MODE=$${SPARSE_MODE}; \
+    cd ..
 makedriver.clean = \
     $${PWD}/src/*.ko \
     $${PWD}/src/*.o \

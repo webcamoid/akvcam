@@ -240,6 +240,7 @@ int akvcam_controls_get_ext(akvcam_controls_t self,
             control = controls->controls + i;
         } else {
             if (copy_from_user(control,
+                               (struct v4l2_ext_control __user *)
                                controls->controls + i,
                                sizeof(struct v4l2_ext_control)) != 0) {
                 result = -EIO;
@@ -255,7 +256,8 @@ int akvcam_controls_get_ext(akvcam_controls_t self,
         control->value = _control->value;
 
         if (!kernel)
-            if (copy_to_user(controls->controls + i,
+            if (copy_to_user((struct v4l2_ext_control __user *)
+                             controls->controls + i,
                              control,
                              sizeof(struct v4l2_ext_control)) != 0) {
                 result = -EIO;
@@ -323,6 +325,7 @@ int akvcam_controls_set_ext(akvcam_controls_t self,
             control = controls->controls + i;
         } else {
             if (copy_from_user(control,
+                               (struct v4l2_ext_control __user *)
                                controls->controls + i,
                                sizeof(struct v4l2_ext_control)) != 0) {
                 result = -EIO;
@@ -396,6 +399,7 @@ int akvcam_controls_try_ext(akvcam_controls_t self,
             control = controls->controls + i;
         } else {
             if (copy_from_user(control,
+                               (struct v4l2_ext_control __user *)
                                controls->controls + i,
                                sizeof(struct v4l2_ext_control)) != 0) {
                 result = -EIO;
