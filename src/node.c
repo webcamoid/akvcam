@@ -79,31 +79,31 @@ void akvcam_node_delete(akvcam_node_t *self)
     *self = NULL;
 }
 
-struct akvcam_device *akvcam_node_device_nr(akvcam_node_t self)
+struct akvcam_device *akvcam_node_device_nr(const akvcam_node_t self)
 {
     return self->device;
 }
 
-struct akvcam_device *akvcam_node_device(akvcam_node_t self)
+struct akvcam_device *akvcam_node_device(const akvcam_node_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->device));
 
     return self->device;
 }
 
-struct akvcam_events *akvcam_node_events_nr(akvcam_node_t self)
+struct akvcam_events *akvcam_node_events_nr(const akvcam_node_t self)
 {
     return self->events;
 }
 
-struct akvcam_events *akvcam_node_events(akvcam_node_t self)
+struct akvcam_events *akvcam_node_events(const akvcam_node_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->events));
 
     return self->events;
 }
 
-bool akvcam_node_non_blocking(akvcam_node_t self)
+bool akvcam_node_non_blocking(const akvcam_node_t self)
 {
     return self->non_blocking;
 }
@@ -180,9 +180,33 @@ static ssize_t akvcam_node_write(struct file *filp,
                                  const char __user *data,
                                  size_t size, loff_t *offset)
 {
-    printk(KERN_INFO "%s()\n", __FUNCTION__);
+    akvcam_device_t device;
+    akvcam_buffers_t buffers;
+    ssize_t bytes_written = 0;
+    void *vdata;
 
-    return (ssize_t) size;
+    printk(KERN_INFO "%s()\n", __FUNCTION__);
+    device = akvcam_device_from_file_nr(filp);
+    buffers = akvcam_device_buffers_nr(device);
+
+    if (akvcam_buffers_allocated(buffers))
+        return -EBUSY;
+
+    if (size < 1)
+        return 0;
+
+    if (offset)
+        *offset = 0;
+
+    vdata = vmalloc(size);
+    copy_from_user(vdata, data, size);
+    bytes_written = akvcam_buffers_write_rw(buffers,
+                                            filp->private_data,
+                                            vdata,
+                                            size);
+    vfree(vdata);
+
+    return bytes_written;
 }
 
 static long akvcam_node_ioctl(struct file *filp,
@@ -205,6 +229,9 @@ static __poll_t akvcam_node_poll(struct file *filp,
     akvcam_buffers_t buffers = akvcam_device_buffers_nr(device);
 
     printk(KERN_INFO "%s()\n", __FUNCTION__);
+
+    if (akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_OUTPUT)
+        return AK_EPOLLOUT | AK_EPOLLWRNORM;
 
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE
         && !akvcam_buffers_allocated(buffers))

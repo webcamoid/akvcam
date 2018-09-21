@@ -72,7 +72,7 @@ void akvcam_frame_delete(akvcam_frame_t *self)
     *self = NULL;
 }
 
-void akvcam_frame_copy(akvcam_frame_t self, akvcam_frame_t other)
+void akvcam_frame_copy(akvcam_frame_t self, const akvcam_frame_t other)
 {
     akvcam_format_copy(self->format, other->format);
     self->size = other->size;
@@ -90,24 +90,24 @@ void akvcam_frame_copy(akvcam_frame_t self, akvcam_frame_t other)
     }
 }
 
-struct akvcam_format *akvcam_frame_format_nr(akvcam_frame_t self)
+struct akvcam_format *akvcam_frame_format_nr(const akvcam_frame_t self)
 {
     return self->format;
 }
 
-struct akvcam_format *akvcam_frame_format(akvcam_frame_t self)
+struct akvcam_format *akvcam_frame_format(const akvcam_frame_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->format));
 
     return self->format;
 }
 
-void *akvcam_frame_data(akvcam_frame_t self)
+void *akvcam_frame_data(const akvcam_frame_t self)
 {
     return self->data;
 }
 
-size_t akvcam_frame_size(akvcam_frame_t self)
+size_t akvcam_frame_size(const akvcam_frame_t self)
 {
     return self->size;
 }

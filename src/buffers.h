@@ -45,27 +45,37 @@ void akvcam_buffers_deallocate(akvcam_buffers_t self, struct akvcam_node *node);
 int akvcam_buffers_create(akvcam_buffers_t self,
                           struct akvcam_node *node,
                           struct v4l2_create_buffers *buffers);
-bool akvcam_buffers_fill(akvcam_buffers_t self, struct v4l2_buffer *buffer);
+bool akvcam_buffers_fill(const akvcam_buffers_t self,
+                         struct v4l2_buffer *buffer);
 int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer);
 int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer);
-void *akvcam_buffers_buffers_data(akvcam_buffers_t self,
-                                  struct v4l2_buffer *buffer);
-void *akvcam_buffers_data(akvcam_buffers_t self, __u32 offset);
-bool akvcam_buffers_allocated(akvcam_buffers_t self);
-size_t akvcam_buffers_size_rw(akvcam_buffers_t self);
+void *akvcam_buffers_buffers_data(const akvcam_buffers_t self,
+                                  const struct v4l2_buffer *buffer);
+void *akvcam_buffers_data(const akvcam_buffers_t self, __u32 offset);
+bool akvcam_buffers_allocated(const akvcam_buffers_t self);
+size_t akvcam_buffers_size_rw(const akvcam_buffers_t self);
 bool akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size);
 ssize_t akvcam_buffers_read_rw(akvcam_buffers_t self,
                                struct akvcam_node *node,
                                void *data,
                                size_t size);
+ssize_t akvcam_buffers_write_rw(akvcam_buffers_t self,
+                                struct akvcam_node *node,
+                                const void *data,
+                                size_t size);
 bool akvcam_buffers_write_frame(akvcam_buffers_t self,
                                 struct akvcam_frame *frame);
 void akvcam_buffers_notify_frame(akvcam_buffers_t self);
+void akvcam_buffers_process_frame(const akvcam_buffers_t self,
+                                  struct v4l2_buffer *buffer);
 void akvcam_buffers_reset_sequence(akvcam_buffers_t self);
 
 // signals
-akvcam_callback(frame_ready, struct v4l2_event *event)
+akvcam_callback(frame_ready, const struct v4l2_event *event)
 void akvcam_buffers_set_frame_ready_callback(akvcam_buffers_t self,
-                                             akvcam_frame_ready_callback callback);
+                                             const akvcam_frame_ready_callback callback);
+akvcam_callback(frame_written, const struct akvcam_frame *frame)
+void akvcam_buffers_set_frame_written_callback(akvcam_buffers_t self,
+                                               const akvcam_frame_written_callback callback);
 
 #endif // AKVCAM_BUFFERS_H

@@ -68,7 +68,7 @@ int akvcam_driver_init(const char *name, const char *description)
     mode |= AKVCAM_RW_MODE_USERPTR;
 
     device = akvcam_device_new("akvcam-device",
-                               AKVCAM_DEVICE_TYPE_CAPTURE,
+                               AKVCAM_DEVICE_TYPE_OUTPUT,
                                mode);
     akvcam_list_push_back(akvcam_driver_global->devices,
                           device,

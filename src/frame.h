@@ -30,11 +30,11 @@ akvcam_frame_t akvcam_frame_new(struct akvcam_format *format,
                                 size_t size);
 void akvcam_frame_delete(akvcam_frame_t *self);
 
-void akvcam_frame_copy(akvcam_frame_t self, akvcam_frame_t other);
-struct akvcam_format *akvcam_frame_format_nr(akvcam_frame_t self);
-struct akvcam_format *akvcam_frame_format(akvcam_frame_t self);
-void *akvcam_frame_data(akvcam_frame_t self);
-size_t akvcam_frame_size(akvcam_frame_t self);
+void akvcam_frame_copy(akvcam_frame_t self, const akvcam_frame_t other);
+struct akvcam_format *akvcam_frame_format_nr(const akvcam_frame_t self);
+struct akvcam_format *akvcam_frame_format(const akvcam_frame_t self);
+void *akvcam_frame_data(const akvcam_frame_t self);
+size_t akvcam_frame_size(const akvcam_frame_t self);
 void akvcam_frame_resize(akvcam_frame_t self, size_t size);
 void akvcam_frame_clear(akvcam_frame_t self);
 

@@ -44,11 +44,15 @@
     #define __poll_t       unsigned int
     #define AK_EPOLLIN     POLLIN
     #define AK_EPOLLPRI    POLLPRI
+    #define AK_EPOLLOUT    POLLOUT
     #define AK_EPOLLRDNORM POLLRDNORM
+    #define AK_EPOLLWRNORM POLLWRNORM
 #else
     #define AK_EPOLLIN     EPOLLIN
     #define AK_EPOLLPRI    EPOLLPRI
+    #define AK_EPOLLOUT    EPOLLOUT
     #define AK_EPOLLRDNORM EPOLLRDNORM
+    #define AK_EPOLLWRNORM EPOLLWRNORM
 #endif
 
 typedef bool (*akvcam_are_equals_t)(const void *element_data,

@@ -155,82 +155,82 @@ void akvcam_device_unregister(akvcam_device_t self)
     self->is_registered = false;
 }
 
-u16 akvcam_device_num(akvcam_device_t self)
+u16 akvcam_device_num(const akvcam_device_t self)
 {
     return self->vdev->num;
 }
 
-AKVCAM_DEVICE_TYPE akvcam_device_type(akvcam_device_t self)
+AKVCAM_DEVICE_TYPE akvcam_device_type(const akvcam_device_t self)
 {
     return self->type;
 }
 
-AKVCAM_RW_MODE akvcam_device_rw_mode(akvcam_device_t self)
+AKVCAM_RW_MODE akvcam_device_rw_mode(const akvcam_device_t self)
 {
     return self->rw_mode;
 }
 
-struct akvcam_list *akvcam_device_formats_nr(akvcam_device_t self)
+struct akvcam_list *akvcam_device_formats_nr(const akvcam_device_t self)
 {
     return self->formats;
 }
 
-struct akvcam_list *akvcam_device_formats(akvcam_device_t self)
+struct akvcam_list *akvcam_device_formats(const akvcam_device_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->formats));
 
     return self->formats;
 }
 
-struct akvcam_format *akvcam_device_format_nr(akvcam_device_t self)
+struct akvcam_format *akvcam_device_format_nr(const akvcam_device_t self)
 {
     return self->format;
 }
 
-struct akvcam_format *akvcam_device_format(akvcam_device_t self)
+struct akvcam_format *akvcam_device_format(const akvcam_device_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->format));
 
     return self->format;
 }
 
-struct akvcam_controls *akvcam_device_controls_nr(akvcam_device_t self)
+struct akvcam_controls *akvcam_device_controls_nr(const akvcam_device_t self)
 {
     return self->controls;
 }
 
-struct akvcam_controls *akvcam_device_controls(akvcam_device_t self)
+struct akvcam_controls *akvcam_device_controls(const akvcam_device_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->controls));
 
     return self->controls;
 }
 
-struct akvcam_list *akvcam_device_nodes_nr(akvcam_device_t self)
+struct akvcam_list *akvcam_device_nodes_nr(const akvcam_device_t self)
 {
     return self->nodes;
 }
 
-struct akvcam_list *akvcam_device_nodes(akvcam_device_t self)
+struct akvcam_list *akvcam_device_nodes(const akvcam_device_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->nodes));
 
     return self->nodes;
 }
 
-struct akvcam_buffers *akvcam_device_buffers_nr(akvcam_device_t self)
+struct akvcam_buffers *akvcam_device_buffers_nr(const akvcam_device_t self)
 {
     return self->buffers;
 }
 
-struct akvcam_buffers *akvcam_device_buffers(akvcam_device_t self)
+struct akvcam_buffers *akvcam_device_buffers(const akvcam_device_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->buffers));
 
     return self->buffers;
 }
 
-struct akvcam_node *akvcam_device_priority_node(akvcam_device_t self)
+struct akvcam_node *akvcam_device_priority_node(const akvcam_device_t self)
 {
     return self->priority_node;
 }
@@ -243,28 +243,32 @@ void akvcam_device_set_priority(akvcam_device_t self,
     self->priority_node = node;
 }
 
-enum v4l2_priority akvcam_device_priority(akvcam_device_t self)
+enum v4l2_priority akvcam_device_priority(const akvcam_device_t self)
 {
     return self->priority;
 }
 
-bool akvcam_device_streaming(akvcam_device_t self)
+bool akvcam_device_streaming(const akvcam_device_t self)
 {
     return self->streaming;
 }
 
 void akvcam_device_set_streaming(akvcam_device_t self, bool streaming)
 {
-    if (!self->streaming && streaming) {
+    if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
+        if (!self->streaming && streaming) {
+            akvcam_buffers_reset_sequence(self->buffers);
+            self->thread = kthread_run((akvacam_thread_t)
+                                       akvcam_device_send_frames,
+                                       self,
+                                       "akvcam-thread-%llu",
+                                       akvcam_id());
+        } else if (self->streaming && !streaming) {
+            kthread_stop(self->thread);
+            self->thread = NULL;
+        }
+    } else if (!self->streaming && streaming) {
         akvcam_buffers_reset_sequence(self->buffers);
-        self->thread = kthread_run((akvacam_thread_t)
-                                   akvcam_device_send_frames,
-                                   self,
-                                   "akvcam-thread-%llu",
-                                   akvcam_id());
-    } else if (self->streaming && !streaming) {
-        kthread_stop(self->thread);
-        self->thread = NULL;
     }
 
     self->streaming = streaming;

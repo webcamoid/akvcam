@@ -65,9 +65,9 @@ static akvcam_control_params akvcam_controls_private[] = {
     {0                  ,                         0,                "",    0,   0, 0, 0,                         0},
 };
 
-akvcam_control_value_t akvcam_controls_value_by_id(akvcam_controls_t self,
+akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,
                                                    __u32 id);
-akvcam_control_params_t akvcam_controls_params_by_id(akvcam_controls_t self,
+akvcam_control_params_t akvcam_controls_params_by_id(const akvcam_controls_t self,
                                                      __u32 id);
 
 akvcam_controls_t akvcam_controls_new(void)
@@ -107,7 +107,7 @@ void akvcam_controls_delete(akvcam_controls_t *self)
     *self = NULL;
 }
 
-int akvcam_controls_fill(akvcam_controls_t self,
+int akvcam_controls_fill(const akvcam_controls_t self,
                          struct v4l2_queryctrl *control)
 {
 #ifdef VIDIOC_QUERY_EXT_CTRL
@@ -135,7 +135,7 @@ int akvcam_controls_fill(akvcam_controls_t self,
 }
 
 #ifdef VIDIOC_QUERY_EXT_CTRL
-int akvcam_controls_fill_ext(akvcam_controls_t self,
+int akvcam_controls_fill_ext(const akvcam_controls_t self,
                              struct v4l2_query_ext_ctrl *control)
 {
     size_t i;
@@ -183,7 +183,8 @@ int akvcam_controls_fill_ext(akvcam_controls_t self,
 }
 #endif
 
-int akvcam_controls_get(akvcam_controls_t self, struct v4l2_control *control)
+int akvcam_controls_get(const akvcam_controls_t self,
+                        struct v4l2_control *control)
 {
     int result;
     struct v4l2_ext_controls ext_controls;
@@ -214,7 +215,7 @@ int akvcam_controls_get(akvcam_controls_t self, struct v4l2_control *control)
     return 0;
 }
 
-int akvcam_controls_get_ext(akvcam_controls_t self,
+int akvcam_controls_get_ext(const akvcam_controls_t self,
                             struct v4l2_ext_controls *controls,
                             uint32_t flags)
 {
@@ -275,7 +276,8 @@ int akvcam_controls_get_ext(akvcam_controls_t self,
 #endif
 }
 
-int akvcam_controls_set(akvcam_controls_t self, struct v4l2_control *control)
+int akvcam_controls_set(akvcam_controls_t self,
+                        const struct v4l2_control *control)
 {
     struct v4l2_ext_controls ext_controls;
     struct v4l2_ext_control ext_control;
@@ -443,7 +445,7 @@ int akvcam_controls_try_ext(akvcam_controls_t self,
     return result;
 }
 
-bool akvcam_controls_contains(akvcam_controls_t self, __u32 id)
+bool akvcam_controls_contains(const akvcam_controls_t self, __u32 id)
 {
     size_t i;
 
@@ -454,7 +456,7 @@ bool akvcam_controls_contains(akvcam_controls_t self, __u32 id)
     return false;
 }
 
-bool akvcam_controls_generate_event(akvcam_controls_t self,
+bool akvcam_controls_generate_event(const akvcam_controls_t self,
                                     __u32 id,
                                     struct v4l2_event *event)
 {
@@ -488,12 +490,12 @@ bool akvcam_controls_generate_event(akvcam_controls_t self,
 }
 
 void akvcam_controls_set_changed_callback(akvcam_controls_t self,
-                                          akvcam_controls_changed_callback callback)
+                                          const akvcam_controls_changed_callback callback)
 {
     self->controls_changed = callback;
 }
 
-akvcam_control_value_t akvcam_controls_value_by_id(akvcam_controls_t self,
+akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,
                                                    __u32 id)
 {
     size_t i;
@@ -508,7 +510,7 @@ akvcam_control_value_t akvcam_controls_value_by_id(akvcam_controls_t self,
     return NULL;
 }
 
-akvcam_control_params_t akvcam_controls_params_by_id(akvcam_controls_t self,
+akvcam_control_params_t akvcam_controls_params_by_id(const akvcam_controls_t self,
                                                      __u32 id)
 {
     size_t i;

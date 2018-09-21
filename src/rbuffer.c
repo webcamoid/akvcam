@@ -65,7 +65,7 @@ void akvcam_rbuffer_delete(akvcam_rbuffer_t *self)
     *self = NULL;
 }
 
-void akvcam_rbuffer_copy(akvcam_rbuffer_t self, akvcam_rbuffer_t other)
+void akvcam_rbuffer_copy(akvcam_rbuffer_t self, const akvcam_rbuffer_t other)
 {
     if (self->data)
         akvcam_rbuffer_free(self->memory_type, self->data);
@@ -130,17 +130,17 @@ void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
     self->memory_type = memory_type;
 }
 
-size_t akvcam_rbuffer_size(akvcam_rbuffer_t self)
+size_t akvcam_rbuffer_size(const akvcam_rbuffer_t self)
 {
     return self->size;
 }
 
-size_t akvcam_rbuffer_data_size(akvcam_rbuffer_t self)
+size_t akvcam_rbuffer_data_size(const akvcam_rbuffer_t self)
 {
     return self->data_size;
 }
 
-size_t akvcam_rbuffer_n_elements(akvcam_rbuffer_t self)
+size_t akvcam_rbuffer_n_elements(const akvcam_rbuffer_t self)
 {
     if (self->step < 1)
         return 0;
@@ -148,12 +148,12 @@ size_t akvcam_rbuffer_n_elements(akvcam_rbuffer_t self)
     return self->size / self->step;
 }
 
-size_t akvcam_rbuffer_element_size(akvcam_rbuffer_t self)
+size_t akvcam_rbuffer_element_size(const akvcam_rbuffer_t self)
 {
     return self->step;
 }
 
-size_t akvcam_rbuffer_n_data(akvcam_rbuffer_t self)
+size_t akvcam_rbuffer_n_data(const akvcam_rbuffer_t self)
 {
     if (self->step < 1)
         return 0;
@@ -254,7 +254,7 @@ void akvcam_rbuffer_clear(akvcam_rbuffer_t self)
     self->write = 0;
 }
 
-void *akvcam_rbuffer_ptr_at(akvcam_rbuffer_t self, size_t i)
+void *akvcam_rbuffer_ptr_at(const akvcam_rbuffer_t self, size_t i)
 {
     size_t offset = i * self->step;
 
@@ -266,7 +266,7 @@ void *akvcam_rbuffer_ptr_at(akvcam_rbuffer_t self, size_t i)
     return self->data + offset;
 }
 
-void *akvcam_rbuffer_ptr_front(akvcam_rbuffer_t self)
+void *akvcam_rbuffer_ptr_front(const akvcam_rbuffer_t self)
 {
     if (!self->data || self->data_size < 1)
         return NULL;
@@ -274,7 +274,7 @@ void *akvcam_rbuffer_ptr_front(akvcam_rbuffer_t self)
     return self->data + self->read;
 }
 
-void *akvcam_rbuffer_ptr_back(akvcam_rbuffer_t self)
+void *akvcam_rbuffer_ptr_back(const akvcam_rbuffer_t self)
 {
     size_t offset;
 
@@ -286,10 +286,10 @@ void *akvcam_rbuffer_ptr_back(akvcam_rbuffer_t self)
     return self->data + offset;
 }
 
-void *akvcam_rbuffer_find(akvcam_rbuffer_t self,
+void *akvcam_rbuffer_find(const akvcam_rbuffer_t self,
                           const void *data,
                           size_t size,
-                          akvcam_are_equals_t equals)
+                          const akvcam_are_equals_t equals)
 {
     size_t i;
     size_t offset;

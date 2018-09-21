@@ -17,3 +17,4 @@ modules.order
 *.kate-swp
 *.tmp
 *.o.d
+*.ur-safe

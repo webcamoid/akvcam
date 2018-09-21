@@ -30,11 +30,11 @@ struct akvcam_events;
 akvcam_node_t akvcam_node_new(struct akvcam_device *device);
 void akvcam_node_delete(akvcam_node_t *self);
 
-struct akvcam_device *akvcam_node_device_nr(akvcam_node_t self);
-struct akvcam_device *akvcam_node_device(akvcam_node_t self);
-struct akvcam_events *akvcam_node_events_nr(akvcam_node_t self);
-struct akvcam_events *akvcam_node_events(akvcam_node_t self);
-bool akvcam_node_non_blocking(akvcam_node_t self);
+struct akvcam_device *akvcam_node_device_nr(const akvcam_node_t self);
+struct akvcam_device *akvcam_node_device(const akvcam_node_t self);
+struct akvcam_events *akvcam_node_events_nr(const akvcam_node_t self);
+struct akvcam_events *akvcam_node_events(const akvcam_node_t self);
+bool akvcam_node_non_blocking(const akvcam_node_t self);
 void akvcam_node_set_non_blocking(akvcam_node_t self, bool non_blocking);
 
 // static

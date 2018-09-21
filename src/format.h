@@ -34,17 +34,17 @@ akvcam_format_t akvcam_format_new(__u32 fourcc,
                                   const struct v4l2_fract *frame_rate);
 void akvcam_format_delete(akvcam_format_t *self);
 
-void akvcam_format_copy(akvcam_format_t self, akvcam_format_t other);
-__u32 akvcam_format_fourcc(akvcam_format_t self);
+void akvcam_format_copy(akvcam_format_t self, const akvcam_format_t other);
+__u32 akvcam_format_fourcc(const akvcam_format_t self);
 void akvcam_format_set_fourcc(akvcam_format_t self, __u32 fourcc);
-__u32 akvcam_format_width(akvcam_format_t self);
+__u32 akvcam_format_width(const akvcam_format_t self);
 void akvcam_format_set_width(akvcam_format_t self, __u32 width);
-__u32 akvcam_format_height(akvcam_format_t self);
+__u32 akvcam_format_height(const akvcam_format_t self);
 void akvcam_format_set_height(akvcam_format_t self, __u32 height);
-struct v4l2_fract *akvcam_format_frame_rate(akvcam_format_t self);
-size_t akvcam_format_bpp(akvcam_format_t self);
-size_t akvcam_format_bypl(akvcam_format_t self);
-size_t akvcam_format_size(akvcam_format_t self);
+struct v4l2_fract *akvcam_format_frame_rate(const akvcam_format_t self);
+size_t akvcam_format_bpp(const akvcam_format_t self);
+size_t akvcam_format_bypl(const akvcam_format_t self);
+size_t akvcam_format_size(const akvcam_format_t self);
 void akvcam_format_clear(akvcam_format_t self);
 
 // public static
@@ -54,9 +54,9 @@ void akvcam_format_round_nearest(int width, int height,
 __u32 akvcam_format_fourcc_from_string(const char *fourcc_str);
 const char *akvcam_format_string_from_fourcc(__u32 fourcc);
 akvcam_format_t akvcam_format_nearest_nr(struct akvcam_list *formats,
-                                         akvcam_format_t format);
+                                         const akvcam_format_t format);
 akvcam_format_t akvcam_format_nearest(struct akvcam_list *formats,
-                                      akvcam_format_t format);
+                                      const akvcam_format_t format);
 struct akvcam_list *akvcam_format_pixel_formats(struct akvcam_list *formats);
 struct akvcam_list *akvcam_format_resolutions(struct akvcam_list *formats,
                                               __u32 fourcc);
@@ -65,8 +65,8 @@ struct akvcam_list *akvcam_format_frame_rates(struct akvcam_list *formats,
                                               __u32 width,
                                               __u32 height);
 akvcam_format_t akvcam_format_from_v4l2_nr(struct akvcam_list *formats,
-                                           struct v4l2_format *format);
+                                           const struct v4l2_format *format);
 akvcam_format_t akvcam_format_from_v4l2(struct akvcam_list *formats,
-                                        struct v4l2_format *format);
+                                        const struct v4l2_format *format);
 
 #endif // AKVCAM_FORMAT_H

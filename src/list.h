@@ -35,33 +35,34 @@ typedef struct akvcam_list_element *akvcam_list_element_t;
 akvcam_list_t akvcam_list_new(void);
 void akvcam_list_delete(akvcam_list_t *self);
 
-size_t akvcam_list_size(akvcam_list_t self);
-bool akvcam_list_empty(akvcam_list_t self);
-void *akvcam_list_at(akvcam_list_t self, size_t i);
-void *akvcam_list_front(akvcam_list_t self);
-void *akvcam_list_back(akvcam_list_t self);
+size_t akvcam_list_size(const akvcam_list_t self);
+bool akvcam_list_empty(const akvcam_list_t self);
+void *akvcam_list_at(const akvcam_list_t self, size_t i);
+void *akvcam_list_front(const akvcam_list_t self);
+void *akvcam_list_back(const akvcam_list_t self);
 bool akvcam_list_push_back(akvcam_list_t self,
                            void *data,
-                           akvcam_deleter_t deleter);
+                           const akvcam_deleter_t deleter);
 bool akvcam_list_push_back_copy(akvcam_list_t self,
                                 const void *data,
                                 size_t data_size,
-                                akvcam_deleter_t deleter);
+                                const akvcam_deleter_t deleter);
 bool akvcam_list_pop(akvcam_list_t self,
                      size_t i,
                      void **data,
                      akvcam_deleter_t *deleter);
-void akvcam_list_erase(akvcam_list_t self, akvcam_list_element_t element);
+void akvcam_list_erase(akvcam_list_t self, const akvcam_list_element_t element);
 void akvcam_list_clear(akvcam_list_t self);
-akvcam_list_element_t akvcam_list_find(akvcam_list_t self,
+akvcam_list_element_t akvcam_list_find(const akvcam_list_t self,
                                        const void *data,
                                        size_t size,
-                                       akvcam_are_equals_t equals);
-ssize_t akvcam_list_index_of(akvcam_list_t self,
+                                       const akvcam_are_equals_t equals);
+ssize_t akvcam_list_index_of(const akvcam_list_t self,
                              const void *data,
                              size_t size,
-                             akvcam_are_equals_t equals);
-void *akvcam_list_next(akvcam_list_t self, akvcam_list_element_t *element);
-void *akvcam_list_element_data(akvcam_list_element_t element);
+                             const akvcam_are_equals_t equals);
+void *akvcam_list_next(const akvcam_list_t self,
+                       akvcam_list_element_t *element);
+void *akvcam_list_element_data(const akvcam_list_element_t element);
 
 #endif // AKVCAM_LIST_H

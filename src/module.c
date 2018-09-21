@@ -27,6 +27,11 @@
 
 static int __init akvcam_init(void)
 {
+    int result = request_module("videodev");
+
+    if (result)
+        return result;
+
     return akvcam_driver_init(AKVCAM_DRIVER_NAME, AKVCAM_DRIVER_DESCRIPTION);
 }
 

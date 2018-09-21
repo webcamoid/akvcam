@@ -34,9 +34,9 @@ akvcam_events_t akvcam_events_new(void);
 void akvcam_events_delete(akvcam_events_t *self);
 
 void akvcam_events_subscribe(akvcam_events_t self,
-                             struct v4l2_event_subscription *subscription);
+                             const struct v4l2_event_subscription *subscription);
 void akvcam_events_unsubscribe(akvcam_events_t self,
-                               struct v4l2_event_subscription *subscription);
+                               const struct v4l2_event_subscription *subscription);
 void akvcam_events_unsubscribe_all(akvcam_events_t self);
 __poll_t akvcam_events_poll(akvcam_events_t self,
                             struct file *filp,
@@ -44,6 +44,6 @@ __poll_t akvcam_events_poll(akvcam_events_t self,
 bool akvcam_events_enqueue(akvcam_events_t self,
                            const struct v4l2_event *event);
 bool akvcam_events_dequeue(akvcam_events_t self, struct v4l2_event *event);
-bool akvcam_events_available(akvcam_events_t self);
+bool akvcam_events_available(const akvcam_events_t self);
 
 #endif // AKVCAM_EVENTS_H

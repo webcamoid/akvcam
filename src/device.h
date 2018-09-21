@@ -51,26 +51,26 @@ void akvcam_device_delete(akvcam_device_t *self);
 
 bool akvcam_device_register(akvcam_device_t self);
 void akvcam_device_unregister(akvcam_device_t self);
-u16 akvcam_device_num(akvcam_device_t self);
-AKVCAM_DEVICE_TYPE akvcam_device_type(akvcam_device_t self);
-AKVCAM_RW_MODE akvcam_device_rw_mode(akvcam_device_t self);
-struct akvcam_list *akvcam_device_formats_nr(akvcam_device_t self);
-struct akvcam_list *akvcam_device_formats(akvcam_device_t self);
-struct akvcam_format *akvcam_device_format_nr(akvcam_device_t self);
-struct akvcam_format *akvcam_device_format(akvcam_device_t self);
-struct akvcam_controls *akvcam_device_controls_nr(akvcam_device_t self);
-struct akvcam_controls *akvcam_device_controls(akvcam_device_t self);
-struct akvcam_list *akvcam_device_nodes_nr(akvcam_device_t self);
-struct akvcam_list *akvcam_device_nodes(akvcam_device_t self);
-struct akvcam_buffers *akvcam_device_buffers_nr(akvcam_device_t self);
-struct akvcam_buffers *akvcam_device_buffers(akvcam_device_t self);
-enum v4l2_priority akvcam_device_priority(akvcam_device_t self);
-struct akvcam_node *akvcam_device_priority_node(akvcam_device_t self);
+u16 akvcam_device_num(const akvcam_device_t self);
+AKVCAM_DEVICE_TYPE akvcam_device_type(const akvcam_device_t self);
+AKVCAM_RW_MODE akvcam_device_rw_mode(const akvcam_device_t self);
+struct akvcam_list *akvcam_device_formats_nr(const akvcam_device_t self);
+struct akvcam_list *akvcam_device_formats(const akvcam_device_t self);
+struct akvcam_format *akvcam_device_format_nr(const akvcam_device_t self);
+struct akvcam_format *akvcam_device_format(const akvcam_device_t self);
+struct akvcam_controls *akvcam_device_controls_nr(const akvcam_device_t self);
+struct akvcam_controls *akvcam_device_controls(const akvcam_device_t self);
+struct akvcam_list *akvcam_device_nodes_nr(const akvcam_device_t self);
+struct akvcam_list *akvcam_device_nodes(const akvcam_device_t self);
+struct akvcam_buffers *akvcam_device_buffers_nr(const akvcam_device_t self);
+struct akvcam_buffers *akvcam_device_buffers(const akvcam_device_t self);
+enum v4l2_priority akvcam_device_priority(const akvcam_device_t self);
+struct akvcam_node *akvcam_device_priority_node(const akvcam_device_t self);
 void akvcam_device_set_priority(akvcam_device_t self,
                                 enum v4l2_priority priority,
                                 struct akvcam_node *node);
-enum v4l2_priority akvcam_device_priority(akvcam_device_t self);
-bool akvcam_device_streaming(akvcam_device_t self);
+enum v4l2_priority akvcam_device_priority(const akvcam_device_t self);
+bool akvcam_device_streaming(const akvcam_device_t self);
 void akvcam_device_set_streaming(akvcam_device_t self, bool streaming);
 bool akvcam_device_prepare_frame(akvcam_device_t self);
 

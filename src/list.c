@@ -58,7 +58,7 @@ void akvcam_list_delete(akvcam_list_t *self)
     *self = NULL;
 }
 
-size_t akvcam_list_size(akvcam_list_t self)
+size_t akvcam_list_size(const akvcam_list_t self)
 {
     if (!self)
         return 0;
@@ -66,7 +66,7 @@ size_t akvcam_list_size(akvcam_list_t self)
     return self->size;
 }
 
-bool akvcam_list_empty(akvcam_list_t self)
+bool akvcam_list_empty(const akvcam_list_t self)
 {
     if (!self)
         return true;
@@ -74,7 +74,7 @@ bool akvcam_list_empty(akvcam_list_t self)
     return self->size < 1;
 }
 
-void *akvcam_list_at(akvcam_list_t self, size_t i)
+void *akvcam_list_at(const akvcam_list_t self, size_t i)
 {
     akvcam_list_element_t element;
     size_t e;
@@ -99,7 +99,7 @@ void *akvcam_list_at(akvcam_list_t self, size_t i)
     return element->data;
 }
 
-void *akvcam_list_front(akvcam_list_t self)
+void *akvcam_list_front(const akvcam_list_t self)
 {
     if (!self || self->size < 1)
         return NULL;
@@ -107,7 +107,7 @@ void *akvcam_list_front(akvcam_list_t self)
     return self->head->data;
 }
 
-void *akvcam_list_back(akvcam_list_t self)
+void *akvcam_list_back(const akvcam_list_t self)
 {
     if (!self || self->size < 1)
         return NULL;
@@ -117,7 +117,7 @@ void *akvcam_list_back(akvcam_list_t self)
 
 bool akvcam_list_push_back(akvcam_list_t self,
                            void *data,
-                           akvcam_deleter_t deleter)
+                           const akvcam_deleter_t deleter)
 {
     akvcam_list_element_t element;
 
@@ -153,7 +153,7 @@ bool akvcam_list_push_back(akvcam_list_t self,
 bool akvcam_list_push_back_copy(akvcam_list_t self,
                                 const void *data,
                                 size_t data_size,
-                                akvcam_deleter_t deleter)
+                                const akvcam_deleter_t deleter)
 {
     return akvcam_list_push_back(self,
                                  kmemdup(data, data_size, GFP_KERNEL),
@@ -213,7 +213,7 @@ bool akvcam_list_pop(akvcam_list_t self,
     return true;
 }
 
-void akvcam_list_erase(akvcam_list_t self, akvcam_list_element_t element)
+void akvcam_list_erase(akvcam_list_t self, const akvcam_list_element_t element)
 {
     akvcam_list_element_t it;
 
@@ -263,10 +263,10 @@ void akvcam_list_clear(akvcam_list_t self)
     self->tail = NULL;
 }
 
-akvcam_list_element_t akvcam_list_find(akvcam_list_t self,
+akvcam_list_element_t akvcam_list_find(const akvcam_list_t self,
                                        const void *data,
                                        size_t size,
-                                       akvcam_are_equals_t equals)
+                                       const akvcam_are_equals_t equals)
 {
     akvcam_list_element_t element;
     ssize_t i;
@@ -305,10 +305,10 @@ akvcam_list_element_t akvcam_list_find(akvcam_list_t self,
     return NULL;
 }
 
-ssize_t akvcam_list_index_of(akvcam_list_t self,
+ssize_t akvcam_list_index_of(const akvcam_list_t self,
                              const void *data,
                              size_t size,
-                             akvcam_are_equals_t equals)
+                             const akvcam_are_equals_t equals)
 {
     akvcam_list_element_t element;
     ssize_t i;
@@ -347,7 +347,8 @@ ssize_t akvcam_list_index_of(akvcam_list_t self,
     return -1;
 }
 
-void *akvcam_list_next(akvcam_list_t self, akvcam_list_element_t *element)
+void *akvcam_list_next(const akvcam_list_t self,
+                       akvcam_list_element_t *element)
 {
     if (!self || !element)
         return NULL;
@@ -363,7 +364,7 @@ void *akvcam_list_next(akvcam_list_t self, akvcam_list_element_t *element)
     return self->head? self->head->data: NULL;
 }
 
-void *akvcam_list_element_data(akvcam_list_element_t element)
+void *akvcam_list_element_data(const akvcam_list_element_t element)
 {
     if (!element)
         return NULL;

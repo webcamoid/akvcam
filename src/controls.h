@@ -44,31 +44,33 @@ struct v4l2_query_ext_ctrl;
 akvcam_controls_t akvcam_controls_new(void);
 void akvcam_controls_delete(akvcam_controls_t *self);
 
-int akvcam_controls_fill(akvcam_controls_t self,
+int akvcam_controls_fill(const akvcam_controls_t self,
                          struct v4l2_queryctrl *control);
 #ifdef VIDIOC_QUERY_EXT_CTRL
-int akvcam_controls_fill_ext(akvcam_controls_t self,
+int akvcam_controls_fill_ext(const akvcam_controls_t self,
                              struct v4l2_query_ext_ctrl *control);
 #endif
-int akvcam_controls_get(akvcam_controls_t self, struct v4l2_control *control);
-int akvcam_controls_get_ext(akvcam_controls_t self,
+int akvcam_controls_get(const akvcam_controls_t self,
+                        struct v4l2_control *control);
+int akvcam_controls_get_ext(const akvcam_controls_t self,
                             struct v4l2_ext_controls *controls,
                             uint32_t flags);
-int akvcam_controls_set(akvcam_controls_t self, struct v4l2_control *control);
+int akvcam_controls_set(akvcam_controls_t self,
+                        const struct v4l2_control *control);
 int akvcam_controls_set_ext(akvcam_controls_t self,
                             struct v4l2_ext_controls *controls,
                             uint32_t flags);
 int akvcam_controls_try_ext(akvcam_controls_t self,
                             struct v4l2_ext_controls *controls,
                             uint32_t flags);
-bool akvcam_controls_contains(akvcam_controls_t self, __u32 id);
-bool akvcam_controls_generate_event(akvcam_controls_t self,
+bool akvcam_controls_contains(const akvcam_controls_t self, __u32 id);
+bool akvcam_controls_generate_event(const akvcam_controls_t self,
                                     __u32 id,
                                     struct v4l2_event *event);
 
 // signals
-akvcam_callback(controls_changed, struct v4l2_event *event)
+akvcam_callback(controls_changed, const struct v4l2_event *event)
 void akvcam_controls_set_changed_callback(akvcam_controls_t self,
-                                          akvcam_controls_changed_callback callback);
+                                          const akvcam_controls_changed_callback callback);
 
 #endif // AKVCAM_CONTROLS_H

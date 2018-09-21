@@ -49,6 +49,7 @@ struct akvcam_buffers
     akvcam_rbuffer_tt(char) rw_buffers;
     spinlock_t slock;
     akvcam_frame_ready_callback frame_ready;
+    akvcam_frame_written_callback frame_written;
     akvcam_node_t main_node;
     wait_queue_head_t frame_is_ready;
     size_t rw_buffer_size;
@@ -56,8 +57,9 @@ struct akvcam_buffers
     __u32 sequence;
 };
 
-bool akvcam_buffers_is_supported(akvcam_buffers_t self, enum v4l2_memory type);
-bool akvcam_buffers_frame_available(akvcam_buffers_t self);
+bool akvcam_buffers_is_supported(const akvcam_buffers_t self,
+                                 enum v4l2_memory type);
+bool akvcam_buffers_frame_available(const akvcam_buffers_t self);
 void akvcam_buffer_delete(akvcam_buffer_t *buffer);
 
 akvcam_buffers_t akvcam_buffers_new(struct akvcam_device *device)
@@ -242,7 +244,8 @@ int akvcam_buffers_create(akvcam_buffers_t self,
     return 0;
 }
 
-bool akvcam_buffers_fill(akvcam_buffers_t self, struct v4l2_buffer *buffer)
+bool akvcam_buffers_fill(const akvcam_buffers_t self,
+                         struct v4l2_buffer *buffer)
 {
     akvcam_buffer_t akbuffer;
     bool ok = false;
@@ -313,31 +316,51 @@ akvcam_buffers_queue_failed:
     return result;
 }
 
-static bool akvcam_buffers_is_done(const akvcam_buffer_t buffer,
-                                   const __u32 *flags,
-                                   size_t size)
+static bool akvcam_buffers_is_ready(const akvcam_buffer_t buffer,
+                                    const __u32 *flags,
+                                    size_t size)
 {
-    return buffer->buffer.flags & V4L2_BUF_FLAG_DONE;
+    return buffer->buffer.flags & *flags;
 }
 
 int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
 {
     int result = -EINVAL;
     akvcam_buffer_t akbuffer;
+    akvcam_format_t format;
+    struct v4l2_fract *frame_rate;
     akvcam_list_element_t it;
+    __u32 tsleep;
+    __u32 flags;
 
-    while (!wait_event_interruptible_timeout(self->frame_is_ready,
-                                             akvcam_buffers_frame_available(self),
-                                             1 * HZ)) {
+    if (self->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
+        flags = V4L2_BUF_FLAG_QUEUED;
+
+        if (!akvcam_node_non_blocking(self->main_node)) {
+            format = akvcam_device_format_nr(self->device);
+            frame_rate = akvcam_format_frame_rate(format);
+            tsleep = 1000 * frame_rate->denominator;
+
+            if (frame_rate->numerator)
+                tsleep /= frame_rate->numerator;
+
+            msleep_interruptible(tsleep);
+        }
+    } else {
+        flags = V4L2_BUF_FLAG_DONE;
+
+        while (!wait_event_interruptible_timeout(self->frame_is_ready,
+                                                 akvcam_buffers_frame_available(self),
+                                                 1 * HZ)) {
+        }
     }
 
     spin_lock(&self->slock);
     it = akvcam_list_find(self->buffers,
-                          NULL,
+                          &flags,
                           0,
                           (akvcam_are_equals_t)
-                          akvcam_buffers_is_done);
-
+                          akvcam_buffers_is_ready);
     akbuffer = akvcam_list_element_data(it);
 
     if (!akbuffer) {
@@ -374,6 +397,12 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
         break;
     }
 
+    if (self->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
+        do_gettimeofday(&akbuffer->buffer.timestamp);
+        akbuffer->buffer.sequence = self->sequence;
+        self->sequence++;
+    }
+
     memcpy(buffer, &akbuffer->buffer, sizeof(struct v4l2_buffer));
     result = 0;
 
@@ -383,8 +412,8 @@ akvcam_buffers_dequeue_failed:
     return result;
 }
 
-void *akvcam_buffers_buffers_data(akvcam_buffers_t self,
-                                  struct v4l2_buffer *buffer)
+void *akvcam_buffers_buffers_data(const akvcam_buffers_t self,
+                                  const struct v4l2_buffer *buffer)
 {
     akvcam_buffer_t akbuffer;
 
@@ -402,7 +431,7 @@ static bool akvcam_buffers_equals_offset(const akvcam_buffer_t buffer,
     return buffer->buffer.m.offset == *offset;
 }
 
-void *akvcam_buffers_data(akvcam_buffers_t self, __u32 offset)
+void *akvcam_buffers_data(const akvcam_buffers_t self, __u32 offset)
 {
     void *data;
     akvcam_buffer_t buffer;
@@ -422,12 +451,12 @@ void *akvcam_buffers_data(akvcam_buffers_t self, __u32 offset)
     return data;
 }
 
-bool akvcam_buffers_allocated(akvcam_buffers_t self)
+bool akvcam_buffers_allocated(const akvcam_buffers_t self)
 {
     return self->main_node != NULL;
 }
 
-size_t akvcam_buffers_size_rw(akvcam_buffers_t self)
+size_t akvcam_buffers_size_rw(const akvcam_buffers_t self)
 {
     size_t size;
 
@@ -472,6 +501,7 @@ ssize_t akvcam_buffers_read_rw(akvcam_buffers_t self,
     akvcam_format_t format;
     struct v4l2_fract *frame_rate;
     size_t data_size;
+    size_t format_size;
     __u32 tsleep;
 
     if (!(self->rw_mode & AKVCAM_RW_MODE_READWRITE))
@@ -479,8 +509,9 @@ ssize_t akvcam_buffers_read_rw(akvcam_buffers_t self,
 
     format = akvcam_device_format_nr(self->device);
     data_size = akvcam_rbuffer_data_size(self->rw_buffers);
+    format_size = akvcam_format_size(format);
 
-    if (data_size < 1 || data_size % akvcam_format_size(format) == 0) {
+    if (data_size < 1 || data_size % format_size == 0) {
         frame_rate = akvcam_format_frame_rate(format);
         tsleep = 1000 * frame_rate->denominator;
 
@@ -496,6 +527,61 @@ ssize_t akvcam_buffers_read_rw(akvcam_buffers_t self,
         size = 0;
 
     spin_unlock(&self->slock);
+
+    return (ssize_t) size;
+}
+
+ssize_t akvcam_buffers_write_rw(akvcam_buffers_t self,
+                                struct akvcam_node *node,
+                                const void *data,
+                                size_t size)
+{
+    akvcam_format_t format;
+    akvcam_frame_t frame;
+    struct v4l2_fract *frame_rate;
+    size_t data_size;
+    size_t format_size;
+    size_t read_size;
+    __u32 tsleep;
+
+    if (!(self->rw_mode & AKVCAM_RW_MODE_READWRITE))
+        return 0;
+
+    spin_lock(&self->slock);
+    akvcam_rbuffer_queue_bytes(self->rw_buffers, data, size);
+    spin_unlock(&self->slock);
+
+    format = akvcam_device_format_nr(self->device);
+    format_size = akvcam_format_size(format);
+
+    if (self->frame_written.callback) {
+        frame = akvcam_frame_new(format, NULL, 0);
+
+        while (akvcam_rbuffer_data_size(self->rw_buffers) >= format_size) {
+            read_size = format_size;
+            akvcam_rbuffer_dequeue_bytes(self->rw_buffers,
+                                         akvcam_frame_data(frame),
+                                         &read_size,
+                                         false);
+            self->frame_written.callback(self->frame_written.user_data, frame);
+        }
+
+        akvcam_frame_delete(&frame);
+    }
+
+    if (!akvcam_node_non_blocking(node)) {
+        data_size = akvcam_rbuffer_data_size(self->rw_buffers);
+
+        if (data_size < 1 || data_size % format_size == 0) {
+            frame_rate = akvcam_format_frame_rate(format);
+            tsleep = 1000 * frame_rate->denominator;
+
+            if (frame_rate->numerator)
+                tsleep /= frame_rate->numerator;
+
+            msleep_interruptible(tsleep);
+        }
+    }
 
     return (ssize_t) size;
 }
@@ -571,12 +657,35 @@ void akvcam_buffers_notify_frame(akvcam_buffers_t self)
     self->sequence++;
 }
 
+void akvcam_buffers_process_frame(const akvcam_buffers_t self,
+                                  struct v4l2_buffer *buffer)
+{
+    akvcam_buffer_t akbuffer;
+    akvcam_frame_t frame;
+    akvcam_format_t format;
+
+    if (self->frame_written.callback) {
+        akbuffer = akvcam_list_at(self->buffers, buffer->index);
+
+        if (!akbuffer)
+            return;
+
+        format = akvcam_device_format_nr(self->device);
+        frame = akvcam_frame_new(format,
+                                 akbuffer->data,
+                                 akbuffer->buffer.length);
+        self->frame_written.callback(self->frame_written.user_data, frame);
+        akvcam_frame_delete(&frame);
+    }
+}
+
 void akvcam_buffers_reset_sequence(akvcam_buffers_t self)
 {
     self->sequence = 0;
 }
 
-bool akvcam_buffers_is_supported(akvcam_buffers_t self, enum v4l2_memory type)
+bool akvcam_buffers_is_supported(const akvcam_buffers_t self,
+                                 enum v4l2_memory type)
 {
     return (self->rw_mode & AKVCAM_RW_MODE_MMAP
             && type == V4L2_MEMORY_MMAP)
@@ -584,7 +693,7 @@ bool akvcam_buffers_is_supported(akvcam_buffers_t self, enum v4l2_memory type)
                 && type == V4L2_MEMORY_USERPTR);
 }
 
-bool akvcam_buffers_frame_available(akvcam_buffers_t self)
+bool akvcam_buffers_frame_available(const akvcam_buffers_t self)
 {
     akvcam_list_element_t it;
 
@@ -593,7 +702,7 @@ bool akvcam_buffers_frame_available(akvcam_buffers_t self)
                           NULL,
                           0,
                           (akvcam_are_equals_t)
-                          akvcam_buffers_is_done);
+                          akvcam_buffers_is_ready);
     spin_unlock(&self->slock);
 
     return it;
@@ -612,7 +721,13 @@ void akvcam_buffer_delete(akvcam_buffer_t *buffer)
 }
 
 void akvcam_buffers_set_frame_ready_callback(akvcam_buffers_t self,
-                                             akvcam_frame_ready_callback callback)
+                                             const akvcam_frame_ready_callback callback)
 {
     self->frame_ready = callback;
+}
+
+void akvcam_buffers_set_frame_written_callback(akvcam_buffers_t self,
+                                               const akvcam_frame_written_callback callback)
+{
+    self->frame_written = callback;
 }

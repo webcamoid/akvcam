@@ -38,7 +38,7 @@ struct akvcam_events
 };
 
 void akvcam_events_remove_unsub(akvcam_events_t self,
-                                struct v4l2_event_subscription *sub);
+                                const struct v4l2_event_subscription *sub);
 
 akvcam_events_t akvcam_events_new(void)
 {
@@ -72,7 +72,7 @@ void akvcam_events_delete(akvcam_events_t *self)
 }
 
 void akvcam_events_subscribe(akvcam_events_t self,
-                             struct v4l2_event_subscription *subscription)
+                             const struct v4l2_event_subscription *subscription)
 {
     akvcam_list_element_t it;
     it = akvcam_list_find(self->subscriptions,
@@ -90,7 +90,7 @@ void akvcam_events_subscribe(akvcam_events_t self,
 }
 
 void akvcam_events_unsubscribe(akvcam_events_t self,
-                               struct v4l2_event_subscription *subscription)
+                               const struct v4l2_event_subscription *subscription)
 {
     akvcam_list_element_t it;
     it = akvcam_list_find(self->subscriptions,
@@ -168,13 +168,13 @@ bool akvcam_events_dequeue(akvcam_events_t self, struct v4l2_event *event)
     return true;
 }
 
-bool akvcam_events_available(akvcam_events_t self)
+bool akvcam_events_available(const akvcam_events_t self)
 {
     return akvcam_rbuffer_data_size(self->events) > 0;
 }
 
 void akvcam_events_remove_unsub(akvcam_events_t self,
-                                struct v4l2_event_subscription *sub)
+                                const struct v4l2_event_subscription *sub)
 {
     struct v4l2_event event;
     akvcam_rbuffer_tt(struct v4l2_event) subscribed_events =

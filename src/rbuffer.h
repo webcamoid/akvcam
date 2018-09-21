@@ -37,16 +37,16 @@ typedef enum
 akvcam_rbuffer_t akvcam_rbuffer_new(void);
 void akvcam_rbuffer_delete(akvcam_rbuffer_t *self);
 
-void akvcam_rbuffer_copy(akvcam_rbuffer_t self, akvcam_rbuffer_t other);
+void akvcam_rbuffer_copy(akvcam_rbuffer_t self, const akvcam_rbuffer_t other);
 void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
                            size_t n_elements,
                            size_t element_size,
                            AKVCAM_RBUFFER_MEMORY_TYPE memory_type);
-size_t akvcam_rbuffer_size(akvcam_rbuffer_t self);
-size_t akvcam_rbuffer_data_size(akvcam_rbuffer_t self);
-size_t akvcam_rbuffer_n_elements(akvcam_rbuffer_t self);
-size_t akvcam_rbuffer_element_size(akvcam_rbuffer_t self);
-size_t akvcam_rbuffer_n_data(akvcam_rbuffer_t self);
+size_t akvcam_rbuffer_size(const akvcam_rbuffer_t self);
+size_t akvcam_rbuffer_data_size(const akvcam_rbuffer_t self);
+size_t akvcam_rbuffer_n_elements(const akvcam_rbuffer_t self);
+size_t akvcam_rbuffer_element_size(const akvcam_rbuffer_t self);
+size_t akvcam_rbuffer_n_data(const akvcam_rbuffer_t self);
 void *akvcam_rbuffer_queue(akvcam_rbuffer_t self, const void *data);
 void *akvcam_rbuffer_queue_bytes(akvcam_rbuffer_t self,
                                  const void *data,
@@ -59,12 +59,12 @@ void *akvcam_rbuffer_dequeue_bytes(akvcam_rbuffer_t self,
                                    size_t *size,
                                    bool keep);
 void akvcam_rbuffer_clear(akvcam_rbuffer_t self);
-void *akvcam_rbuffer_ptr_at(akvcam_rbuffer_t self, size_t i);
-void *akvcam_rbuffer_ptr_front(akvcam_rbuffer_t self);
-void *akvcam_rbuffer_ptr_back(akvcam_rbuffer_t self);
-void *akvcam_rbuffer_find(akvcam_rbuffer_t self,
+void *akvcam_rbuffer_ptr_at(const akvcam_rbuffer_t self, size_t i);
+void *akvcam_rbuffer_ptr_front(const akvcam_rbuffer_t self);
+void *akvcam_rbuffer_ptr_back(const akvcam_rbuffer_t self);
+void *akvcam_rbuffer_find(const akvcam_rbuffer_t self,
                           const void *data,
                           size_t size,
-                          akvcam_are_equals_t equals);
+                          const akvcam_are_equals_t equals);
 
 #endif // AKVCAM_RBUFFER_H
