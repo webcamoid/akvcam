@@ -50,7 +50,7 @@ akvcam_events_t akvcam_events_new(void)
     akvcam_rbuffer_resize(self->events,
                           AKVCAM_EVENTS_QUEUE_MAX,
                           sizeof(struct v4l2_event),
-                          AKVCAM_RBUFFER_MEMORY_TYPE_KMALLOC);
+                          AKVCAM_MEMORY_TYPE_KMALLOC);
     self->sequence = 0;
 
     return self;
@@ -72,7 +72,7 @@ void akvcam_events_delete(akvcam_events_t *self)
 }
 
 void akvcam_events_subscribe(akvcam_events_t self,
-                             const struct v4l2_event_subscription *subscription)
+                             struct v4l2_event_subscription *subscription)
 {
     akvcam_list_element_t it;
     it = akvcam_list_find(self->subscriptions,
@@ -83,10 +83,11 @@ void akvcam_events_subscribe(akvcam_events_t self,
     if (it)
         return;
 
-    akvcam_list_push_back_copy(self->subscriptions,
-                               subscription,
-                               sizeof(struct v4l2_event_subscription),
-                               akvcam_delete_data);
+    akvcam_list_push_back(self->subscriptions,
+                          subscription,
+                          sizeof(struct v4l2_event_subscription),
+                          akvcam_delete_data,
+                          true);
 }
 
 void akvcam_events_unsubscribe(akvcam_events_t self,
@@ -183,7 +184,7 @@ void akvcam_events_remove_unsub(akvcam_events_t self,
     akvcam_rbuffer_resize(subscribed_events,
                           akvcam_rbuffer_n_elements(self->events),
                           akvcam_rbuffer_element_size(self->events),
-                          AKVCAM_RBUFFER_MEMORY_TYPE_KMALLOC);
+                          AKVCAM_MEMORY_TYPE_KMALLOC);
 
     while (akvcam_rbuffer_data_size(self->events) > 0) {
         akvcam_rbuffer_dequeue(self->events, &event, false);

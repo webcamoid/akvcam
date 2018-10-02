@@ -272,7 +272,8 @@ int akvcam_ioctls_querycap(akvcam_node_t node,
     memset(capability, 0, sizeof(struct v4l2_capability));
 
     snprintf((char *) capability->driver, 16, "%s", akvcam_driver_name());
-    snprintf((char *) capability->card, 32, "%s", akvcam_driver_description());
+    snprintf((char *) capability->card,
+             32, "%s", akvcam_device_description(device));
     snprintf((char *) capability->bus_info,
              32, "platform:akvcam-%d", akvcam_device_num(device));
     capability->version = akvcam_driver_version();

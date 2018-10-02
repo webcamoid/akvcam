@@ -16,8 +16,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/ctype.h>
+#include <linux/slab.h>
 #include <linux/uvcvideo.h>
 #include <linux/videodev2.h>
+#include <linux/vmalloc.h>
 
 #include "utils.h"
 
@@ -152,4 +155,93 @@ const char *akvcam_string_from_ioctl(uint cmd)
     snprintf(unknown, 1024, "VIDIOC_UNKNOWN(%u)", cmd);
 
     return unknown;
+}
+
+size_t akvcam_line_size(const char *buffer, size_t size, bool *found)
+{
+    size_t i;
+    *found = false;
+
+    for (i = 0; i < size; i++)
+        if (buffer[i] == '\n') {
+            *found = true;
+
+            break;
+        }
+
+    return i;
+}
+
+char *akvcam_strdup(const char *str, AKVCAM_MEMORY_TYPE type)
+{
+    char *str_dup;
+    size_t len = strlen(str);
+
+    if (type == AKVCAM_MEMORY_TYPE_KMALLOC)
+        str_dup = kmalloc(len + 1, GFP_KERNEL);
+    else
+        str_dup = vmalloc(len + 1);
+
+    memcpy(str_dup, str, len + 1);
+
+    return str_dup;
+}
+
+char *akvcam_strip_str(const char *str, AKVCAM_MEMORY_TYPE type)
+{
+    return akvcam_strip_str_sub(str, 0, strlen(str), type);
+}
+
+char *akvcam_strip_str_sub(const char *str,
+                           size_t from,
+                           size_t size,
+                           AKVCAM_MEMORY_TYPE type)
+{
+    char *stripped_str;
+    ssize_t i;
+    size_t len = akvcam_min(str? strlen(str): 0, from + size);
+    size_t left;
+    size_t right;
+    size_t stripped_len = len;
+
+    for (i = (ssize_t) from; i < (ssize_t) len; i++)
+        if (!isspace(str[i]))
+            break;
+
+    left = (size_t) i;
+
+    if (left == len) {
+        stripped_len = 0;
+    } else {
+        for (i = (ssize_t) len - 1; i >= (ssize_t) from; i--)
+            if (!isspace(str[i]))
+                break;
+
+        right = (size_t) i;
+        stripped_len = right - left + 1;
+    }
+
+    if (type == AKVCAM_MEMORY_TYPE_KMALLOC)
+        stripped_str = kmalloc(stripped_len + 1, GFP_KERNEL);
+    else
+        stripped_str = vmalloc(stripped_len + 1);
+
+    stripped_str[stripped_len] = 0;
+
+    if (stripped_len > 0)
+        memcpy(stripped_str, str + left, stripped_len);
+
+    return stripped_str;
+}
+
+char *akvcam_strip_move_str(char *str, AKVCAM_MEMORY_TYPE type)
+{
+    char *stripped_str = akvcam_strip_str(str, type);
+
+    if (type == AKVCAM_MEMORY_TYPE_KMALLOC)
+        kfree(str);
+    else
+        vfree(str);
+
+    return stripped_str;
 }

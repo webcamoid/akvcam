@@ -32,10 +32,12 @@ lupdate_only {
         src/frame.h \
         src/ioctl.h \
         src/list.h \
+        src/map.h \
         src/mmap.h \
         src/node.h \
         src/object.h \
         src/rbuffer.h \
+        src/settings.h \
         src/utils.h
 
     SOURCES += \
@@ -49,10 +51,12 @@ lupdate_only {
         src/frame.c \
         src/ioctl.c \
         src/list.c \
+        src/map.c \
         src/mmap.c \
         src/node.c \
         src/object.c \
         src/rbuffer.c \
+        src/settings.c \
         src/utils.c
 }
 
@@ -75,7 +79,8 @@ DEFINES += \
     CONFIG_PCI
 
 OTHER_FILES += \
-    src/Makefile
+    src/Makefile \
+    share/config_example.ini
 
 DUMMY_FILES = .
 makedriver.input = DUMMY_FILES
@@ -96,5 +101,3 @@ makedriver.clean = \
 makedriver.CONFIG += no_link
 QMAKE_EXTRA_COMPILERS += makedriver
 PRE_TARGETDEPS += compiler_makedriver_make_all
-
-# sudo modprobe videodev

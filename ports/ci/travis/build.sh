@@ -96,6 +96,10 @@ if [ ! -z "${USE_QEMU}" ]; then
 
     echo 'shutdown -h now' >> ${system_mount_point}/root/driver_test.sh
 
+    # Copy config.ini file.
+    mkdir -p ${system_mount_point}/etc/akvcam
+    cp -vf ports/ci/travis/config.ini ${system_mount_point}/etc/akvcam/config.ini
+
     umount ${system_mount_point}
 
     echo

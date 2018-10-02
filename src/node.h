@@ -37,7 +37,8 @@ struct akvcam_events *akvcam_node_events(const akvcam_node_t self);
 bool akvcam_node_non_blocking(const akvcam_node_t self);
 void akvcam_node_set_non_blocking(akvcam_node_t self, bool non_blocking);
 
-// static
+// public static
+size_t akvcam_node_sizeof(void);
 struct v4l2_file_operations *akvcam_node_fops(void);
 
 #endif // AKVCAM_NODE_H

@@ -174,6 +174,14 @@ size_t akvcam_format_size(const akvcam_format_t self)
     return self->height * akvcam_format_bypl(self);
 }
 
+bool akvcam_format_is_valid(const akvcam_format_t self)
+{
+    return akvcam_format_size(self) > 0
+            && self->frame_rate.numerator != 0
+            && self->frame_rate.denominator != 0
+            && self->frame_rate.numerator / self->frame_rate.denominator > 0;
+}
+
 void akvcam_format_clear(akvcam_format_t self)
 {
     self->fourcc = 0;
@@ -181,6 +189,11 @@ void akvcam_format_clear(akvcam_format_t self)
     self->height = 0;
     self->frame_rate.numerator = 0;
     self->frame_rate.denominator = 0;
+}
+
+size_t akvcam_format_sizeof(void)
+{
+    return sizeof(struct akvcam_format);
 }
 
 void akvcam_format_round_nearest(int width, int height,
@@ -282,10 +295,11 @@ struct akvcam_list *akvcam_format_pixel_formats(struct akvcam_list *formats)
         it = akvcam_list_find(supported_formats, &fourcc, sizeof(__u32), NULL);
 
         if (!it)
-            akvcam_list_push_back_copy(supported_formats,
-                                       &fourcc,
-                                       sizeof(__u32),
-                                       akvcam_delete_data);
+            akvcam_list_push_back(supported_formats,
+                                  &fourcc,
+                                  sizeof(__u32),
+                                  (akvcam_deleter_t) akvcam_delete_data,
+                                  true);
     }
 
     return supported_formats;
@@ -318,10 +332,11 @@ struct akvcam_list *akvcam_format_resolutions(struct akvcam_list *formats,
                               NULL);
 
         if (!it)
-            akvcam_list_push_back_copy(supported_resolutions,
-                                       &resolution,
-                                       sizeof(struct v4l2_frmsize_discrete),
-                                       akvcam_delete_data);
+            akvcam_list_push_back(supported_resolutions,
+                                  &resolution,
+                                  sizeof(struct v4l2_frmsize_discrete),
+                                  (akvcam_deleter_t) akvcam_delete_data,
+                                  true);
     }
 
     return supported_resolutions;
@@ -357,10 +372,11 @@ struct akvcam_list *akvcam_format_frame_rates(struct akvcam_list *formats,
                               NULL);
 
         if (!it)
-            akvcam_list_push_back_copy(supported_frame_rates,
-                                       &frame_rate,
-                                       sizeof(struct v4l2_fract),
-                                       akvcam_delete_data);
+            akvcam_list_push_back(supported_frame_rates,
+                                  &frame_rate,
+                                  sizeof(struct v4l2_fract),
+                                  (akvcam_deleter_t) akvcam_delete_data,
+                                  true);
     }
 
     return supported_frame_rates;

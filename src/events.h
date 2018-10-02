@@ -34,7 +34,7 @@ akvcam_events_t akvcam_events_new(void);
 void akvcam_events_delete(akvcam_events_t *self);
 
 void akvcam_events_subscribe(akvcam_events_t self,
-                             const struct v4l2_event_subscription *subscription);
+                             struct v4l2_event_subscription *subscription);
 void akvcam_events_unsubscribe(akvcam_events_t self,
                                const struct v4l2_event_subscription *subscription);
 void akvcam_events_unsubscribe_all(akvcam_events_t self);

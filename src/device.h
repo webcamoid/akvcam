@@ -45,6 +45,7 @@ struct file;
 
 // public
 akvcam_device_t akvcam_device_new(const char *name,
+                                  const char *description,
                                   AKVCAM_DEVICE_TYPE type,
                                   AKVCAM_RW_MODE rw_mode);
 void akvcam_device_delete(akvcam_device_t *self);
@@ -52,6 +53,7 @@ void akvcam_device_delete(akvcam_device_t *self);
 bool akvcam_device_register(akvcam_device_t self);
 void akvcam_device_unregister(akvcam_device_t self);
 u16 akvcam_device_num(const akvcam_device_t self);
+const char *akvcam_device_description(const akvcam_device_t self);
 AKVCAM_DEVICE_TYPE akvcam_device_type(const akvcam_device_t self);
 AKVCAM_RW_MODE akvcam_device_rw_mode(const akvcam_device_t self);
 struct akvcam_list *akvcam_device_formats_nr(const akvcam_device_t self);

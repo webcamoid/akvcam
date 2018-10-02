@@ -70,6 +70,9 @@ void akvcam_buffers_process_frame(const akvcam_buffers_t self,
                                   struct v4l2_buffer *buffer);
 void akvcam_buffers_reset_sequence(akvcam_buffers_t self);
 
+// public static
+size_t akvcam_buffers_sizeof(void);
+
 // signals
 akvcam_callback(frame_ready, const struct v4l2_event *event)
 void akvcam_buffers_set_frame_ready_callback(akvcam_buffers_t self,

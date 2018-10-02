@@ -23,6 +23,7 @@
 typedef struct akvcam_list_element
 {
     void *data;
+    size_t size;
     akvcam_deleter_t deleter;
     struct akvcam_list_element *prev;
     struct akvcam_list_element *next;
@@ -115,24 +116,31 @@ void *akvcam_list_back(const akvcam_list_t self)
     return self->tail->data;
 }
 
-bool akvcam_list_push_back(akvcam_list_t self,
-                           void *data,
-                           const akvcam_deleter_t deleter)
+akvcam_list_element_t akvcam_list_push_back(akvcam_list_t self,
+                                            void *data,
+                                            size_t data_size,
+                                            const akvcam_deleter_t deleter,
+                                            bool copy)
 {
     akvcam_list_element_t element;
 
     if (!self)
-        return false;
+        return NULL;
 
     element = kzalloc(sizeof(struct akvcam_list_element), GFP_KERNEL);
 
     if (!element) {
         akvcam_set_last_error(-ENOMEM);
 
-        return false;
+        return NULL;
     }
 
-    element->data = data;
+    if (copy && data_size > 1)
+        element->data = kmemdup(data, data_size, GFP_KERNEL);
+    else
+        element->data = data;
+
+    element->size = data_size;
     element->deleter = deleter;
     element->prev = self->tail;
     self->size++;
@@ -147,70 +155,32 @@ bool akvcam_list_push_back(akvcam_list_t self,
 
     akvcam_set_last_error(0);
 
-    return true;
+    return element;
 }
 
-bool akvcam_list_push_back_copy(akvcam_list_t self,
-                                const void *data,
-                                size_t data_size,
-                                const akvcam_deleter_t deleter)
-{
-    return akvcam_list_push_back(self,
-                                 kmemdup(data, data_size, GFP_KERNEL),
-                                 deleter);
-}
-
-bool akvcam_list_pop(akvcam_list_t self,
-                     size_t i,
-                     void **data,
-                     akvcam_deleter_t *deleter)
+akvcam_list_element_t akvcam_list_it(akvcam_list_t self, size_t i)
 {
     akvcam_list_element_t element;
     size_t e;
 
-    if (data)
-        *data = NULL;
-
-    if (deleter)
-        *deleter = NULL;
-
     if (!self)
-        return false;
+        return NULL;
 
     if (i >= self->size || self->size < 1)
-        return false;
+        return NULL;
 
-    if (i == 0) {
-        element = self->head;
-    } else if (i == self->size - 1) {
-        element = self->tail;
-    } else {
-        element = self->head;
+    if (i == 0)
+        return self->head;
 
-        for (e = 0; e < i; e++)
-            element = element->next;
-    }
+    if (i == self->size - 1)
+        return self->tail;
 
-    if (data)
-        *data = element->data;
+    element = self->head;
 
-    if (deleter)
-        *deleter = element->deleter;
+    for (e = 0; e < i; e++)
+        element = element->next;
 
-    if (element->prev)
-        element->prev->next = element->next;
-    else
-        self->head = element->next;
-
-    if (element->next)
-        element->next->prev = element->prev;
-    else
-        self->tail = element->prev;
-
-    kfree(element);
-    self->size--;
-
-    return true;
+    return element;
 }
 
 void akvcam_list_erase(akvcam_list_t self, const akvcam_list_element_t element)
@@ -347,6 +317,14 @@ ssize_t akvcam_list_index_of(const akvcam_list_t self,
     return -1;
 }
 
+bool akvcam_list_contains(const akvcam_list_t self,
+                          const void *data,
+                          size_t size,
+                          const akvcam_are_equals_t equals)
+{
+    return akvcam_list_index_of(self, data, size, equals) >= 0;
+}
+
 void *akvcam_list_next(const akvcam_list_t self,
                        akvcam_list_element_t *element)
 {
@@ -370,4 +348,20 @@ void *akvcam_list_element_data(const akvcam_list_element_t element)
         return NULL;
 
     return element->data;
+}
+
+size_t akvcam_list_element_size(const akvcam_list_element_t element)
+{
+    if (!element)
+        return 0;
+
+    return element->size;
+}
+
+akvcam_deleter_t akvcam_list_element_deleter(const akvcam_list_element_t element)
+{
+    if (!element)
+        return NULL;
+
+    return element->deleter;
 }

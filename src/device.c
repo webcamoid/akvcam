@@ -36,6 +36,7 @@
 struct akvcam_device
 {
     akvcam_object_t self;
+    char *description;
     akvcam_list_tt(akvcam_format_t) formats;
     akvcam_format_t format;
     akvcam_controls_t controls;
@@ -59,6 +60,7 @@ void akvcam_device_event_received(akvcam_device_t self,
 int akvcam_device_send_frames(akvcam_device_t self);
 
 akvcam_device_t akvcam_device_new(const char *name,
+                                  const char *description,
                                   AKVCAM_DEVICE_TYPE type,
                                   AKVCAM_RW_MODE rw_mode)
 {
@@ -67,6 +69,7 @@ akvcam_device_t akvcam_device_new(const char *name,
 
     akvcam_device_t self = kzalloc(sizeof(struct akvcam_device), GFP_KERNEL);
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_device_delete);
+    self->description = akvcam_strdup(description, AKVCAM_MEMORY_TYPE_KMALLOC);
     self->formats = akvcam_list_new();
     self->format = akvcam_format_new(0, 0, 0, NULL);
     self->controls = akvcam_controls_new();
@@ -122,6 +125,7 @@ void akvcam_device_delete(akvcam_device_t *self)
     akvcam_controls_delete(&((*self)->controls));
     akvcam_format_delete(&((*self)->format));
     akvcam_list_delete(&((*self)->formats));
+    kfree((*self)->description);
     akvcam_object_free(&((*self)->self));
     kfree(*self);
     *self = NULL;
@@ -158,6 +162,11 @@ void akvcam_device_unregister(akvcam_device_t self)
 u16 akvcam_device_num(const akvcam_device_t self)
 {
     return self->vdev->num;
+}
+
+const char *akvcam_device_description(const akvcam_device_t self)
+{
+    return self->description;
 }
 
 AKVCAM_DEVICE_TYPE akvcam_device_type(const akvcam_device_t self)

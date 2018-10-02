@@ -40,17 +40,12 @@ bool akvcam_list_empty(const akvcam_list_t self);
 void *akvcam_list_at(const akvcam_list_t self, size_t i);
 void *akvcam_list_front(const akvcam_list_t self);
 void *akvcam_list_back(const akvcam_list_t self);
-bool akvcam_list_push_back(akvcam_list_t self,
-                           void *data,
-                           const akvcam_deleter_t deleter);
-bool akvcam_list_push_back_copy(akvcam_list_t self,
-                                const void *data,
-                                size_t data_size,
-                                const akvcam_deleter_t deleter);
-bool akvcam_list_pop(akvcam_list_t self,
-                     size_t i,
-                     void **data,
-                     akvcam_deleter_t *deleter);
+akvcam_list_element_t akvcam_list_push_back(akvcam_list_t self,
+                                            void *data,
+                                            size_t data_size,
+                                            const akvcam_deleter_t deleter,
+                                            bool copy);
+akvcam_list_element_t akvcam_list_it(akvcam_list_t self, size_t i);
 void akvcam_list_erase(akvcam_list_t self, const akvcam_list_element_t element);
 void akvcam_list_clear(akvcam_list_t self);
 akvcam_list_element_t akvcam_list_find(const akvcam_list_t self,
@@ -61,8 +56,14 @@ ssize_t akvcam_list_index_of(const akvcam_list_t self,
                              const void *data,
                              size_t size,
                              const akvcam_are_equals_t equals);
+bool akvcam_list_contains(const akvcam_list_t self,
+                          const void *data,
+                          size_t size,
+                          const akvcam_are_equals_t equals);
 void *akvcam_list_next(const akvcam_list_t self,
                        akvcam_list_element_t *element);
 void *akvcam_list_element_data(const akvcam_list_element_t element);
+size_t akvcam_list_element_size(const akvcam_list_element_t element);
+akvcam_deleter_t akvcam_list_element_deleter(const akvcam_list_element_t element);
 
 #endif // AKVCAM_LIST_H

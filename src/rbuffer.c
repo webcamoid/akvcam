@@ -33,18 +33,18 @@ struct akvcam_rbuffer
     size_t read;
     size_t write;
     size_t step;
-    AKVCAM_RBUFFER_MEMORY_TYPE memory_type;
+    AKVCAM_MEMORY_TYPE memory_type;
 };
 
-void *akvcam_rbuffer_alloc(AKVCAM_RBUFFER_MEMORY_TYPE memory_type, size_t size);
-void akvcam_rbuffer_free(AKVCAM_RBUFFER_MEMORY_TYPE memory_type, void *data);
+void *akvcam_rbuffer_alloc(AKVCAM_MEMORY_TYPE memory_type, size_t size);
+void akvcam_rbuffer_free(AKVCAM_MEMORY_TYPE memory_type, void *data);
 
 akvcam_rbuffer_t akvcam_rbuffer_new(void)
 {
     akvcam_rbuffer_t self = kzalloc(sizeof(struct akvcam_rbuffer), GFP_KERNEL);
     self->self = akvcam_object_new(self,
                                    (akvcam_deleter_t) akvcam_rbuffer_delete);
-    self->memory_type = AKVCAM_RBUFFER_MEMORY_TYPE_KMALLOC;
+    self->memory_type = AKVCAM_MEMORY_TYPE_KMALLOC;
 
     return self;
 }
@@ -82,7 +82,7 @@ void akvcam_rbuffer_copy(akvcam_rbuffer_t self, const akvcam_rbuffer_t other)
 void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
                            size_t n_elements,
                            size_t element_size,
-                           AKVCAM_RBUFFER_MEMORY_TYPE memory_type)
+                           AKVCAM_MEMORY_TYPE memory_type)
 {
     char *new_data;
     size_t new_size = n_elements * element_size;
@@ -159,6 +159,11 @@ size_t akvcam_rbuffer_n_data(const akvcam_rbuffer_t self)
         return 0;
 
     return self->data_size / self->step;
+}
+
+bool akvcam_rbuffer_empty(const akvcam_rbuffer_t self)
+{
+    return self->data_size < 1;
 }
 
 void *akvcam_rbuffer_queue(akvcam_rbuffer_t self, const void *data)
@@ -289,40 +294,50 @@ void *akvcam_rbuffer_ptr_back(const akvcam_rbuffer_t self)
 void *akvcam_rbuffer_find(const akvcam_rbuffer_t self,
                           const void *data,
                           size_t size,
-                          const akvcam_are_equals_t equals)
+                          const akvcam_are_equals_t equals,
+                          ssize_t *offset)
 {
     size_t i;
-    size_t offset;
+    size_t ioffset;
+
+    if (offset)
+        *offset = 0;
 
     for (i = 0; i < self->data_size; i += self->step) {
-        offset = (self->read + i) % self->size;
+        ioffset = (self->read + i) % self->size;
 
         if (equals) {
-            if (equals(self->data + offset, data, size))
-                return self->data + offset;
+            if (equals(self->data + ioffset, data, size))
+                return self->data + ioffset;
         } else if (size) {
-            if (memcmp(self->data + offset, data, size) == 0)
-                return self->data + offset;
+            if (memcmp(self->data + ioffset, data, size) == 0)
+                return self->data + ioffset;
         } else {
-            if (self->data + offset == data)
-                return self->data + offset;
+            if (self->data + ioffset == data)
+                return self->data + ioffset;
         }
+
+        if (offset)
+            (*offset)++;
     }
+
+    if (offset)
+        *offset = -1;
 
     return NULL;
 }
 
-void *akvcam_rbuffer_alloc(AKVCAM_RBUFFER_MEMORY_TYPE memory_type, size_t size)
+void *akvcam_rbuffer_alloc(AKVCAM_MEMORY_TYPE memory_type, size_t size)
 {
-    if (memory_type == AKVCAM_RBUFFER_MEMORY_TYPE_KMALLOC)
+    if (memory_type == AKVCAM_MEMORY_TYPE_KMALLOC)
         return kzalloc(size, GFP_KERNEL);
 
     return vzalloc(size);
 }
 
-void akvcam_rbuffer_free(AKVCAM_RBUFFER_MEMORY_TYPE memory_type, void *data)
+void akvcam_rbuffer_free(AKVCAM_MEMORY_TYPE memory_type, void *data)
 {
-    if (memory_type == AKVCAM_RBUFFER_MEMORY_TYPE_KMALLOC)
+    if (memory_type == AKVCAM_MEMORY_TYPE_KMALLOC)
         kfree(data);
     else
         vfree(data);

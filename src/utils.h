@@ -55,12 +55,27 @@
     #define AK_EPOLLWRNORM EPOLLWRNORM
 #endif
 
+typedef enum
+{
+    AKVCAM_MEMORY_TYPE_KMALLOC,
+    AKVCAM_MEMORY_TYPE_VMALLOC,
+} AKVCAM_MEMORY_TYPE;
+
 typedef bool (*akvcam_are_equals_t)(const void *element_data,
                                     const void *data,
                                     size_t size);
+
 uint64_t akvcam_id(void);
 int akvcam_get_last_error(void);
 int akvcam_set_last_error(int error);
 const char *akvcam_string_from_ioctl(uint cmd);
+size_t akvcam_line_size(const char *buffer, size_t size, bool *found);
+char *akvcam_strdup(const char *str, AKVCAM_MEMORY_TYPE type);
+char *akvcam_strip_str(const char *str, AKVCAM_MEMORY_TYPE type);
+char *akvcam_strip_str_sub(const char *str,
+                           size_t from,
+                           size_t size,
+                           AKVCAM_MEMORY_TYPE type);
+char *akvcam_strip_move_str(char *str, AKVCAM_MEMORY_TYPE type);
 
 #endif // AKVCAM_UTILS_H

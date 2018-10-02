@@ -45,9 +45,11 @@ struct v4l2_fract *akvcam_format_frame_rate(const akvcam_format_t self);
 size_t akvcam_format_bpp(const akvcam_format_t self);
 size_t akvcam_format_bypl(const akvcam_format_t self);
 size_t akvcam_format_size(const akvcam_format_t self);
+bool akvcam_format_is_valid(const akvcam_format_t self);
 void akvcam_format_clear(akvcam_format_t self);
 
 // public static
+size_t akvcam_format_sizeof(void);
 void akvcam_format_round_nearest(int width, int height,
                                  int *owidth, int *oheight,
                                  int align);

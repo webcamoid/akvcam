@@ -28,12 +28,6 @@
 struct akvcam_rbuffer;
 typedef struct akvcam_rbuffer *akvcam_rbuffer_t;
 
-typedef enum
-{
-    AKVCAM_RBUFFER_MEMORY_TYPE_KMALLOC,
-    AKVCAM_RBUFFER_MEMORY_TYPE_VMALLOC,
-} AKVCAM_RBUFFER_MEMORY_TYPE;
-
 akvcam_rbuffer_t akvcam_rbuffer_new(void);
 void akvcam_rbuffer_delete(akvcam_rbuffer_t *self);
 
@@ -41,12 +35,13 @@ void akvcam_rbuffer_copy(akvcam_rbuffer_t self, const akvcam_rbuffer_t other);
 void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
                            size_t n_elements,
                            size_t element_size,
-                           AKVCAM_RBUFFER_MEMORY_TYPE memory_type);
+                           AKVCAM_MEMORY_TYPE memory_type);
 size_t akvcam_rbuffer_size(const akvcam_rbuffer_t self);
 size_t akvcam_rbuffer_data_size(const akvcam_rbuffer_t self);
 size_t akvcam_rbuffer_n_elements(const akvcam_rbuffer_t self);
 size_t akvcam_rbuffer_element_size(const akvcam_rbuffer_t self);
 size_t akvcam_rbuffer_n_data(const akvcam_rbuffer_t self);
+bool akvcam_rbuffer_empty(const akvcam_rbuffer_t self);
 void *akvcam_rbuffer_queue(akvcam_rbuffer_t self, const void *data);
 void *akvcam_rbuffer_queue_bytes(akvcam_rbuffer_t self,
                                  const void *data,
@@ -65,6 +60,7 @@ void *akvcam_rbuffer_ptr_back(const akvcam_rbuffer_t self);
 void *akvcam_rbuffer_find(const akvcam_rbuffer_t self,
                           const void *data,
                           size_t size,
-                          const akvcam_are_equals_t equals);
+                          const akvcam_are_equals_t equals,
+                          ssize_t *offset);
 
 #endif // AKVCAM_RBUFFER_H

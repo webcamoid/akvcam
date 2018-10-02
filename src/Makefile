@@ -20,10 +20,12 @@ akvcam-objs := \
 	frame.o \
 	ioctl.o \
 	list.o \
+	map.o \
 	mmap.o \
 	node.o \
 	object.o \
 	rbuffer.o \
+	settings.o \
 	utils.o
 
 all:

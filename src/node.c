@@ -113,6 +113,11 @@ void akvcam_node_set_non_blocking(akvcam_node_t self, bool non_blocking)
     self->non_blocking = non_blocking;
 }
 
+size_t akvcam_node_sizeof(void)
+{
+    return sizeof(struct akvcam_node);
+}
+
 struct v4l2_file_operations *akvcam_node_fops(void)
 {
     return &akvcam_fops;
@@ -134,7 +139,9 @@ static int akvcam_node_open(struct file *filp)
     nodes = akvcam_device_nodes_nr(device);
     akvcam_list_push_back(nodes,
                           filp->private_data,
-                          (akvcam_deleter_t) akvcam_node_delete);
+                          akvcam_node_sizeof(),
+                          (akvcam_deleter_t) akvcam_node_delete,
+                          false);
 
     return 0;
 }
@@ -276,12 +283,12 @@ static int akvcam_node_release(struct file *filp)
 }
 
 static struct v4l2_file_operations akvcam_fops = {
-    .owner             = THIS_MODULE                  ,
-    .open              = akvcam_node_open             ,
-    .read              = akvcam_node_read             ,
-    .write             = akvcam_node_write            ,
-    .unlocked_ioctl    = akvcam_node_ioctl            ,
-    .poll              = akvcam_node_poll             ,
-    .mmap              = akvcam_node_mmap             ,
-    .release           = akvcam_node_release          ,
+    .owner          = THIS_MODULE        ,
+    .open           = akvcam_node_open   ,
+    .read           = akvcam_node_read   ,
+    .write          = akvcam_node_write  ,
+    .unlocked_ioctl = akvcam_node_ioctl  ,
+    .poll           = akvcam_node_poll   ,
+    .mmap           = akvcam_node_mmap   ,
+    .release        = akvcam_node_release,
 };

@@ -149,7 +149,9 @@ int akvcam_buffers_allocate(akvcam_buffers_t self,
             spin_lock(&self->slock);
             akvcam_list_push_back(self->buffers,
                                   buffer,
-                                  (akvcam_deleter_t) akvcam_buffer_delete);
+                                  akvcam_buffers_sizeof(),
+                                  (akvcam_deleter_t) akvcam_buffer_delete,
+                                  false);
             spin_unlock(&self->slock);
         }
     }
@@ -236,7 +238,9 @@ int akvcam_buffers_create(akvcam_buffers_t self,
             spin_lock(&self->slock);
             akvcam_list_push_back(self->buffers,
                                   buffer,
-                                  (akvcam_deleter_t) akvcam_buffer_delete);
+                                  akvcam_buffers_sizeof(),
+                                  (akvcam_deleter_t) akvcam_buffer_delete,
+                                  false);
             spin_unlock(&self->slock);
         }
     }
@@ -486,7 +490,7 @@ bool akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size)
     akvcam_rbuffer_resize(self->rw_buffers,
                           size,
                           akvcam_format_size(format),
-                          AKVCAM_RBUFFER_MEMORY_TYPE_VMALLOC);
+                          AKVCAM_MEMORY_TYPE_VMALLOC);
     self->rw_buffer_size = size;
     spin_unlock(&self->slock);
 
@@ -696,10 +700,11 @@ bool akvcam_buffers_is_supported(const akvcam_buffers_t self,
 bool akvcam_buffers_frame_available(const akvcam_buffers_t self)
 {
     akvcam_list_element_t it;
+    __u32 flags = V4L2_BUF_FLAG_DONE;
 
     spin_lock(&self->slock);
     it = akvcam_list_find(self->buffers,
-                          NULL,
+                          &flags,
                           0,
                           (akvcam_are_equals_t)
                           akvcam_buffers_is_ready);
@@ -718,6 +723,11 @@ void akvcam_buffer_delete(akvcam_buffer_t *buffer)
 
     kfree(*buffer);
     *buffer = NULL;
+}
+
+size_t akvcam_buffers_sizeof(void)
+{
+    return sizeof(struct akvcam_buffers);
 }
 
 void akvcam_buffers_set_frame_ready_callback(akvcam_buffers_t self,
