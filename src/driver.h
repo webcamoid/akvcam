@@ -21,8 +21,7 @@
 
 #include <linux/types.h>
 
-struct akvcam_device;
-struct akvcam_list;
+#include "device_types.h"
 
 // public static
 int akvcam_driver_init(const char *name, const char *description);
@@ -31,7 +30,7 @@ void akvcam_driver_uninit(void);
 const char *akvcam_driver_name(void);
 const char *akvcam_driver_description(void);
 uint akvcam_driver_version(void);
-struct akvcam_list *akvcam_driver_devices_nr(void);
-struct akvcam_list *akvcam_driver_devices(void);
+akvcam_devices_list_t akvcam_driver_devices_nr(void);
+akvcam_devices_list_t akvcam_driver_devices(void);
 
 #endif // AKVCAM_DRIVER_H

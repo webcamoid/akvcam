@@ -21,20 +21,16 @@
 
 #include <linux/types.h>
 
+#include "list_types.h"
 #include "object.h"
 #include "utils.h"
-
-#define akvcam_list_tt(type) akvcam_list_t
-
-struct akvcam_list;
-typedef struct akvcam_list *akvcam_list_t;
-struct akvcam_list_element;
-typedef struct akvcam_list_element *akvcam_list_element_t;
 
 // public
 akvcam_list_t akvcam_list_new(void);
 void akvcam_list_delete(akvcam_list_t *self);
 
+void akvcam_list_copy(akvcam_list_t self, const akvcam_list_t other);
+void akvcam_list_append(akvcam_list_t self, const akvcam_list_t other);
 size_t akvcam_list_size(const akvcam_list_t self);
 bool akvcam_list_empty(const akvcam_list_t self);
 void *akvcam_list_at(const akvcam_list_t self, size_t i);
@@ -44,7 +40,7 @@ akvcam_list_element_t akvcam_list_push_back(akvcam_list_t self,
                                             void *data,
                                             size_t data_size,
                                             const akvcam_deleter_t deleter,
-                                            bool copy);
+                                            bool is_object);
 akvcam_list_element_t akvcam_list_it(akvcam_list_t self, size_t i);
 void akvcam_list_erase(akvcam_list_t self, const akvcam_list_element_t element);
 void akvcam_list_clear(akvcam_list_t self);
@@ -65,5 +61,9 @@ void *akvcam_list_next(const akvcam_list_t self,
 void *akvcam_list_element_data(const akvcam_list_element_t element);
 size_t akvcam_list_element_size(const akvcam_list_element_t element);
 akvcam_deleter_t akvcam_list_element_deleter(const akvcam_list_element_t element);
+akvcam_matrix_t akvcam_matrix_combine(const akvcam_matrix_t matrix);
+
+// public static
+size_t akvcam_list_sizeof(void);
 
 #endif // AKVCAM_LIST_H

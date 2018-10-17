@@ -21,15 +21,16 @@
 
 #include <linux/types.h>
 
+#include "node_types.h"
+
 struct akvcam_ioctl;
 typedef struct akvcam_ioctl *akvcam_ioctl_t;
-struct akvcam_node;
 
 akvcam_ioctl_t akvcam_ioctl_new(void);
 void akvcam_ioctl_delete(akvcam_ioctl_t *self);
 
 int akvcam_ioctl_do(akvcam_ioctl_t self,
-                    struct akvcam_node *node,
+                    akvcam_node_t node,
                     unsigned int cmd,
                     void __user *arg);
 

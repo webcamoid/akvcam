@@ -28,8 +28,25 @@
 #define akvcam_min(value1, value2) \
     ((value1) < (value2)? (value1): (value2))
 
+#define akvcam_max(value1, value2) \
+    ((value1) > (value2)? (value1): (value2))
+
+#define akvcam_abs(value) \
+    ((value) < 0? -(value): (value))
+
 #define akvcam_between(min, value, max) \
     ((value) >= (min) && (value) <= (max))
+
+#define akvcam_bound(min, value, max) \
+    ((value) < (min)? (min): (value) > (max)? (max): (value))
+
+#define akvcam_align_up(value, align) \
+    (((value) + (align) - 1) & ~((align) - 1))
+
+#define akvcam_align32(value) akvcam_align_up(value, 32)
+
+#define akvcam_mod(value, mod) \
+    (((value) % (mod) + (mod)) % (mod))
 
 #define akvcam_callback(name, ...) \
     typedef void (*akvcam_##name##_proc)(void *user_data, __VA_ARGS__); \
@@ -55,6 +72,14 @@
     #define AK_EPOLLWRNORM EPOLLWRNORM
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
+    #define akvcam_file_read(filp, data, size, offset) \
+        kernel_read(filp, offset, data, size)
+#else
+    #define akvcam_file_read(filp, data, size, offset) \
+        kernel_read(filp, data, (size_t) size, &offset)
+#endif
+
 typedef enum
 {
     AKVCAM_MEMORY_TYPE_KMALLOC,
@@ -77,5 +102,6 @@ char *akvcam_strip_str_sub(const char *str,
                            size_t size,
                            AKVCAM_MEMORY_TYPE type);
 char *akvcam_strip_move_str(char *str, AKVCAM_MEMORY_TYPE type);
+size_t akvcam_str_count(const char *str, char c);
 
 #endif // AKVCAM_UTILS_H

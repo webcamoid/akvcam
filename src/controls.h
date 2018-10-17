@@ -21,15 +21,9 @@
 
 #include <linux/videodev2.h>
 
+#include "controls_types.h"
 #include "utils.h"
 
-#define AKVCAM_CONTROLS_FLAG_TRY    0x0
-#define AKVCAM_CONTROLS_FLAG_GET    0x1
-#define AKVCAM_CONTROLS_FLAG_SET    0x2
-#define AKVCAM_CONTROLS_FLAG_KERNEL 0x4
-
-struct akvcam_controls;
-typedef struct akvcam_controls *akvcam_controls_t;
 struct v4l2_queryctrl;
 struct v4l2_control;
 struct v4l2_ext_controls;

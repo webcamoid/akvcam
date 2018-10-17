@@ -37,10 +37,11 @@ struct akvcam_device
 {
     akvcam_object_t self;
     char *description;
-    akvcam_list_tt(akvcam_format_t) formats;
+    akvcam_formats_list_t formats;
     akvcam_format_t format;
     akvcam_controls_t controls;
-    akvcam_list_tt(akvcam_node_t) nodes;
+    akvcam_nodes_list_t nodes;
+    akvcam_devices_list_t capture_devices;
     akvcam_node_t priority_node;
     akvcam_buffers_t buffers;
     struct v4l2_device v4l2_dev;
@@ -49,6 +50,7 @@ struct akvcam_device
     AKVCAM_DEVICE_TYPE type;
     AKVCAM_RW_MODE rw_mode;
     enum v4l2_priority priority;
+    bool multiplanar;
     bool is_registered;
     bool streaming;
 };
@@ -174,79 +176,93 @@ AKVCAM_DEVICE_TYPE akvcam_device_type(const akvcam_device_t self)
     return self->type;
 }
 
+enum v4l2_buf_type akvcam_device_v4l2_type(const akvcam_device_t self)
+{
+    if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE && self->multiplanar)
+        return V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+    else if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE && !self->multiplanar)
+        return V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    else if (self->type == AKVCAM_DEVICE_TYPE_OUTPUT && self->multiplanar)
+        return V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+    else if (self->type == AKVCAM_DEVICE_TYPE_OUTPUT && !self->multiplanar)
+        return V4L2_BUF_TYPE_VIDEO_OUTPUT;
+
+    return (enum v4l2_buf_type) 0;
+}
+
 AKVCAM_RW_MODE akvcam_device_rw_mode(const akvcam_device_t self)
 {
     return self->rw_mode;
 }
 
-struct akvcam_list *akvcam_device_formats_nr(const akvcam_device_t self)
+akvcam_formats_list_t akvcam_device_formats_nr(const akvcam_device_t self)
 {
     return self->formats;
 }
 
-struct akvcam_list *akvcam_device_formats(const akvcam_device_t self)
+akvcam_formats_list_t akvcam_device_formats(const akvcam_device_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->formats));
 
     return self->formats;
 }
 
-struct akvcam_format *akvcam_device_format_nr(const akvcam_device_t self)
+akvcam_format_t akvcam_device_format_nr(const akvcam_device_t self)
 {
     return self->format;
 }
 
-struct akvcam_format *akvcam_device_format(const akvcam_device_t self)
+akvcam_format_t akvcam_device_format(const akvcam_device_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->format));
 
     return self->format;
 }
 
-struct akvcam_controls *akvcam_device_controls_nr(const akvcam_device_t self)
+akvcam_controls_t akvcam_device_controls_nr(const akvcam_device_t self)
 {
     return self->controls;
 }
 
-struct akvcam_controls *akvcam_device_controls(const akvcam_device_t self)
+akvcam_controls_t akvcam_device_controls(const akvcam_device_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->controls));
 
     return self->controls;
 }
 
-struct akvcam_list *akvcam_device_nodes_nr(const akvcam_device_t self)
+akvcam_nodes_list_t akvcam_device_nodes_nr(const akvcam_device_t self)
 {
     return self->nodes;
 }
 
-struct akvcam_list *akvcam_device_nodes(const akvcam_device_t self)
+akvcam_nodes_list_t akvcam_device_nodes(const akvcam_device_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->nodes));
 
     return self->nodes;
 }
 
-struct akvcam_buffers *akvcam_device_buffers_nr(const akvcam_device_t self)
+akvcam_buffers_t akvcam_device_buffers_nr(const akvcam_device_t self)
 {
     return self->buffers;
 }
 
-struct akvcam_buffers *akvcam_device_buffers(const akvcam_device_t self)
+akvcam_buffers_t akvcam_device_buffers(const akvcam_device_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->buffers));
 
     return self->buffers;
 }
 
-struct akvcam_node *akvcam_device_priority_node(const akvcam_device_t self)
+akvcam_node_t akvcam_device_priority_node(const akvcam_device_t self)
 {
     return self->priority_node;
 }
 
 void akvcam_device_set_priority(akvcam_device_t self,
                                 enum v4l2_priority priority,
-                                struct akvcam_node *node)
+                                akvcam_node_t node)
 {
     self->priority = priority;
     self->priority_node = node;
@@ -355,6 +371,28 @@ bool akvcam_device_prepare_frame(akvcam_device_t self)
     akvcam_frame_delete(&frame);
 
     return result;
+}
+
+akvcam_devices_list_t akvcam_device_capture_devices_nr(const akvcam_device_t self)
+{
+    return self->capture_devices;
+}
+
+akvcam_devices_list_t akvcam_device_capture_devices(const akvcam_device_t self)
+{
+    akvcam_object_ref(AKVCAM_TO_OBJECT(self->capture_devices));
+
+    return self->capture_devices;
+}
+
+bool akvcam_device_multiplanar(const akvcam_device_t self)
+{
+    return self->multiplanar;
+}
+
+void akvcam_device_set_multiplanar(akvcam_device_t self, bool multiplanar)
+{
+    self->multiplanar =  multiplanar;
 }
 
 int akvcam_device_send_frames(akvcam_device_t self)

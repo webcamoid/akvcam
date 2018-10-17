@@ -21,12 +21,14 @@
 
 #include <linux/types.h>
 
+#include "list_types.h"
+
 #define AKVCAM_SETTINGS_PREFERRED_MAX_LINE_SIZE 4096
 #define AKVCAM_SETTINGS_PREFERRED_MAX_FILE_SIZE (4 * 1024 * 1024)
 
 struct akvcam_settings;
 typedef struct akvcam_settings *akvcam_settings_t;
-struct akvcam_list;
+struct v4l2_fract;
 
 // public
 akvcam_settings_t akvcam_settings_new(void);
@@ -44,8 +46,8 @@ void akvcam_settings_end_group(akvcam_settings_t self);
 size_t akvcam_settings_begin_array(akvcam_settings_t self, const char *prefix);
 void akvcam_settings_set_array_index(akvcam_settings_t self, size_t i);
 void akvcam_settings_end_array(akvcam_settings_t self);
-struct akvcam_list *akvcam_settings_groups(const akvcam_settings_t self);
-struct akvcam_list *akvcam_settings_keys(const akvcam_settings_t self);
+akvcam_string_list_t akvcam_settings_groups(const akvcam_settings_t self);
+akvcam_string_list_t akvcam_settings_keys(const akvcam_settings_t self);
 void akvcam_settings_clear(akvcam_settings_t self);
 bool akvcam_settings_contains(const akvcam_settings_t self, const char *key);
 char *akvcam_settings_value(const akvcam_settings_t self, const char *key);
@@ -54,8 +56,18 @@ int32_t akvcam_settings_value_int32(const akvcam_settings_t self,
                                     const char *key);
 uint32_t akvcam_settings_value_uint32(const akvcam_settings_t self,
                                       const char *key);
-struct akvcam_list *akvcam_settings_value_list(const akvcam_settings_t self,
-                                               const char *key,
-                                               const char *separators);
+akvcam_string_list_t akvcam_settings_value_list(const akvcam_settings_t self,
+                                                const char *key,
+                                                const char *separators);
+struct v4l2_fract akvcam_settings_value_frac(const akvcam_settings_t self,
+                                             const char *key);
+
+// public static
+bool akvcam_settings_to_bool(const char *value);
+int32_t akvcam_settings_to_int32(const char *value);
+uint32_t akvcam_settings_to_uint32(const char *value);
+akvcam_string_list_t akvcam_settings_to_list(const char *value,
+                                             const char *separators);
+struct v4l2_fract akvcam_settings_to_frac(const char *value);
 
 #endif // AKVCAM_SETTINGS_H

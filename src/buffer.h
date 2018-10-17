@@ -16,12 +16,26 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef AKVCAM_MMAP_H
-#define AKVCAM_MMAP_H
+#ifndef AKVCAM_BUFFER_H
+#define AKVCAM_BUFFER_H
 
-struct file;
-struct vm_area_struct;
+#include <linux/types.h>
 
-int akvcam_mmap_do(struct file *filp, struct vm_area_struct *vma);
+struct akvcam_buffer;
+typedef struct akvcam_buffer *akvcam_buffer_t;
+struct v4l2_buffer;
 
-#endif // AKVCAM_MMAP_H
+// public
+akvcam_buffer_t akvcam_buffer_new(size_t size);
+void akvcam_buffer_delete(akvcam_buffer_t *self);
+
+struct v4l2_buffer *akvcam_buffer_get(akvcam_buffer_t self);
+void *akvcam_buffer_data(akvcam_buffer_t self);
+size_t akvcam_buffer_size(akvcam_buffer_t self);
+__u32 akvcam_buffer_offset(akvcam_buffer_t self);
+void akvcam_buffer_set_offset(akvcam_buffer_t self, __u32 offset);
+
+// public static
+size_t akvcam_buffer_sizeof(void);
+
+#endif // AKVCAM_BUFFER_H

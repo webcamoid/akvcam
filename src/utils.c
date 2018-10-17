@@ -245,3 +245,15 @@ char *akvcam_strip_move_str(char *str, AKVCAM_MEMORY_TYPE type)
 
     return stripped_str;
 }
+
+size_t akvcam_str_count(const char *str, char c)
+{
+    size_t count = 0;
+    size_t i;
+
+    for (i = 0; i < strlen(str); i++)
+        if (str[i] == c)
+            count++;
+
+    return count;
+}

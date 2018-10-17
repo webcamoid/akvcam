@@ -59,12 +59,12 @@ static akvcam_control_params akvcam_controls_private[] = {
     {V4L2_CID_CONTRAST  ,    V4L2_CTRL_TYPE_INTEGER,        "Contrast", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER},
     {V4L2_CID_SATURATION,    V4L2_CTRL_TYPE_INTEGER,      "Saturation", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER},
     {V4L2_CID_HUE       ,    V4L2_CTRL_TYPE_INTEGER,             "Hue", -359, 359, 1, 0,     V4L2_CTRL_FLAG_SLIDER},
-    {V4L2_CID_GAMMA     ,    V4L2_CTRL_TYPE_INTEGER,           "Gamma", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER},
     {V4L2_CID_HFLIP     ,    V4L2_CTRL_TYPE_BOOLEAN, "Horizontal Flip",    0,   1, 1, 0,                         0},
     {V4L2_CID_VFLIP     ,    V4L2_CTRL_TYPE_BOOLEAN,   "Vertical Flip",    0,   1, 1, 0,                         0},
     {0                  ,                         0,                "",    0,   0, 0, 0,                         0},
 };
 
+size_t akvcam_controls_count(void);
 akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,
                                                    __u32 id);
 akvcam_control_params_t akvcam_controls_params_by_id(const akvcam_controls_t self,
@@ -75,12 +75,7 @@ akvcam_controls_t akvcam_controls_new(void)
     size_t i;
     akvcam_controls_t self = kzalloc(sizeof(struct akvcam_controls), GFP_KERNEL);
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_controls_delete);
-
-    // Check the number of controls available.
-    self->n_controls = 0;
-
-    for (i = 0; akvcam_controls_private[i].id; i++)
-        self->n_controls++;
+    self->n_controls = akvcam_controls_count();
 
     // Initialize controls with default values.
     self->values = kzalloc(self->n_controls * sizeof(akvcam_control_value), GFP_KERNEL);
@@ -493,6 +488,18 @@ void akvcam_controls_set_changed_callback(akvcam_controls_t self,
                                           const akvcam_controls_changed_callback callback)
 {
     self->controls_changed = callback;
+}
+
+size_t akvcam_controls_count(void)
+{
+    size_t i;
+    static size_t count = 0;
+
+    if (count < 1)
+        for (i = 0; akvcam_controls_private[i].id; i++)
+            count++;
+
+    return count;
 }
 
 akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,

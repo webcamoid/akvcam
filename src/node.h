@@ -21,19 +21,18 @@
 
 #include <linux/types.h>
 
-struct akvcam_node;
-typedef struct akvcam_node *akvcam_node_t;
-struct akvcam_device;
-struct akvcam_events;
+#include "node_types.h"
+#include "device_types.h"
+#include "events_types.h"
 
 // public
-akvcam_node_t akvcam_node_new(struct akvcam_device *device);
+akvcam_node_t akvcam_node_new(akvcam_device_t device);
 void akvcam_node_delete(akvcam_node_t *self);
 
-struct akvcam_device *akvcam_node_device_nr(const akvcam_node_t self);
-struct akvcam_device *akvcam_node_device(const akvcam_node_t self);
-struct akvcam_events *akvcam_node_events_nr(const akvcam_node_t self);
-struct akvcam_events *akvcam_node_events(const akvcam_node_t self);
+akvcam_device_t akvcam_node_device_nr(const akvcam_node_t self);
+akvcam_device_t akvcam_node_device(const akvcam_node_t self);
+akvcam_events_t akvcam_node_events_nr(const akvcam_node_t self);
+akvcam_events_t akvcam_node_events(const akvcam_node_t self);
 bool akvcam_node_non_blocking(const akvcam_node_t self);
 void akvcam_node_set_non_blocking(akvcam_node_t self, bool non_blocking);
 

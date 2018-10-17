@@ -30,6 +30,7 @@ typedef struct akvcam_map *akvcam_map_t;
 struct akvcam_map_element;
 typedef struct akvcam_map_element *akvcam_map_element_t;
 struct akvcam_list;
+typedef akvcam_map_tt(char *) akvcam_string_map_t;
 
 // public
 akvcam_map_t akvcam_map_new(void);
@@ -43,7 +44,7 @@ akvcam_map_element_t akvcam_map_set_value(akvcam_map_t self,
                                           void *value,
                                           size_t value_size,
                                           const akvcam_deleter_t deleter,
-                                          bool copy);
+                                          bool is_object);
 bool akvcam_map_contains(const akvcam_map_t self, const char *key);
 struct akvcam_list *akvcam_map_keys(const akvcam_map_t self);
 struct akvcam_list *akvcam_map_values(const akvcam_map_t self);

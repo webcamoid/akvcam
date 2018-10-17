@@ -20,6 +20,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
+#include <linux/videodev2.h>
 
 #include "settings.h"
 #include "list.h"
@@ -41,7 +42,7 @@ typedef struct
 struct akvcam_settings
 {
     akvcam_object_t self;
-    akvcam_map_tt(akvcam_map_tt(char *)) configs;
+    akvcam_map_tt(akvcam_string_map_t) configs;
     size_t max_line_size;
     size_t max_file_size;
     char *current_group;
@@ -52,8 +53,7 @@ struct akvcam_settings
 bool akvcam_settings_parse(const char *line, akvcam_settings_element_t element);
 char *akvcam_settings_parse_string(char *str, bool move);
 void akvcam_settings_element_free(akvcam_settings_element_t element);
-void akvcam_settings_str_delete(char **object);
-akvcam_map_tt(char *) akvcam_settings_group_configs(const akvcam_settings_t self);
+akvcam_string_map_t akvcam_settings_group_configs(const akvcam_settings_t self);
 
 akvcam_settings_t akvcam_settings_new(void)
 {
@@ -96,7 +96,7 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
     char *raw_data = vmalloc((unsigned long) self->max_line_size);
     char *line;
     char *current_group = NULL;
-    akvcam_map_t group_configs;
+    akvcam_string_map_t group_configs;
     akvcam_settings_element element;
     struct kstat stats;
     mm_segment_t oldfs;
@@ -106,6 +106,7 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
     size_t totaL_bytes = 0;
     ssize_t new_line = 0;
     loff_t offset;
+    akvcam_map_t tmp_map;
 
     memset(&element, 0, sizeof(akvcam_settings_element));
     file_size = self->max_file_size > 0?
@@ -146,18 +147,11 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
                 break;
 
             offset = 0;
+            bytes_read = akvcam_file_read(config_file,
+                                          raw_data,
+                                          line_size,
+                                          offset);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
-            bytes_read = kernel_read(config_file,
-                                     offset,
-                                     raw_data,
-                                     line_size);
-#else
-            bytes_read = kernel_read(config_file,
-                                     raw_data,
-                                     (size_t) line_size,
-                                     &offset);
-#endif
             if (bytes_read < 1)
                 break;
 
@@ -200,12 +194,14 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
                                               AKVCAM_MEMORY_TYPE_VMALLOC);
 
                 if (!akvcam_map_contains(self->configs, current_group)) {
+                    tmp_map = akvcam_map_new();
                     akvcam_map_set_value(self->configs,
                                          current_group,
-                                         akvcam_map_new(),
+                                         tmp_map,
                                          akvcam_map_sizeof(),
                                          (akvcam_deleter_t) akvcam_map_delete,
-                                         false);
+                                         true);
+                    akvcam_map_delete(&tmp_map);
                 }
             } else if (element.key
                        && element.value
@@ -214,21 +210,22 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
                 if (!current_group) {
                     current_group = akvcam_strdup("*",
                                                   AKVCAM_MEMORY_TYPE_VMALLOC);
+                    tmp_map = akvcam_map_new();
                     akvcam_map_set_value(self->configs,
                                          current_group,
-                                         akvcam_map_new(),
+                                         tmp_map,
                                          akvcam_map_sizeof(),
                                          (akvcam_deleter_t) akvcam_map_delete,
-                                         false);
+                                         true);
+                    akvcam_map_delete(&tmp_map);
                 }
 
                 group_configs = akvcam_map_value(self->configs, current_group);
                 akvcam_map_set_value(group_configs,
                                      element.key,
-                                     akvcam_strdup(element.value,
-                                                   AKVCAM_MEMORY_TYPE_VMALLOC),
+                                     element.value,
                                      strlen(element.value) + 1,
-                                     (akvcam_deleter_t) akvcam_settings_str_delete,
+                                     NULL,
                                      false);
             }
 
@@ -306,7 +303,7 @@ void akvcam_settings_end_group(akvcam_settings_t self)
 
 size_t akvcam_settings_begin_array(akvcam_settings_t self, const char *prefix)
 {
-    akvcam_map_tt(char *) group_configs = akvcam_settings_group_configs(self);
+    akvcam_string_map_t group_configs = akvcam_settings_group_configs(self);
     size_t len = strlen(prefix);
     char *array_key;
     char *array_size_str;
@@ -348,29 +345,25 @@ void akvcam_settings_end_array(akvcam_settings_t self)
     }
 }
 
-struct akvcam_list *akvcam_settings_groups(const akvcam_settings_t self)
+akvcam_string_list_t akvcam_settings_groups(const akvcam_settings_t self)
 {
     akvcam_map_element_t element = NULL;
-    akvcam_list_tt(char *) groups = akvcam_list_new();
+    akvcam_string_list_t groups = akvcam_list_new();
     char *group;
 
     while (akvcam_map_next(self->configs, &element)) {
         group = akvcam_map_element_key(element);
-        akvcam_list_push_back(groups,
-                              akvcam_strdup(group, AKVCAM_MEMORY_TYPE_VMALLOC),
-                              strlen(group) + 1,
-                              (akvcam_deleter_t) akvcam_settings_str_delete,
-                              false);
+        akvcam_list_push_back(groups, group, strlen(group) + 1, NULL, false);
     }
 
     return groups;
 }
 
-struct akvcam_list *akvcam_settings_keys(const akvcam_settings_t self)
+akvcam_string_list_t akvcam_settings_keys(const akvcam_settings_t self)
 {
     akvcam_map_element_t element = NULL;
-    akvcam_list_tt(char *) keys = akvcam_list_new();
-    akvcam_map_tt(char *) group_configs = akvcam_settings_group_configs(self);
+    akvcam_string_list_t keys = akvcam_list_new();
+    akvcam_string_map_t group_configs = akvcam_settings_group_configs(self);
     char *key;
 
     if (!group_configs)
@@ -378,11 +371,7 @@ struct akvcam_list *akvcam_settings_keys(const akvcam_settings_t self)
 
     while (akvcam_map_next(group_configs, &element)) {
         key = akvcam_map_element_key(element);
-        akvcam_list_push_back(keys,
-                              akvcam_strdup(key, AKVCAM_MEMORY_TYPE_VMALLOC),
-                              strlen(key) + 1,
-                              (akvcam_deleter_t) akvcam_settings_str_delete,
-                              false);
+        akvcam_list_push_back(keys, key, strlen(key) + 1, NULL, false);
     }
 
     return keys;
@@ -398,7 +387,7 @@ void akvcam_settings_clear(akvcam_settings_t self)
 
 bool akvcam_settings_contains(const akvcam_settings_t self, const char *key)
 {
-    akvcam_map_tt(char *) group_configs = akvcam_settings_group_configs(self);
+    akvcam_string_map_t group_configs = akvcam_settings_group_configs(self);
 
     if (!group_configs)
         return false;
@@ -408,7 +397,7 @@ bool akvcam_settings_contains(const akvcam_settings_t self, const char *key)
 
 char *akvcam_settings_value(const akvcam_settings_t self, const char *key)
 {
-    akvcam_map_tt(char *) group_configs = akvcam_settings_group_configs(self);
+    akvcam_string_map_t group_configs = akvcam_settings_group_configs(self);
     char *array_key;
     char *value;
     size_t array_key_size;
@@ -434,88 +423,145 @@ char *akvcam_settings_value(const akvcam_settings_t self, const char *key)
 
 bool akvcam_settings_value_bool(const akvcam_settings_t self, const char *key)
 {
-    char *value_str = akvcam_settings_value(self, key);
-    s32 value = false;
-
-    if (!value_str)
-        return false;
-
-    if (strncasecmp(value_str,
-                    "true",
-                    akvcam_min(strlen(value_str), strlen("true"))) == 0)
-        return true;
-
-    if (kstrtos32(value_str, 10, (s32 *) &value) != 0)
-        return false;
-
-    return (bool) value;
+    return akvcam_settings_to_bool(akvcam_settings_value(self, key));
 }
 
 int32_t akvcam_settings_value_int32(const akvcam_settings_t self,
                                     const char *key)
 {
-    char *value_str = akvcam_settings_value(self, key);
-    s32 value = 0;
-
-    if (!value_str)
-        return 0;
-
-    if (kstrtos32(value_str, 10, (s32 *) &value) != 0)
-        return 0;
-
-    return value;
+    return akvcam_settings_to_int32(akvcam_settings_value(self, key));
 }
 
 uint32_t akvcam_settings_value_uint32(const akvcam_settings_t self,
                                       const char *key)
 {
-    char *value_str = akvcam_settings_value(self, key);
-    u32 value = 0;
-
-    if (!value_str)
-        return 0;
-
-    if (kstrtou32(value_str, 10, (u32 *) &value) != 0)
-        return 0;
-
-    return value;
+    return akvcam_settings_to_uint32(akvcam_settings_value(self, key));
 }
 
-struct akvcam_list *akvcam_settings_value_list(const akvcam_settings_t self,
-                                               const char *key,
-                                               const char *separators)
+akvcam_string_list_t akvcam_settings_value_list(const akvcam_settings_t self,
+                                                const char *key,
+                                                const char *separators)
 {
-    char *value_str = akvcam_settings_value(self, key);
-    char *value_str_tmp;
-    char *value_str_tmp_ptr;
+    return akvcam_settings_to_list(akvcam_settings_value(self, key),
+                                   separators);
+}
+
+struct v4l2_fract akvcam_settings_value_frac(const akvcam_settings_t self,
+                                             const char *key)
+{
+    return akvcam_settings_to_frac(akvcam_settings_value(self, key));
+}
+
+bool akvcam_settings_to_bool(const char *value)
+{
+    s32 result = false;
+
+    if (!value)
+        return false;
+
+    if (strcasecmp(value, "true") == 0)
+        return true;
+
+    if (kstrtos32(value, 10, (s32 *) &result) != 0)
+        return false;
+
+    return (bool) result;
+}
+
+int32_t akvcam_settings_to_int32(const char *value)
+{
+    s32 result = 0;
+
+    if (!value)
+        return 0;
+
+    if (kstrtos32(value, 10, (s32 *) &result) != 0)
+        return 0;
+
+    return result;
+}
+
+uint32_t akvcam_settings_to_uint32(const char *value)
+{
+    u32 result = 0;
+
+    if (!value)
+        return 0;
+
+    if (kstrtou32(value, 10, (u32 *) &result) != 0)
+        return 0;
+
+    return result;
+}
+
+akvcam_string_list_t akvcam_settings_to_list(const char *value,
+                                             const char *separators)
+{
+    char *value_tmp;
+    char *value_tmp_ptr;
     char *element;
     char *stripped_element;
-    akvcam_list_tt(char *) value = akvcam_list_new();
+    akvcam_string_list_t result = akvcam_list_new();
 
-    if (!value_str)
-        return value;
+    if (!value)
+        return result;
 
-    value_str_tmp_ptr = value_str_tmp =
-            akvcam_strdup(value_str, AKVCAM_MEMORY_TYPE_VMALLOC);
+    value_tmp_ptr = value_tmp =
+            akvcam_strdup(value, AKVCAM_MEMORY_TYPE_VMALLOC);
 
     for (;;) {
-        element = strsep(&value_str_tmp_ptr, separators);
+        element = strsep(&value_tmp_ptr, separators);
 
         if (!element)
             break;
 
         stripped_element = akvcam_strip_str(element,
-                                            AKVCAM_MEMORY_TYPE_VMALLOC);
-        akvcam_list_push_back(value,
+                                            AKVCAM_MEMORY_TYPE_KMALLOC);
+        akvcam_list_push_back(result,
                               stripped_element,
                               strlen(stripped_element) + 1,
-                              (akvcam_deleter_t) akvcam_settings_str_delete,
+                              NULL,
                               false);
+        kfree(stripped_element);
     }
 
-    vfree(value_str_tmp);
+    vfree(value_tmp);
 
-    return value;
+    return result;
+}
+
+struct v4l2_fract akvcam_settings_to_frac(const char *value)
+{
+    struct v4l2_fract frac = {0, 1};
+    akvcam_string_list_t frac_list = akvcam_settings_to_list(value, "/");
+
+    if (!value)
+        return frac;
+
+    switch (akvcam_list_size(frac_list)) {
+    case 1:
+        frac.numerator = akvcam_settings_to_uint32(akvcam_list_at(frac_list, 0));
+
+        break;
+
+    case 2:
+        frac.numerator = akvcam_settings_to_uint32(akvcam_list_at(frac_list, 0));
+        frac.denominator = akvcam_settings_to_uint32(akvcam_list_at(frac_list, 1));
+
+        if (frac.denominator < 1) {
+            frac.numerator = 0;
+            frac.denominator = 1;
+        }
+
+        break;
+
+    default:
+        break;
+    }
+
+    akvcam_list_delete(&frac_list);
+
+    return frac;
 }
 
 bool akvcam_settings_parse(const char *line, akvcam_settings_element_t element)
@@ -669,17 +715,9 @@ void akvcam_settings_element_free(akvcam_settings_element_t element)
     }
 }
 
-void akvcam_settings_str_delete(char **str)
+akvcam_string_map_t akvcam_settings_group_configs(const akvcam_settings_t self)
 {
-    if (str && *str) {
-        vfree(*str);
-        *str = NULL;
-    }
-}
-
-akvcam_map_tt(char *) akvcam_settings_group_configs(const akvcam_settings_t self)
-{
-    akvcam_map_tt(char *) group_configs;
+    akvcam_string_map_t group_configs;
 
     if (self->current_group)
         group_configs = akvcam_map_value(self->configs, self->current_group);

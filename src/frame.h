@@ -21,21 +21,51 @@
 
 #include <linux/types.h>
 
-struct akvcam_frame;
-typedef struct akvcam_frame *akvcam_frame_t;
-struct akvcam_format;
+#include "frame_types.h"
+#include "format_types.h"
 
-akvcam_frame_t akvcam_frame_new(struct akvcam_format *format,
+// public
+akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
                                 const void *data,
                                 size_t size);
 void akvcam_frame_delete(akvcam_frame_t *self);
 
 void akvcam_frame_copy(akvcam_frame_t self, const akvcam_frame_t other);
-struct akvcam_format *akvcam_frame_format_nr(const akvcam_frame_t self);
-struct akvcam_format *akvcam_frame_format(const akvcam_frame_t self);
+akvcam_format_t akvcam_frame_format_nr(const akvcam_frame_t self);
+akvcam_format_t akvcam_frame_format(const akvcam_frame_t self);
 void *akvcam_frame_data(const akvcam_frame_t self);
+void *akvcam_frame_line(const akvcam_frame_t self, size_t plane, size_t i);
+const void *akvcam_frame_const_line(const akvcam_frame_t self,
+                                    size_t plane,
+                                    size_t i);
 size_t akvcam_frame_size(const akvcam_frame_t self);
 void akvcam_frame_resize(akvcam_frame_t self, size_t size);
 void akvcam_frame_clear(akvcam_frame_t self);
+bool akvcam_frame_load(akvcam_frame_t self, const char *file_name);
+void akvcam_frame_mirror(akvcam_frame_t self,
+                         bool horizontalMirror,
+                         bool verticalMirror);
+bool akvcam_frame_scaled(akvcam_frame_t self,
+                         size_t width,
+                         size_t height,
+                         AKVCAM_SCALING mode,
+                         AKVCAM_ASPECT_RATIO aspectRatio);
+void akvcam_frame_swap_rgb(akvcam_frame_t self);
+bool akvcam_frame_convert(akvcam_frame_t self, __u32 fourcc);
+void akvcam_frame_adjust_hsl(akvcam_frame_t self,
+                             int hue,
+                             int saturation,
+                             int luminance);
+void akvcam_frame_adjust_contrast(akvcam_frame_t self, int contrast);
+void akvcam_frame_to_gray_scale(akvcam_frame_t self);
+void akvcam_frame_adjust(akvcam_frame_t self,
+                         int hue,
+                         int saturation,
+                         int luminance,
+                         int contrast,
+                         bool gray);
+
+// public static
+bool akvcam_frame_can_convert(__u32 in_fourcc, __u32 out_fourcc);
 
 #endif // AKVCAM_FRAME_H

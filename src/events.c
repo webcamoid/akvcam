@@ -86,8 +86,8 @@ void akvcam_events_subscribe(akvcam_events_t self,
     akvcam_list_push_back(self->subscriptions,
                           subscription,
                           sizeof(struct v4l2_event_subscription),
-                          akvcam_delete_data,
-                          true);
+                          NULL,
+                          false);
 }
 
 void akvcam_events_unsubscribe(akvcam_events_t self,

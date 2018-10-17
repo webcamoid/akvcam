@@ -41,7 +41,7 @@ struct akvcam_node
 
 static struct v4l2_file_operations akvcam_fops;
 
-akvcam_node_t akvcam_node_new(struct akvcam_device *device)
+akvcam_node_t akvcam_node_new(akvcam_device_t device)
 {
     akvcam_node_t self = kzalloc(sizeof(struct akvcam_node), GFP_KERNEL);
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_node_delete);
@@ -79,24 +79,24 @@ void akvcam_node_delete(akvcam_node_t *self)
     *self = NULL;
 }
 
-struct akvcam_device *akvcam_node_device_nr(const akvcam_node_t self)
+akvcam_device_t akvcam_node_device_nr(const akvcam_node_t self)
 {
     return self->device;
 }
 
-struct akvcam_device *akvcam_node_device(const akvcam_node_t self)
+akvcam_device_t akvcam_node_device(const akvcam_node_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->device));
 
     return self->device;
 }
 
-struct akvcam_events *akvcam_node_events_nr(const akvcam_node_t self)
+akvcam_events_t akvcam_node_events_nr(const akvcam_node_t self)
 {
     return self->events;
 }
 
-struct akvcam_events *akvcam_node_events(const akvcam_node_t self)
+akvcam_events_t akvcam_node_events(const akvcam_node_t self)
 {
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->events));
 
@@ -126,7 +126,7 @@ struct v4l2_file_operations *akvcam_node_fops(void)
 static int akvcam_node_open(struct file *filp)
 {
     akvcam_device_t device;
-    akvcam_list_tt(akvcam_node_t) nodes;
+    akvcam_nodes_list_t nodes;
     printk(KERN_INFO "%s()\n", __FUNCTION__);
     device = akvcam_device_from_file_nr(filp);
 
@@ -141,7 +141,8 @@ static int akvcam_node_open(struct file *filp)
                           filp->private_data,
                           akvcam_node_sizeof(),
                           (akvcam_deleter_t) akvcam_node_delete,
-                          false);
+                          true);
+    akvcam_node_delete((akvcam_node_t *) &filp->private_data);
 
     return 0;
 }
@@ -257,7 +258,7 @@ static int akvcam_node_mmap(struct file *filp, struct vm_area_struct *vma)
 static int akvcam_node_release(struct file *filp)
 {
     akvcam_node_t node;
-    akvcam_list_tt(akvcam_node_t) nodes;
+    akvcam_nodes_list_t nodes;
     akvcam_list_element_t it;
     akvcam_device_t device;
     printk(KERN_INFO "%s()\n", __FUNCTION__);

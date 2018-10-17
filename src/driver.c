@@ -27,9 +27,6 @@
 #include "list.h"
 #include "settings.h"
 
-typedef akvcam_list_tt(akvcam_format_t) akvcam_formats_list_t;
-typedef akvcam_list_tt(akvcam_device_t) akvcam_devices_list_t;
-
 typedef struct
 {
     akvcam_object_t self;
@@ -42,16 +39,19 @@ static akvcam_driver_t akvcam_driver_global = NULL;
 
 bool akvcam_driver_register(void);
 void akvcam_driver_unregister(void);
-akvcam_formats_list_t akvcam_driver_read_formats(akvcam_settings_t settings);
-akvcam_format_t akvcam_driver_read_format(akvcam_settings_t settings);
+akvcam_matrix_t akvcam_driver_read_formats(akvcam_settings_t settings);
+akvcam_formats_list_t akvcam_driver_read_format(akvcam_settings_t settings);
 akvcam_devices_list_t akvcam_driver_read_devices(akvcam_settings_t settings,
-                                                 akvcam_formats_list_t available_formats);
+                                                 akvcam_matrix_t available_formats);
 akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
-                                          akvcam_formats_list_t available_formats);
+                                          akvcam_matrix_t available_formats);
 akvcam_formats_list_t akvcam_driver_read_device_formats(akvcam_settings_t settings,
-                                                        akvcam_formats_list_t available_formats);
-void akvcam_driver_copy_formats(akvcam_formats_list_t to,
-                                akvcam_formats_list_t from);
+                                                        akvcam_matrix_t available_formats);
+void akvcam_driver_connect_devices(akvcam_settings_t settings,
+                                   akvcam_devices_list_t devices);
+bool akvcam_driver_contains_node(const u32 *connections,
+                                 size_t n_connectios,
+                                 u32 node);
 
 static void akvcam_driver_delete(void *dummy)
 {
@@ -62,7 +62,7 @@ static void akvcam_driver_delete(void *dummy)
 int akvcam_driver_init(const char *name, const char *description)
 {
     akvcam_settings_t settings;
-    akvcam_formats_list_t available_formats;
+    akvcam_matrix_t available_formats;
 
     if (akvcam_driver_global)
         return -EINVAL;
@@ -80,6 +80,7 @@ int akvcam_driver_init(const char *name, const char *description)
         akvcam_driver_global->devices =
                 akvcam_driver_read_devices(settings, available_formats);
         akvcam_list_delete(&available_formats);
+        akvcam_driver_connect_devices(settings, akvcam_driver_global->devices);
     } else {
         akvcam_driver_global->devices = akvcam_list_new();
     }
@@ -125,7 +126,7 @@ uint akvcam_driver_version(void)
     return LINUX_VERSION_CODE;
 }
 
-struct akvcam_list *akvcam_driver_devices_nr(void)
+akvcam_devices_list_t akvcam_driver_devices_nr(void)
 {
     if (!akvcam_driver_global)
         return NULL;
@@ -133,7 +134,7 @@ struct akvcam_list *akvcam_driver_devices_nr(void)
     return akvcam_driver_global->devices;
 }
 
-struct akvcam_list *akvcam_driver_devices(void)
+akvcam_devices_list_t akvcam_driver_devices(void)
 {
     if (!akvcam_driver_global)
         return NULL;
@@ -179,10 +180,10 @@ void akvcam_driver_unregister(void)
     }
 }
 
-akvcam_formats_list_t akvcam_driver_read_formats(akvcam_settings_t settings)
+akvcam_matrix_t akvcam_driver_read_formats(akvcam_settings_t settings)
 {
-    akvcam_formats_list_t formats = akvcam_list_new();
-    akvcam_format_t format;
+    akvcam_matrix_t formats_matrix = akvcam_list_new();
+    akvcam_formats_list_t formats_list = NULL;
     size_t n_formats;
     size_t i;
 
@@ -191,49 +192,111 @@ akvcam_formats_list_t akvcam_driver_read_formats(akvcam_settings_t settings)
 
     for (i = 0; i < n_formats; i++) {
         akvcam_settings_set_array_index(settings, i);
-        format = akvcam_driver_read_format(settings);
-
-        if (format)
-            akvcam_list_push_back(formats,
-                                  format,
-                                  akvcam_format_sizeof(),
-                                  (akvcam_deleter_t) akvcam_format_delete,
-                                  false);
+        formats_list = akvcam_driver_read_format(settings);
+        akvcam_list_push_back(formats_matrix,
+                              formats_list,
+                              akvcam_list_sizeof(),
+                              (akvcam_deleter_t) akvcam_list_delete,
+                              true);
+        akvcam_list_delete(&formats_list);
     }
 
     akvcam_settings_end_array(settings);
     akvcam_settings_end_group(settings);
 
+    return formats_matrix;
+}
+
+akvcam_formats_list_t akvcam_driver_read_format(akvcam_settings_t settings)
+{
+    __u32 pix_format;
+    uint32_t width;
+    uint32_t height;
+    struct v4l2_fract frame_rate;
+    akvcam_format_t format;
+    akvcam_formats_list_t formats;
+    akvcam_string_matrix_t format_matrix;
+    akvcam_string_matrix_t combined_formats = NULL;
+    akvcam_string_list_t pix_formats;
+    akvcam_string_list_t widths;
+    akvcam_string_list_t heights;
+    akvcam_string_list_t frame_rates;
+    akvcam_string_list_t format_list;
+    akvcam_list_element_t it = NULL;
+
+    formats = akvcam_list_new();
+    format_matrix = akvcam_list_new();
+
+    pix_formats = akvcam_settings_value_list(settings, "format", ",");
+    widths = akvcam_settings_value_list(settings, "width", ",");
+    heights = akvcam_settings_value_list(settings, "height", ",");
+    frame_rates = akvcam_settings_value_list(settings, "fps", ",");
+
+    if (akvcam_list_empty(pix_formats)
+        || akvcam_list_empty(widths)
+        || akvcam_list_empty(heights)
+        || akvcam_list_empty(frame_rates)) {
+        goto akvcam_driver_read_format_failed;
+    }
+
+    akvcam_list_push_back(format_matrix,
+                          pix_formats,
+                          akvcam_list_sizeof(),
+                          (akvcam_deleter_t) akvcam_list_delete,
+                          true);
+    akvcam_list_push_back(format_matrix,
+                          widths,
+                          akvcam_list_sizeof(),
+                          (akvcam_deleter_t) akvcam_list_delete,
+                          true);
+    akvcam_list_push_back(format_matrix,
+                          heights,
+                          akvcam_list_sizeof(),
+                          (akvcam_deleter_t) akvcam_list_delete,
+                          true);
+    akvcam_list_push_back(format_matrix,
+                          frame_rates,
+                          akvcam_list_sizeof(),
+                          (akvcam_deleter_t) akvcam_list_delete,
+                          true);
+
+    combined_formats = akvcam_matrix_combine(format_matrix);
+
+    for (;;) {
+        format_list = akvcam_list_next(combined_formats, &it);
+
+        if (!it)
+            break;
+
+        pix_format = akvcam_format_fourcc_from_string(akvcam_list_at(format_list, 0));
+        width = akvcam_settings_to_uint32(akvcam_list_at(format_list, 1));
+        height = akvcam_settings_to_uint32(akvcam_list_at(format_list, 2));
+        frame_rate = akvcam_settings_to_frac(akvcam_list_at(format_list, 3));
+        format = akvcam_format_new(pix_format, width, height, &frame_rate);
+
+        if (akvcam_format_is_valid(format))
+            akvcam_list_push_back(formats,
+                                  format,
+                                  akvcam_format_sizeof(),
+                                  (akvcam_deleter_t) akvcam_format_delete,
+                                  true);
+
+        akvcam_format_delete(&format);
+    }
+
+akvcam_driver_read_format_failed:
+    akvcam_list_delete(&combined_formats);
+    akvcam_list_delete(&frame_rates);
+    akvcam_list_delete(&heights);
+    akvcam_list_delete(&widths);
+    akvcam_list_delete(&pix_formats);
+    akvcam_list_delete(&format_matrix);
+
     return formats;
 }
 
-akvcam_format_t akvcam_driver_read_format(akvcam_settings_t settings)
-{
-    char *fourcc_str;
-    __u32 pix_format;
-    __u32 width;
-    __u32 height;
-    struct v4l2_fract frame_rate = {0, 1};
-    akvcam_format_t format;
-
-    fourcc_str = akvcam_settings_value(settings, "format");
-    pix_format = akvcam_format_fourcc_from_string(fourcc_str);
-    width = akvcam_settings_value_uint32(settings, "width");
-    height = akvcam_settings_value_uint32(settings, "height");
-    frame_rate.numerator = akvcam_settings_value_uint32(settings, "fps");
-    format = akvcam_format_new(pix_format, width, height, &frame_rate);
-
-    if (!akvcam_format_is_valid(format)) {
-        akvcam_format_delete(&format);
-
-        return NULL;
-    }
-
-    return format;
-}
-
 akvcam_devices_list_t akvcam_driver_read_devices(akvcam_settings_t settings,
-                                                 akvcam_formats_list_t available_formats)
+                                                 akvcam_matrix_t available_formats)
 {
     akvcam_devices_list_t devices = akvcam_list_new();
     akvcam_device_t device;
@@ -247,12 +310,14 @@ akvcam_devices_list_t akvcam_driver_read_devices(akvcam_settings_t settings,
         akvcam_settings_set_array_index(settings, i);
         device = akvcam_driver_read_device(settings, available_formats);
 
-        if (device)
+        if (device) {
             akvcam_list_push_back(devices,
                                   device,
-                                  akvcam_format_sizeof(),
+                                  akvcam_device_sizeof(),
                                   (akvcam_deleter_t) akvcam_device_delete,
-                                  false);
+                                  true);
+            akvcam_device_delete(&device);
+        }
     }
 
     akvcam_settings_end_array(settings);
@@ -262,15 +327,16 @@ akvcam_devices_list_t akvcam_driver_read_devices(akvcam_settings_t settings,
 }
 
 akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
-                                          akvcam_formats_list_t available_formats)
+                                          akvcam_matrix_t available_formats)
 {
     akvcam_device_t device;
     AKVCAM_DEVICE_TYPE type;
-    akvcam_list_tt(char *) modes;
+    akvcam_string_list_t modes;
     AKVCAM_RW_MODE mode;
     char *description;
     akvcam_formats_list_t formats;
     akvcam_buffers_t buffers;
+    bool multiplanar;
 
     type = strcmp(akvcam_settings_value(settings, "type"),
                   "output") == 0? AKVCAM_DEVICE_TYPE_OUTPUT:
@@ -317,24 +383,28 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
         return NULL;
     }
 
+    multiplanar = akvcam_format_have_multiplanar(formats);
     device = akvcam_device_new("akvcam-device", description, type, mode);
-    akvcam_driver_copy_formats(akvcam_device_formats_nr(device), formats);
+    akvcam_list_append(akvcam_device_formats_nr(device), formats);
     akvcam_format_copy(akvcam_device_format_nr(device),
                        akvcam_list_front(formats));
     buffers = akvcam_device_buffers_nr(device);
     akvcam_buffers_resize_rw(buffers, AKVCAM_BUFFERS_MIN);
     akvcam_list_delete(&formats);
+    akvcam_device_set_multiplanar(device, multiplanar);
+
+    if (!akvcam_device_v4l2_type(device))
+        akvcam_device_delete(&device);
 
     return device;
 }
 
 akvcam_formats_list_t akvcam_driver_read_device_formats(akvcam_settings_t settings,
-                                                        akvcam_formats_list_t available_formats)
+                                                        akvcam_matrix_t available_formats)
 {
-    akvcam_list_tt(char *) formats_index;
+    akvcam_string_list_t formats_index;
     akvcam_formats_list_t formats = akvcam_list_new();
-    akvcam_format_t format;
-    akvcam_format_t format_tmp;
+    akvcam_formats_list_t format_list;
     akvcam_list_element_t it = NULL;
     char *index_str;
     u32 index;
@@ -352,18 +422,12 @@ akvcam_formats_list_t akvcam_driver_read_device_formats(akvcam_settings_t settin
         if (kstrtou32(index_str, 10, (u32 *) &index) != 0)
             continue;
 
-        format = akvcam_list_at(available_formats, index - 1);
+        format_list = akvcam_list_at(available_formats, index - 1);
 
-        if (!format)
+        if (!format_list)
             continue;
 
-        format_tmp = akvcam_format_new(0, 0, 0, NULL);
-        akvcam_format_copy(format_tmp, format);
-        akvcam_list_push_back(formats,
-                              format_tmp,
-                              akvcam_format_sizeof(),
-                              (akvcam_deleter_t) akvcam_format_delete,
-                              false);
+        akvcam_list_append(formats, format_list);
     }
 
     akvcam_list_delete(&formats_index);
@@ -371,23 +435,101 @@ akvcam_formats_list_t akvcam_driver_read_device_formats(akvcam_settings_t settin
     return formats;
 }
 
-void akvcam_driver_copy_formats(akvcam_formats_list_t to,
-                                akvcam_formats_list_t from)
+void akvcam_driver_connect_devices(akvcam_settings_t settings,
+                                   akvcam_devices_list_t devices)
 {
-    akvcam_format_t format;
+    akvcam_string_list_t connections;
     akvcam_list_element_t it = NULL;
+    akvcam_device_t device;
+    akvcam_device_t output;
+    size_t n_connections;
+    size_t n_nodes;
+    u32 *connections_index;
+    char *index_str;
+    u32 index;
+    size_t i;
+    size_t j;
 
-    for (;;) {
-        format = akvcam_list_next(from, &it);
+    akvcam_settings_begin_group(settings, "Connections");
+    n_connections = akvcam_settings_begin_array(settings, "connections");
 
-        if (!it)
-            break;
+    for (i = 0; i < n_connections; i++) {
+        akvcam_settings_set_array_index(settings, i);
+        connections = akvcam_settings_value_list(settings, "connection", ":");
+        n_nodes = akvcam_list_size(connections);
 
-        akvcam_object_ref(AKVCAM_TO_OBJECT(format));
-        akvcam_list_push_back(to,
-                              format,
-                              akvcam_format_sizeof(),
-                              (akvcam_deleter_t) akvcam_format_delete,
-                              false);
+        if (n_nodes < 2) {
+            akvcam_list_delete(&connections);
+
+            continue;
+        }
+
+        connections_index = kzalloc(sizeof(u32) * n_nodes, GFP_KERNEL);
+
+        for (j = 0;; j++) {
+            index_str = akvcam_list_next(connections, &it);
+
+            if (!it)
+                break;
+
+            index = 0;
+
+            if (kstrtou32(index_str, 10, (u32 *) &index) != 0)
+                break;
+
+            if (index < 1 || index > akvcam_list_size(devices))
+                break;
+
+            device = akvcam_list_at(devices, index - 1);
+
+            if ((j == 0
+                 && akvcam_device_type(device) != AKVCAM_DEVICE_TYPE_OUTPUT)
+                || (j != 0
+                    && akvcam_device_type(device) != AKVCAM_DEVICE_TYPE_CAPTURE)) {
+                break;
+            }
+
+            connections_index[j] =
+                    akvcam_driver_contains_node(connections_index,
+                                                n_nodes,
+                                                index)?
+                        0: index;
+        }
+
+        akvcam_list_delete(&connections);
+
+        if (j == n_nodes)
+            for (j = 0; j < n_nodes; j++) {
+                if (j == 0) {
+                    output = akvcam_list_at(devices, connections_index[j] - 1);
+                } else {
+                    if (!connections_index[j])
+                        continue;
+
+                    akvcam_list_push_back(akvcam_device_capture_devices_nr(output),
+                                          akvcam_list_at(devices, connections_index[j] - 1),
+                                          akvcam_device_sizeof(),
+                                          (akvcam_deleter_t) akvcam_device_delete,
+                                          true);
+                }
+            }
+
+        kfree(connections_index);
     }
+
+    akvcam_settings_end_array(settings);
+    akvcam_settings_end_group(settings);
+}
+
+bool akvcam_driver_contains_node(const u32 *connections,
+                                 size_t n_connectios,
+                                 u32 node)
+{
+    size_t i;
+
+    for (i = 0; i < n_connectios; i++)
+        if (connections[i] == node)
+            return true;
+
+    return false;
 }

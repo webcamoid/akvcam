@@ -28,6 +28,7 @@ typedef struct akvcam_map_element
     void *value;
     size_t size;
     akvcam_deleter_t deleter;
+    bool is_object;
     akvcam_list_element_t it;
 } akvcam_map_element, *akvcam_map_element_t;
 
@@ -36,9 +37,6 @@ struct akvcam_map
     akvcam_object_t self;
     akvcam_list_tt(akvcam_map_element_t) elements;
 };
-
-void akvcam_map_element_delete(akvcam_map_element_t *element);
-void akvcam_map_str_delete(char **element);
 
 akvcam_map_t akvcam_map_new(void)
 {
@@ -96,9 +94,9 @@ akvcam_map_element_t akvcam_map_set_value(akvcam_map_t self,
                                           void *value,
                                           size_t value_size,
                                           const akvcam_deleter_t deleter,
-                                          bool copy)
+                                          bool is_object)
 {
-    akvcam_map_element_t element;
+    akvcam_map_element element;
     akvcam_list_element_t it =
             akvcam_list_find(self->elements,
                              key,
@@ -108,28 +106,27 @@ akvcam_map_element_t akvcam_map_set_value(akvcam_map_t self,
     if (it)
         akvcam_list_erase(self->elements, it);
 
-    element = kzalloc(sizeof(akvcam_map_element), GFP_KERNEL);
+    element.key = akvcam_strdup(key, AKVCAM_MEMORY_TYPE_KMALLOC);
 
-    if (!element)
-        return NULL;
+    if (value_size > 1 && !is_object)
+        element.value = kmemdup(value, value_size, GFP_KERNEL);
+    else {
+        if (deleter && is_object)
+            akvcam_object_ref(AKVCAM_TO_OBJECT(value));
 
-    element->key = akvcam_strdup(key, AKVCAM_MEMORY_TYPE_KMALLOC);
+        element.value = value;
+    }
 
-    if (copy)
-        element->value = kmemdup(value, value_size, GFP_KERNEL);
-    else
-        element->value = value;
+    element.size = value_size;
+    element.deleter = deleter;
+    element.is_object = is_object;
+    element.it = akvcam_list_push_back(self->elements,
+                                       &element,
+                                       sizeof(akvcam_map_element),
+                                       NULL,
+                                       false);
 
-    element->size = value_size;
-    element->deleter = deleter;
-    element->it =
-            akvcam_list_push_back(self->elements,
-                                  element,
-                                  sizeof(akvcam_map_element),
-                                  (akvcam_deleter_t) akvcam_map_element_delete,
-                                  false);
-
-    return element;
+    return akvcam_list_back(self->elements);
 }
 
 bool akvcam_map_contains(const akvcam_map_t self, const char *key)
@@ -152,8 +149,8 @@ struct akvcam_list *akvcam_map_keys(const akvcam_map_t self)
         akvcam_list_push_back(keys,
                               map_element->key,
                               strlen(map_element->key) + 1,
-                              (akvcam_deleter_t) akvcam_map_str_delete,
-                              true);
+                              NULL,
+                              false);
     }
 
     return keys;
@@ -174,8 +171,8 @@ struct akvcam_list *akvcam_map_values(const akvcam_map_t self)
         akvcam_list_push_back(values,
                               map_element->value,
                               map_element->size,
-                              NULL,
-                              false);
+                              map_element->deleter,
+                              map_element->is_object);
     }
 
     return values;
@@ -201,11 +198,41 @@ akvcam_map_element_t akvcam_map_it(akvcam_map_t self, const char *key)
 
 void akvcam_map_erase(akvcam_map_t self, const akvcam_map_element_t element)
 {
+    if (element->key)
+        kfree(element->key);
+
+    if (element->value) {
+        if (element->size > 1 && !element->is_object)
+            kfree(element->value);
+        else if (element->deleter)
+            element->deleter(&element->value);
+    }
+
     akvcam_list_erase(self->elements, element->it);
 }
 
 void akvcam_map_clear(akvcam_map_t self)
 {
+    akvcam_list_element_t it = NULL;
+    akvcam_map_element_t element;
+
+    for (;;) {
+        element = akvcam_list_next(self->elements, &it);
+
+        if (!it)
+            break;
+
+        if (element->key)
+            kfree(element->key);
+
+        if (element->value) {
+            if (element->size > 1 && !element->is_object)
+                kfree(element->value);
+            else if (element->deleter)
+                element->deleter(&element->value);
+        }
+    }
+
     akvcam_list_clear(self->elements);
 }
 
@@ -246,24 +273,4 @@ akvcam_deleter_t akvcam_map_element_deleter(const akvcam_map_element_t element)
 size_t akvcam_map_sizeof(void)
 {
     return sizeof(struct akvcam_map);
-}
-
-void akvcam_map_element_delete(akvcam_map_element_t *element)
-{
-    if ((*element)->key)
-        kfree((*element)->key);
-
-    if ((*element)->deleter && (*element)->value)
-        (*element)->deleter(&((*element)->value));
-
-    kfree(*element);
-    *element = NULL;
-}
-
-void akvcam_map_str_delete(char **str)
-{
-    if (*str)
-        kfree(*str);
-
-    *str = NULL;
 }

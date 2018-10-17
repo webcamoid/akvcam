@@ -21,10 +21,9 @@
 
 #include <linux/types.h>
 
+#include "events_types.h"
 #include "utils.h"
 
-struct akvcam_events;
-typedef struct akvcam_events *akvcam_events_t;
 struct v4l2_event_subscription;
 struct v4l2_event;
 struct file;

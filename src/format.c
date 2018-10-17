@@ -34,57 +34,48 @@ struct akvcam_format
 {
     akvcam_object_t self;
     __u32 fourcc;
-    __u32 width;
-    __u32 height;
+    size_t width;
+    size_t height;
     struct v4l2_fract frame_rate;
 };
+
+typedef size_t (*akvcam_plane_offset_t)(size_t plane, size_t width, size_t height);
+typedef size_t (*akvcam_bypl_t)(size_t plane, size_t width);
 
 typedef struct {
     __u32 fourcc;
     size_t bpp;
+    size_t planes;
+    akvcam_plane_offset_t plane_offset;
+    akvcam_bypl_t bypl;
     char str[32];
 } akvcam_format_globals, *akvcam_format_globals_t;
 
-#define AKVCAM_NUM_FORMATS 10
+size_t akvcam_po_nv(size_t plane, size_t width, size_t height);
+size_t akvcam_bypl_nv(size_t plane, size_t width);
 
+// Multiplanar formats are not supported at all yet.
 static akvcam_format_globals akvcam_format_globals_formats[] = {
-    {V4L2_PIX_FMT_RGB32 , 32, "RGB32"},
-    {V4L2_PIX_FMT_RGB24 , 24, "RGB24"},
-    {V4L2_PIX_FMT_RGB565, 16, "RGB16"},
-    {V4L2_PIX_FMT_RGB555, 16, "RGB15"},
-    {V4L2_PIX_FMT_BGR32 , 32, "BGR32"},
-    {V4L2_PIX_FMT_BGR24 , 24, "BGR24"},
-    {V4L2_PIX_FMT_UYVY  , 16, "UYVY" },
-    {V4L2_PIX_FMT_YUYV  , 16, "YUY2" },
-    {V4L2_PIX_FMT_NV12  , 12, "NV12" },
-    {V4L2_PIX_FMT_NV21  , 12, "NV21" }
+    {V4L2_PIX_FMT_RGB32 , 32, 1,         NULL,           NULL, "RGB32"},
+    {V4L2_PIX_FMT_RGB24 , 24, 1,         NULL,           NULL, "RGB24"},
+    {V4L2_PIX_FMT_RGB565, 16, 1,         NULL,           NULL, "RGB16"},
+    {V4L2_PIX_FMT_RGB555, 16, 1,         NULL,           NULL, "RGB15"},
+    {V4L2_PIX_FMT_BGR32 , 32, 1,         NULL,           NULL, "BGR32"},
+    {V4L2_PIX_FMT_BGR24 , 24, 1,         NULL,           NULL, "BGR24"},
+    {V4L2_PIX_FMT_UYVY  , 16, 1,         NULL,           NULL, "UYVY" },
+    {V4L2_PIX_FMT_YUYV  , 16, 1,         NULL,           NULL, "YUY2" },
+//    {V4L2_PIX_FMT_NV12  , 12, 2, akvcam_po_nv, akvcam_bypl_nv, "NV12" },
+//    {V4L2_PIX_FMT_NV21  , 12, 2, akvcam_po_nv, akvcam_bypl_nv, "NV21" },
+    {0                  ,  0, 0,         NULL,           NULL, ""     }
 };
 
-static akvcam_format_globals_t akvcam_format_globals_by_fourcc(__u32 fourcc)
-{
-    size_t i;
-
-    for (i = 0; i < AKVCAM_NUM_FORMATS; i++)
-        if (akvcam_format_globals_formats[i].fourcc == fourcc)
-            return akvcam_format_globals_formats + i;
-
-    return NULL;
-}
-
-static akvcam_format_globals_t akvcam_format_globals_by_str(const char *str)
-{
-    size_t i;
-
-    for (i = 0; i < AKVCAM_NUM_FORMATS; i++)
-        if (strcmp(akvcam_format_globals_formats[i].str, str) == 0)
-            return akvcam_format_globals_formats + i;
-
-    return NULL;
-}
+size_t akvcam_formats_count(void);
+akvcam_format_globals_t akvcam_format_globals_by_fourcc(__u32 fourcc);
+akvcam_format_globals_t akvcam_format_globals_by_str(const char *str);
 
 akvcam_format_t akvcam_format_new(__u32 fourcc,
-                                  __u32 width,
-                                  __u32 height,
+                                  size_t width,
+                                  size_t height,
                                   const struct v4l2_fract *frame_rate)
 {
     akvcam_format_t self = kzalloc(sizeof(struct akvcam_format), GFP_KERNEL);
@@ -132,22 +123,22 @@ void akvcam_format_set_fourcc(akvcam_format_t self, __u32 fourcc)
     self->fourcc = fourcc;
 }
 
-__u32 akvcam_format_width(const akvcam_format_t self)
+size_t akvcam_format_width(const akvcam_format_t self)
 {
     return self->width;
 }
 
-void akvcam_format_set_width(akvcam_format_t self, __u32 width)
+void akvcam_format_set_width(akvcam_format_t self, size_t width)
 {
     self->width = width;
 }
 
-__u32 akvcam_format_height(const akvcam_format_t self)
+size_t akvcam_format_height(const akvcam_format_t self)
 {
     return self->height;
 }
 
-void akvcam_format_set_height(akvcam_format_t self, __u32 height)
+void akvcam_format_set_height(akvcam_format_t self, size_t height)
 {
     self->height = height;
 }
@@ -164,14 +155,56 @@ size_t akvcam_format_bpp(const akvcam_format_t self)
     return vf? vf->bpp: 0;
 }
 
-size_t akvcam_format_bypl(const akvcam_format_t self)
+size_t akvcam_format_bypl(const akvcam_format_t self, size_t plane)
 {
-    return self->width * akvcam_format_bpp(self) / 8;
+    akvcam_format_globals_t vf = akvcam_format_globals_by_fourcc(self->fourcc);
+
+    if (!vf)
+        return 0;
+
+    if (vf->bypl)
+        return vf->bypl(plane, self->width);
+
+    return (size_t) akvcam_align32((ssize_t) (self->width * vf->bpp)) / 8;
 }
 
 size_t akvcam_format_size(const akvcam_format_t self)
 {
-    return self->height * akvcam_format_bypl(self);
+    akvcam_format_globals_t vf = akvcam_format_globals_by_fourcc(self->fourcc);
+
+    if (!vf)
+        return 0;
+
+    if (vf->plane_offset)
+        return vf->plane_offset(vf->planes, self->width, self->height);
+
+    return self->height
+           * (size_t) akvcam_align32((ssize_t) (self->width * vf->bpp)) / 8;
+}
+
+size_t akvcam_format_planes(const akvcam_format_t self)
+{
+    akvcam_format_globals_t vf = akvcam_format_globals_by_fourcc(self->fourcc);
+
+    return vf? vf->planes: 0;
+}
+
+size_t akvcam_format_offset(const akvcam_format_t self, size_t plane)
+{
+    akvcam_format_globals_t vf = akvcam_format_globals_by_fourcc(self->fourcc);
+
+    if (!vf)
+        return 0;
+
+    if (vf->plane_offset)
+        return vf->plane_offset(plane, self->width, self->height);
+
+    return 0;
+}
+
+size_t akvcam_format_plane_size(const akvcam_format_t self, size_t plane)
+{
+    return self->height * akvcam_format_bypl(self, plane);
 }
 
 bool akvcam_format_is_valid(const akvcam_format_t self)
@@ -209,9 +242,13 @@ void akvcam_format_round_nearest(int width, int height,
 
 __u32 akvcam_format_fourcc_from_string(const char *fourcc_str)
 {
-    akvcam_format_globals_t vf = akvcam_format_globals_by_str(fourcc_str);
+    size_t i;
 
-    return vf? vf->fourcc: 0;
+    for (i = 0; i < akvcam_formats_count(); i++)
+        if (strcasecmp(akvcam_format_globals_formats[i].str, fourcc_str) == 0)
+            return (akvcam_format_globals_formats + i)->fourcc;
+
+    return 0;
 }
 
 const char *akvcam_format_string_from_fourcc(__u32 fourcc)
@@ -221,18 +258,18 @@ const char *akvcam_format_string_from_fourcc(__u32 fourcc)
     return vf? vf->str: NULL;
 }
 
-akvcam_format_t akvcam_format_nearest_nr(struct akvcam_list *formats,
+akvcam_format_t akvcam_format_nearest_nr(akvcam_formats_list_t formats,
                                          const akvcam_format_t format)
 {
     akvcam_list_element_t element = NULL;
     akvcam_format_t nearest_format = NULL;
     akvcam_format_t temp_format;
-    __s64 diff_fourcc;
-    __s64 diff_width;
-    __s64 diff_height;
-    __s64 diff_fps;
-    __u64 r;
-    __u64 s;
+    ssize_t diff_fourcc;
+    ssize_t diff_width;
+    ssize_t diff_height;
+    ssize_t diff_fps;
+    size_t r;
+    size_t s;
     memset(&s, 0xff, sizeof(__u64));
 
     for (;;) {
@@ -243,19 +280,19 @@ akvcam_format_t akvcam_format_nearest_nr(struct akvcam_list *formats,
 
         diff_fourcc = akvcam_format_fourcc(temp_format)
                     - akvcam_format_fourcc(format);
-        diff_width = akvcam_format_width(temp_format)
-                   - akvcam_format_width(format);
-        diff_height = akvcam_format_height(temp_format)
-                    - akvcam_format_height(format);
+        diff_width = (ssize_t) akvcam_format_width(temp_format)
+                   - (ssize_t) akvcam_format_width(format);
+        diff_height = (ssize_t) akvcam_format_height(temp_format)
+                    - (ssize_t) akvcam_format_height(format);
         diff_fps = akvcam_format_frame_rate(temp_format)->numerator
                  * akvcam_format_frame_rate(format)->denominator
                  - akvcam_format_frame_rate(format)->numerator
                  * akvcam_format_frame_rate(temp_format)->denominator;
 
-        r = (__u64)(diff_fourcc * diff_fourcc)
-          + (__u64)(diff_width * diff_width)
-          + (__u64)(diff_height * diff_height)
-          + (__u64)(diff_fps * diff_fps);
+        r = (size_t) (diff_fourcc * diff_fourcc)
+          + (size_t) (diff_width * diff_width)
+          + (size_t) (diff_height * diff_height)
+          + (size_t) (diff_fps * diff_fps);
 
         if (r < s) {
             s = r;
@@ -266,7 +303,7 @@ akvcam_format_t akvcam_format_nearest_nr(struct akvcam_list *formats,
     return nearest_format;
 }
 
-akvcam_format_t akvcam_format_nearest(struct akvcam_list *formats,
+akvcam_format_t akvcam_format_nearest(akvcam_formats_list_t formats,
                                       const akvcam_format_t format)
 {
     akvcam_format_t nearest_format = akvcam_format_nearest_nr(formats, format);
@@ -277,11 +314,11 @@ akvcam_format_t akvcam_format_nearest(struct akvcam_list *formats,
     return nearest_format;
 }
 
-struct akvcam_list *akvcam_format_pixel_formats(struct akvcam_list *formats)
+akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_t formats)
 {
     akvcam_list_element_t element = NULL;
     akvcam_list_element_t it;
-    akvcam_list_tt(akvcam_format_t) supported_formats = akvcam_list_new();
+    akvcam_pixel_formats_list_t supported_formats = akvcam_list_new();
     akvcam_format_t format = NULL;
     __u32 fourcc;
 
@@ -298,20 +335,19 @@ struct akvcam_list *akvcam_format_pixel_formats(struct akvcam_list *formats)
             akvcam_list_push_back(supported_formats,
                                   &fourcc,
                                   sizeof(__u32),
-                                  (akvcam_deleter_t) akvcam_delete_data,
-                                  true);
+                                  NULL,
+                                  false);
     }
 
     return supported_formats;
 }
 
-struct akvcam_list *akvcam_format_resolutions(struct akvcam_list *formats,
-                                              __u32 fourcc)
+akvcam_resolutions_list_t akvcam_format_resolutions(akvcam_formats_list_t formats,
+                                                    __u32 fourcc)
 {
     akvcam_list_element_t element = NULL;
     akvcam_list_element_t it;
-    akvcam_list_tt(struct v4l2_frmsize_discrete) supported_resolutions =
-            akvcam_list_new();
+    akvcam_resolutions_list_t supported_resolutions = akvcam_list_new();
     akvcam_format_t format = NULL;
     struct v4l2_frmsize_discrete resolution;
 
@@ -324,8 +360,8 @@ struct akvcam_list *akvcam_format_resolutions(struct akvcam_list *formats,
         if (akvcam_format_fourcc(format) != fourcc)
             continue;
 
-        resolution.width = akvcam_format_width(format);
-        resolution.height = akvcam_format_height(format);
+        resolution.width = (__u32) akvcam_format_width(format);
+        resolution.height = (__u32) akvcam_format_height(format);
         it = akvcam_list_find(supported_resolutions,
                               &resolution,
                               sizeof(struct v4l2_frmsize_discrete),
@@ -335,21 +371,21 @@ struct akvcam_list *akvcam_format_resolutions(struct akvcam_list *formats,
             akvcam_list_push_back(supported_resolutions,
                                   &resolution,
                                   sizeof(struct v4l2_frmsize_discrete),
-                                  (akvcam_deleter_t) akvcam_delete_data,
-                                  true);
+                                  NULL,
+                                  false);
     }
 
     return supported_resolutions;
 }
 
-struct akvcam_list *akvcam_format_frame_rates(struct akvcam_list *formats,
-                                              __u32 fourcc,
-                                              __u32 width,
-                                              __u32 height)
+akvcam_fps_list_t akvcam_format_frame_rates(akvcam_formats_list_t formats,
+                                            __u32 fourcc,
+                                            size_t width,
+                                            size_t height)
 {
     akvcam_list_element_t element = NULL;
     akvcam_list_element_t it;
-    akvcam_list_tt(struct v4l2_fract) supported_frame_rates = akvcam_list_new();
+    akvcam_fps_list_t supported_frame_rates = akvcam_list_new();
     akvcam_format_t format = NULL;
     struct v4l2_fract frame_rate;
 
@@ -375,18 +411,22 @@ struct akvcam_list *akvcam_format_frame_rates(struct akvcam_list *formats,
             akvcam_list_push_back(supported_frame_rates,
                                   &frame_rate,
                                   sizeof(struct v4l2_fract),
-                                  (akvcam_deleter_t) akvcam_delete_data,
-                                  true);
+                                  NULL,
+                                  false);
     }
 
     return supported_frame_rates;
 }
 
-akvcam_format_t akvcam_format_from_v4l2_nr(struct akvcam_list *formats,
+akvcam_format_t akvcam_format_from_v4l2_nr(akvcam_formats_list_t formats,
                                            const struct v4l2_format *format)
 {
     akvcam_list_element_t element = NULL;
     akvcam_format_t akformat = NULL;
+    size_t i;
+    size_t bypl;
+    size_t plane_size;
+    bool is_valid;
 
     for (;;) {
         akformat = akvcam_list_next(formats, &element);
@@ -394,25 +434,52 @@ akvcam_format_t akvcam_format_from_v4l2_nr(struct akvcam_list *formats,
         if (!element)
             break;
 
-        if (format->fmt.pix.width == akvcam_format_width(akformat)
-            && format->fmt.pix.height == akvcam_format_height(akformat)
-            && format->fmt.pix.pixelformat == akvcam_format_fourcc(akformat)
-            && format->fmt.pix.field == V4L2_FIELD_NONE
-            && format->fmt.pix.bytesperline == (__u32) akvcam_format_bypl(akformat)
-            && format->fmt.pix.sizeimage == (__u32) akvcam_format_size(akformat)
-            && format->fmt.pix.colorspace == DEFAULT_COLORSPACE) {
-            return akformat;
+        if (format->type == V4L2_BUF_TYPE_VIDEO_CAPTURE
+            || format->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
+            if (format->fmt.pix.width == akvcam_format_width(akformat)
+                && format->fmt.pix.height == akvcam_format_height(akformat)
+                && format->fmt.pix.pixelformat == akvcam_format_fourcc(akformat)
+                && format->fmt.pix.field == V4L2_FIELD_NONE
+                && format->fmt.pix.bytesperline == (__u32) akvcam_format_bypl(akformat, 0)
+                && format->fmt.pix.sizeimage == (__u32) akvcam_format_size(akformat)
+                && format->fmt.pix.colorspace == DEFAULT_COLORSPACE) {
+                return akformat;
+            }
+        } else if (format->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
+                   || format->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+            if (format->fmt.pix_mp.width == akvcam_format_width(akformat)
+                && format->fmt.pix_mp.height == akvcam_format_height(akformat)
+                && format->fmt.pix_mp.pixelformat == akvcam_format_fourcc(akformat)
+                && format->fmt.pix_mp.field == V4L2_FIELD_NONE
+                && format->fmt.pix_mp.colorspace == DEFAULT_COLORSPACE
+                && format->fmt.pix_mp.num_planes == akvcam_format_planes(akformat)) {
+                is_valid = true;
+
+                for (i = 0; i < format->fmt.pix_mp.num_planes; i++) {
+                    bypl = akvcam_format_bypl(akformat, i);
+                    plane_size = akvcam_format_plane_size(akformat, i);
+
+                    if (format->fmt.pix_mp.plane_fmt[i].bytesperline != bypl
+                        || format->fmt.pix_mp.plane_fmt[i].sizeimage != plane_size) {
+                        is_valid = false;
+
+                        break;
+                    }
+                }
+
+                if (is_valid)
+                    return akformat;
+            }
         }
     }
 
     return NULL;
 }
 
-akvcam_format_t akvcam_format_from_v4l2(struct akvcam_list *formats,
+akvcam_format_t akvcam_format_from_v4l2(akvcam_formats_list_t formats,
                                         const struct v4l2_format *format)
 {
-    akvcam_format_t akformat =
-            akvcam_format_from_v4l2_nr(formats, format);
+    akvcam_format_t akformat = akvcam_format_from_v4l2_nr(formats, format);
 
     if (!akformat)
         return NULL;
@@ -420,4 +487,80 @@ akvcam_format_t akvcam_format_from_v4l2(struct akvcam_list *formats,
     akvcam_object_ref(AKVCAM_TO_OBJECT(akformat));
 
     return akformat;
+}
+
+bool akvcam_format_have_multiplanar(const akvcam_formats_list_t formats)
+{
+    akvcam_list_element_t it = NULL;
+    akvcam_format_t format;
+    akvcam_format_globals_t vf;
+
+    for (;;) {
+        format = akvcam_list_next(formats, &it);
+
+        if (!it)
+            break;
+
+        vf = akvcam_format_globals_by_fourcc(format->fourcc);
+
+        if (!vf)
+            continue;
+
+        if (vf->planes > 1)
+            return true;
+    }
+
+    return false;
+}
+
+size_t akvcam_formats_count(void)
+{
+    size_t i;
+    static size_t count = 0;
+
+    if (count < 1)
+        for (i = 0; akvcam_format_globals_formats[i].fourcc; i++)
+            count++;
+
+    return count;
+}
+
+akvcam_format_globals_t akvcam_format_globals_by_fourcc(__u32 fourcc)
+{
+    size_t i;
+
+    for (i = 0; i < akvcam_formats_count(); i++)
+        if (akvcam_format_globals_formats[i].fourcc == fourcc)
+            return akvcam_format_globals_formats + i;
+
+    return NULL;
+}
+
+akvcam_format_globals_t akvcam_format_globals_by_str(const char *str)
+{
+    size_t i;
+
+    for (i = 0; i < akvcam_formats_count(); i++)
+        if (strcmp(akvcam_format_globals_formats[i].str, str) == 0)
+            return akvcam_format_globals_formats + i;
+
+    return NULL;
+}
+
+size_t akvcam_po_nv(size_t plane, size_t width, size_t height)
+{
+    size_t offset[] = {
+        0,
+        (size_t) akvcam_align32((ssize_t) width) * height,
+        5 * (size_t) akvcam_align32((ssize_t) width) * height / 4
+    };
+
+    return offset[plane];
+}
+
+size_t akvcam_bypl_nv(size_t plane, size_t width)
+{
+    UNUSED(plane);
+
+    return (size_t) akvcam_align32((ssize_t) width);
 }
