@@ -270,7 +270,7 @@ int akvcam_ioctls_querycap(akvcam_node_t node,
     printk(KERN_INFO "%s()\n", __FUNCTION__);
     device = akvcam_node_device_nr(node);
 
-    memset(capability, 0, sizeof(struct v4l2_capability));    
+    memset(capability, 0, sizeof(struct v4l2_capability));
     snprintf((char *) capability->driver, 16, "%s", akvcam_driver_name());
     snprintf((char *) capability->card,
              32, "%s", akvcam_device_description(device));
@@ -993,7 +993,7 @@ int akvcam_ioctls_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer)
     planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
     n_planes = akvcam_min(buffer->length, akvcam_format_planes(format));
     copy_from_user(planes,
-                   buffer->m.planes,
+                   (char __user *) buffer->m.planes,
                    buffer->length * sizeof(struct v4l2_plane));
 
     for (i = 0; i < n_planes; i++) {
@@ -1065,7 +1065,7 @@ int akvcam_ioctl_qbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
                 planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
                 n_planes = akvcam_min(buffer->length, akvcam_format_planes(format));
                 copy_from_user(planes,
-                               buffer->m.planes,
+                               (char __user *) buffer->m.planes,
                                buffer->length * sizeof(struct v4l2_plane));
 
                 for (i = 0; i < n_planes; i++)
@@ -1116,7 +1116,7 @@ int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
                 planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
                 n_planes = akvcam_min(buffer->length, akvcam_format_planes(format));
                 copy_from_user(planes,
-                               buffer->m.planes,
+                               (char __user *) buffer->m.planes,
                                buffer->length * sizeof(struct v4l2_plane));
 
                 for (i = 0; i < n_planes; i++)
@@ -1139,7 +1139,7 @@ int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
         planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
         n_planes = akvcam_min(buffer->length, akvcam_format_planes(format));
         copy_from_user(planes,
-                       buffer->m.planes,
+                       (char __user *) buffer->m.planes,
                        buffer->length * sizeof(struct v4l2_plane));
 
         for (i = 0; i < n_planes; i++)
@@ -1148,7 +1148,7 @@ int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
                     * (__u32) akvcam_format_size(format)
                     + (__u32) akvcam_format_offset(format, i);
 
-        copy_to_user(buffer->m.planes,
+        copy_to_user((char __user *) buffer->m.planes,
                      planes,
                      buffer->length * sizeof(struct v4l2_plane));
         kfree(planes);

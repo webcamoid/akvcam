@@ -256,21 +256,7 @@ struct akvcam_frame
     size_t size;
 };
 
-bool akvcam_frame_adjust_format_supported(__u32 fourcc)
-{
-    size_t i;
-    __u32 adjust_formats[] = {
-        V4L2_PIX_FMT_BGR24,
-        V4L2_PIX_FMT_RGB24,
-        0
-    };
-
-    for (i = 0; adjust_formats[i]; i++)
-        if (adjust_formats[i] == fourcc)
-            return true;
-
-    return false;
-}
+bool akvcam_frame_adjust_format_supported(__u32 fourcc);
 
 akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
                                 const void *data,
@@ -1833,4 +1819,20 @@ void akvcam_contrast_table_uninit(void)
         vfree(akvcam_contrast_table.data);
         akvcam_contrast_table.data = NULL;
     }
+}
+
+bool akvcam_frame_adjust_format_supported(__u32 fourcc)
+{
+    size_t i;
+    __u32 adjust_formats[] = {
+        V4L2_PIX_FMT_BGR24,
+        V4L2_PIX_FMT_RGB24,
+        0
+    };
+
+    for (i = 0; adjust_formats[i]; i++)
+        if (adjust_formats[i] == fourcc)
+            return true;
+
+    return false;
 }

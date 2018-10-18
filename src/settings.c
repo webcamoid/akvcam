@@ -82,9 +82,9 @@ void akvcam_settings_delete(akvcam_settings_t *self)
     *self = NULL;
 }
 
-bool akvcam_settings_find_new_line(const char *element,
-                                   const char *new_line,
-                                   size_t size)
+static bool akvcam_settings_find_new_line(const char *element,
+                                          const char *new_line,
+                                          size_t size)
 {
     return strncmp(element, new_line, 1) == 0;
 }
