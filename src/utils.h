@@ -72,14 +72,6 @@
     #define AK_EPOLLWRNORM EPOLLWRNORM
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
-    #define akvcam_file_read(filp, data, size, offset) \
-        kernel_read(filp, offset, data, size)
-#else
-    #define akvcam_file_read(filp, data, size, offset) \
-        kernel_read(filp, data, (size_t) size, &offset)
-#endif
-
 typedef enum
 {
     AKVCAM_MEMORY_TYPE_KMALLOC,

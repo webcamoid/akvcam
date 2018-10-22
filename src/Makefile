@@ -17,6 +17,7 @@ akvcam-objs := \
 	device.o \
 	driver.o \
 	events.o \
+	file_read.o \
 	format.o \
 	frame.o \
 	ioctl.o \

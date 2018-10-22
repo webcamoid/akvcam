@@ -768,7 +768,7 @@ bool akvcam_buffers_frame_available(const akvcam_buffers_t self)
                           akvcam_buffers_is_ready);
     spin_unlock(&self->slock);
 
-    return it;
+    return it != NULL;
 }
 
 size_t akvcam_buffers_sizeof(void)

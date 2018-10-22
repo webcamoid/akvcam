@@ -33,6 +33,7 @@ lupdate_only {
         src/driver.h \
         src/events.h \
         src/events_types.h \
+        src/file_read.h \
         src/format.h \
         src/format_types.h \
         src/frame.h \
@@ -57,6 +58,7 @@ lupdate_only {
         src/device.c \
         src/driver.c \
         src/events.c \
+        src/file_read.c \
         src/format.c \
         src/frame.c \
         src/ioctl.c \
@@ -82,11 +84,11 @@ INCLUDEPATH += \
 
 DEFINES += \
     __KERNEL__ \
-    KBUILD_MODNAME=\"\\\"\\\"\" \
     CONFIG_COMPAT \
     CONFIG_HZ=0 \
     CONFIG_PAGE_OFFSET=0 \
-    CONFIG_PCI
+    CONFIG_PCI \
+    KBUILD_MODNAME=\"\\\"\\\"\"
 
 OTHER_FILES += \
     src/Makefile \

@@ -16,13 +16,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <linux/fs.h>
 #include <linux/slab.h>
-#include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 #include <linux/videodev2.h>
 
 #include "settings.h"
+#include "file_read.h"
 #include "list.h"
 #include "map.h"
 #include "object.h"
@@ -43,8 +42,6 @@ struct akvcam_settings
 {
     akvcam_object_t self;
     akvcam_map_tt(akvcam_string_map_t) configs;
-    size_t max_line_size;
-    size_t max_file_size;
     char *current_group;
     char *current_array;
     size_t array_index;
@@ -60,8 +57,6 @@ akvcam_settings_t akvcam_settings_new(void)
     akvcam_settings_t self = kzalloc(sizeof(struct akvcam_settings), GFP_KERNEL);
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_settings_delete);
     self->configs = akvcam_map_new();
-    self->max_line_size = AKVCAM_SETTINGS_PREFERRED_MAX_LINE_SIZE;
-    self->max_file_size = AKVCAM_SETTINGS_PREFERRED_MAX_FILE_SIZE;
 
     return self;
 }
@@ -82,102 +77,28 @@ void akvcam_settings_delete(akvcam_settings_t *self)
     *self = NULL;
 }
 
-static bool akvcam_settings_find_new_line(const char *element,
-                                          const char *new_line,
-                                          size_t size)
-{
-    return strncmp(element, new_line, 1) == 0;
-}
-
 bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
 {
-    struct file *config_file = NULL;
-    akvcam_rbuffer_tt(char *) data = akvcam_rbuffer_new();
-    char *raw_data = vmalloc((unsigned long) self->max_line_size);
-    char *line;
-    char *current_group = NULL;
+    akvcam_file_t config_file;
     akvcam_string_map_t group_configs;
     akvcam_settings_element element;
-    struct kstat stats;
-    mm_segment_t oldfs;
-    ssize_t bytes_read;
-    size_t file_size;
-    size_t line_size;
-    size_t totaL_bytes = 0;
-    ssize_t new_line = 0;
-    loff_t offset;
     akvcam_map_t tmp_map;
+    char *line;
+    char *current_group = NULL;
 
-    memset(&element, 0, sizeof(akvcam_settings_element));
-    file_size = self->max_file_size > 0?
-                    self->max_file_size:
-                    AKVCAM_SETTINGS_PREFERRED_MAX_FILE_SIZE;
-    memset(&stats, 0, sizeof(struct kstat));
-    oldfs = get_fs();
-    set_fs(KERNEL_DS);
-
-    if (vfs_stat((const char __user *) file_name, &stats)
-        || (size_t) stats.size > file_size) {
-        set_fs(oldfs);
-
-        goto akvcam_settings_load_failed;
-    }
-
-    set_fs(oldfs);
-
-    file_size = (size_t) stats.size;
-    akvcam_rbuffer_resize(data,
-                          file_size,
-                          sizeof(char),
-                          AKVCAM_MEMORY_TYPE_VMALLOC);
-
-    config_file = filp_open(file_name, O_RDONLY, 0);
-
-    if (IS_ERR(config_file))
-        goto akvcam_settings_load_failed;
-
+    memset(&element, 0, sizeof(akvcam_settings_element));    
     akvcam_settings_clear(self);
-    line_size = self->max_line_size > 0?
-                    self->max_line_size:
-                    AKVCAM_SETTINGS_PREFERRED_MAX_LINE_SIZE;
 
-    for (;;) {
-        if (akvcam_rbuffer_empty(data)) {
-            if (totaL_bytes >= file_size)
-                break;
+    if (!file_name || strlen(file_name) < 1)
+        return false;
 
-            offset = 0;
-            bytes_read = akvcam_file_read(config_file,
-                                          raw_data,
-                                          line_size,
-                                          offset);
+    config_file = akvcam_file_new(file_name);
 
-            if (bytes_read < 1)
-                break;
+    if (!akvcam_file_open(config_file))
+        goto akvcam_settings_load_failed;
 
-            akvcam_rbuffer_queue_bytes(data, raw_data, (size_t) bytes_read);
-            totaL_bytes += (size_t) bytes_read;
-        }
-
-        akvcam_rbuffer_find(data,
-                            "\n",
-                            1,
-                            (akvcam_are_equals_t) akvcam_settings_find_new_line,
-                            &new_line);
-
-        if (new_line < 0)
-            continue;
-
-        if ((size_t) new_line >= line_size)
-            goto akvcam_settings_load_failed;
-
-        // line_size doesn't count \n so increase cur_line_size to dequeue the
-        // \n too, and make last byte NULL to identify it as a string.
-        line = vmalloc((size_t) new_line + 2);
-        line[(size_t) new_line + 1] = 0;
-        new_line++;
-        akvcam_rbuffer_dequeue_bytes(data, line, (size_t *) &new_line, false);
-        line = akvcam_strip_move_str(line, AKVCAM_MEMORY_TYPE_VMALLOC);
+    while (!akvcam_file_eof(config_file)) {
+        line = akvcam_file_read_line(config_file);
 
         if (!akvcam_settings_parse(line, &element)) {
             vfree(line);
@@ -235,9 +156,7 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
         vfree(line);
     }
 
-    filp_close(config_file, NULL);
-    akvcam_rbuffer_delete(&data);
-    vfree(raw_data);
+    akvcam_file_delete(&config_file);
 
     if (current_group)
         vfree(current_group);
@@ -245,39 +164,13 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
     return true;
 
 akvcam_settings_load_failed:
-    if (config_file)
-        filp_close(config_file, NULL);
-
+    akvcam_file_delete(&config_file);
     akvcam_settings_clear(self);
-    akvcam_rbuffer_delete(&data);
-    vfree(raw_data);
 
     if (current_group)
         vfree(current_group);
 
     return false;
-}
-
-size_t akvcam_settings_max_line_size(akvcam_settings_t self)
-{
-    return self->max_line_size;
-}
-
-void akvcam_settings_set_max_line_size(akvcam_settings_t self,
-                                       size_t line_size)
-{
-    self->max_line_size = line_size;
-}
-
-size_t akvcam_settings_max_file_size(akvcam_settings_t self)
-{
-    return self->max_file_size;
-}
-
-void akvcam_settings_set_max_file_size(akvcam_settings_t self,
-                                       size_t file_size)
-{
-    self->max_file_size = file_size;
 }
 
 void akvcam_settings_begin_group(akvcam_settings_t self, const char *prefix)

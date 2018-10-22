@@ -16,13 +16,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <linux/fs.h>
 #include <linux/slab.h>
-#include <linux/uaccess.h>
 #include <linux/videodev2.h>
 #include <linux/vmalloc.h>
 
 #include "frame.h"
+#include "file_read.h"
 #include "format.h"
 #include "object.h"
 #include "utils.h"
@@ -385,16 +384,13 @@ void akvcam_frame_clear(akvcam_frame_t self)
 
 bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
 {
-    struct file *bmp_file;
+    akvcam_file_t bmp_file;
     char type[2];
     akvcam_bmp_header header;
     akvcam_bmp_image_header image_header;
     akvcam_RGB24_t line;
     akvcam_BGR24 pixel24;
     akvcam_BGR32 pixel32;
-    struct kstat stats;
-    mm_segment_t oldfs;
-    loff_t offset;
     uint32_t x;
     uint32_t y;
 
@@ -403,41 +399,23 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
     if (!file_name || strlen(file_name) < 1)
         return false;
 
-    memset(&stats, 0, sizeof(struct kstat));
-    oldfs = get_fs();
-    set_fs(KERNEL_DS);
+    bmp_file = akvcam_file_new(file_name);
 
-    if (vfs_stat((const char __user *) file_name, &stats)) {
-        set_fs(oldfs);
+    if (!akvcam_file_open(bmp_file))
+        goto akvcam_frame_load_failed;
 
-        return false;
-    }
-
-    set_fs(oldfs);
-
-    bmp_file = filp_open(file_name, O_RDONLY, 0);
-
-    if (!bmp_file)
-        return false;
-
-    offset = 0;
-    akvcam_file_read(bmp_file, type, 2, offset);
+    akvcam_file_read(bmp_file, type, 2);
 
     if (memcmp(type, "BM", 2) != 0)
         goto akvcam_frame_load_failed;
 
-    offset = 0;
     akvcam_file_read(bmp_file,
                      (char *) &header,
-                     sizeof(akvcam_bmp_header),
-                     offset);
-    offset = 0;
+                     sizeof(akvcam_bmp_header));
     akvcam_file_read(bmp_file,
                      (char *) &image_header,
-                     sizeof(akvcam_bmp_image_header),
-                     offset);
-
-    vfs_setpos(bmp_file, header.offBits, stats.size);
+                     sizeof(akvcam_bmp_image_header));
+    akvcam_file_seek(bmp_file, header.offBits, AKVCAM_FILE_SEEK_BEG);
     akvcam_format_set_fourcc(self->format, V4L2_PIX_FMT_RGB24);
     akvcam_format_set_width(self->format, image_header.width);
     akvcam_format_set_height(self->format, image_header.height);
@@ -454,11 +432,9 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
                 line = akvcam_frame_line(self, 0, image_header.height - y - 1);
 
                 for (x = 0; x < image_header.width; x++) {
-                    offset = 0;
                     akvcam_file_read(bmp_file,
                                      (char *) &pixel24,
-                                     sizeof(akvcam_BGR24),
-                                     offset);
+                                     sizeof(akvcam_BGR24));
                     line[x].r = pixel24.r;
                     line[x].g = pixel24.g;
                     line[x].b = pixel24.b;
@@ -472,11 +448,9 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
                 line = akvcam_frame_line(self, 0, image_header.height - y - 1);
 
                 for (x = 0; x < image_header.width; x++) {
-                    offset = 0;
                     akvcam_file_read(bmp_file,
                                      (char *) &pixel32,
-                                     sizeof(akvcam_BGR32),
-                                     offset);
+                                     sizeof(akvcam_BGR32));
                     line[x].r = pixel32.r;
                     line[x].g = pixel32.g;
                     line[x].b = pixel32.b;
@@ -489,15 +463,13 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
             goto akvcam_frame_load_failed;
     }
 
-    filp_close(bmp_file, NULL);
+    akvcam_file_delete(&bmp_file);
 
     return true;
 
 akvcam_frame_load_failed:
     akvcam_frame_clear(self);
-
-    if (bmp_file)
-        filp_close(bmp_file, NULL);
+    akvcam_file_delete(&bmp_file);
 
     return false;
 }

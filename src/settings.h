@@ -23,9 +23,6 @@
 
 #include "list_types.h"
 
-#define AKVCAM_SETTINGS_PREFERRED_MAX_LINE_SIZE 4096
-#define AKVCAM_SETTINGS_PREFERRED_MAX_FILE_SIZE (4 * 1024 * 1024)
-
 struct akvcam_settings;
 typedef struct akvcam_settings *akvcam_settings_t;
 struct v4l2_fract;
@@ -35,12 +32,6 @@ akvcam_settings_t akvcam_settings_new(void);
 void akvcam_settings_delete(akvcam_settings_t *self);
 
 bool akvcam_settings_load(akvcam_settings_t self, const char *file_name);
-size_t akvcam_settings_max_line_size(akvcam_settings_t self);
-void akvcam_settings_set_max_line_size(akvcam_settings_t self,
-                                       size_t line_size);
-size_t akvcam_settings_max_file_size(akvcam_settings_t self);
-void akvcam_settings_set_max_file_size(akvcam_settings_t self,
-                                       size_t file_size);
 void akvcam_settings_begin_group(akvcam_settings_t self, const char *prefix);
 void akvcam_settings_end_group(akvcam_settings_t self);
 size_t akvcam_settings_begin_array(akvcam_settings_t self, const char *prefix);

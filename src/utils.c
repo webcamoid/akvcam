@@ -175,14 +175,17 @@ size_t akvcam_line_size(const char *buffer, size_t size, bool *found)
 char *akvcam_strdup(const char *str, AKVCAM_MEMORY_TYPE type)
 {
     char *str_dup;
-    size_t len = strlen(str);
+    size_t len = str? strlen(str): 0;
 
     if (type == AKVCAM_MEMORY_TYPE_KMALLOC)
         str_dup = kmalloc(len + 1, GFP_KERNEL);
     else
         str_dup = vmalloc(len + 1);
 
-    memcpy(str_dup, str, len + 1);
+    str_dup[len] = 0;
+
+    if (str)
+        memcpy(str_dup, str, len + 1);
 
     return str_dup;
 }
