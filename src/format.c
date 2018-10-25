@@ -107,10 +107,17 @@ void akvcam_format_delete(akvcam_format_t *self)
 
 void akvcam_format_copy(akvcam_format_t self, const akvcam_format_t other)
 {
-    self->fourcc = other->fourcc;
-    self->width = other->width;
-    self->height = other->height;
-    memcpy(&self->frame_rate, &other->frame_rate, sizeof(struct v4l2_fract));
+    if (other) {
+        self->fourcc = other->fourcc;
+        self->width = other->width;
+        self->height = other->height;
+        memcpy(&self->frame_rate, &other->frame_rate, sizeof(struct v4l2_fract));
+    } else {
+        self->fourcc = 0;
+        self->width = 0;
+        self->height = 0;
+        memset(&self->frame_rate, 0, sizeof(struct v4l2_fract));
+    }
 }
 
 __u32 akvcam_format_fourcc(const akvcam_format_t self)
@@ -170,7 +177,12 @@ size_t akvcam_format_bypl(const akvcam_format_t self, size_t plane)
 
 size_t akvcam_format_size(const akvcam_format_t self)
 {
-    akvcam_format_globals_t vf = akvcam_format_globals_by_fourcc(self->fourcc);
+    akvcam_format_globals_t vf;
+
+    if (!self)
+        return 0;
+
+    vf = akvcam_format_globals_by_fourcc(self->fourcc);
 
     if (!vf)
         return 0;

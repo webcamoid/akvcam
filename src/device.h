@@ -62,8 +62,8 @@ enum v4l2_priority akvcam_device_priority(const akvcam_device_t self);
 bool akvcam_device_streaming(const akvcam_device_t self);
 void akvcam_device_set_streaming(akvcam_device_t self, bool streaming);
 bool akvcam_device_prepare_frame(akvcam_device_t self);
-akvcam_devices_list_t akvcam_device_capture_devices_nr(const akvcam_device_t self);
-akvcam_devices_list_t akvcam_device_capture_devices(const akvcam_device_t self);
+akvcam_devices_list_t akvcam_device_connected_devices_nr(const akvcam_device_t self);
+akvcam_devices_list_t akvcam_device_connected_devices(const akvcam_device_t self);
 bool akvcam_device_multiplanar(const akvcam_device_t self);
 void akvcam_device_set_multiplanar(akvcam_device_t self, bool multiplanar);
 

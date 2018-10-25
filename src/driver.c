@@ -439,6 +439,7 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
                                    akvcam_devices_list_t devices)
 {
     akvcam_string_list_t connections;
+    akvcam_devices_list_t connected_outputs;
     akvcam_list_element_t it = NULL;
     akvcam_device_t device;
     akvcam_device_t output;
@@ -506,11 +507,21 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
                     if (!connections_index[j])
                         continue;
 
-                    akvcam_list_push_back(akvcam_device_capture_devices_nr(output),
-                                          akvcam_list_at(devices, connections_index[j] - 1),
-                                          akvcam_device_sizeof(),
-                                          (akvcam_deleter_t) akvcam_device_delete,
-                                          true);
+                    device = akvcam_list_at(devices, connections_index[j] - 1);
+                    connected_outputs = akvcam_device_connected_devices_nr(device);
+
+                    if (akvcam_list_empty(connected_outputs)) {
+                        akvcam_list_push_back(connected_outputs,
+                                              output,
+                                              akvcam_device_sizeof(),
+                                              (akvcam_deleter_t) akvcam_device_delete,
+                                              true);
+                        akvcam_list_push_back(akvcam_device_connected_devices_nr(output),
+                                              device,
+                                              akvcam_device_sizeof(),
+                                              (akvcam_deleter_t) akvcam_device_delete,
+                                              true);
+                    }
                 }
             }
 

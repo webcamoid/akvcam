@@ -22,6 +22,7 @@
 #include <linux/videodev2.h>
 
 #include "controls_types.h"
+#include "device_types.h"
 #include "utils.h"
 
 struct v4l2_queryctrl;
@@ -35,11 +36,13 @@ struct v4l2_query_ext_ctrl;
 #endif
 
 // public
-akvcam_controls_t akvcam_controls_new(void);
+akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE type);
 void akvcam_controls_delete(akvcam_controls_t *self);
 
 int akvcam_controls_fill(const akvcam_controls_t self,
                          struct v4l2_queryctrl *control);
+int akvcam_controls_fill_menu(const akvcam_controls_t self,
+                              struct v4l2_querymenu *menu);
 #ifdef VIDIOC_QUERY_EXT_CTRL
 int akvcam_controls_fill_ext(const akvcam_controls_t self,
                              struct v4l2_query_ext_ctrl *control);

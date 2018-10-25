@@ -20,11 +20,21 @@
 #include <linux/uaccess.h>
 
 #include "controls.h"
+#include "frame_types.h"
 #include "object.h"
 
 #ifndef V4L2_CTRL_FLAG_NEXT_COMPOUND
 #define V4L2_CTRL_FLAG_NEXT_COMPOUND 0x40000000
 #endif
+
+typedef union
+{
+    __u8  name[32];
+    __s64 value;
+} akvcam_menu_item, *akvcam_menu_item_t;
+
+typedef akvcam_menu_item_t (*akvcam_control_menu_t)(size_t *size,
+                                                    bool *int_menu);
 
 typedef struct
 {
@@ -36,6 +46,7 @@ typedef struct
     __s32 step;
     __s32 default_value;
     __u32 flags;
+    akvcam_control_menu_t menu;
 } akvcam_control_params, *akvcam_control_params_t;
 
 typedef struct
@@ -49,40 +60,70 @@ struct akvcam_controls
     akvcam_object_t self;
     akvcam_control_value_t values;
     akvcam_controls_changed_callback controls_changed;
+    akvcam_control_params_t control_params;
     size_t n_controls;
+    AKVCAM_DEVICE_TYPE type;
 };
 
-static akvcam_control_params akvcam_controls_private[] = {
+akvcam_menu_item_t akvcam_controls_colorfx_menu(size_t *size,
+                                                bool *int_menu);
+
+static akvcam_control_params akvcam_controls_capture[] = {
     {V4L2_CID_USER_CLASS, V4L2_CTRL_TYPE_CTRL_CLASS,   "User Controls",    0,   0, 0, 0, V4L2_CTRL_FLAG_READ_ONLY
-                                                                                       | V4L2_CTRL_FLAG_WRITE_ONLY},
-    {V4L2_CID_BRIGHTNESS,    V4L2_CTRL_TYPE_INTEGER,      "Brightness", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER},
-    {V4L2_CID_CONTRAST  ,    V4L2_CTRL_TYPE_INTEGER,        "Contrast", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER},
-    {V4L2_CID_SATURATION,    V4L2_CTRL_TYPE_INTEGER,      "Saturation", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER},
-    {V4L2_CID_HUE       ,    V4L2_CTRL_TYPE_INTEGER,             "Hue", -359, 359, 1, 0,     V4L2_CTRL_FLAG_SLIDER},
-    {V4L2_CID_HFLIP     ,    V4L2_CTRL_TYPE_BOOLEAN, "Horizontal Flip",    0,   1, 1, 0,                         0},
-    {V4L2_CID_VFLIP     ,    V4L2_CTRL_TYPE_BOOLEAN,   "Vertical Flip",    0,   1, 1, 0,                         0},
-    {0                  ,                         0,                "",    0,   0, 0, 0,                         0},
+                                                                                       | V4L2_CTRL_FLAG_WRITE_ONLY, NULL                        },
+    {V4L2_CID_BRIGHTNESS,    V4L2_CTRL_TYPE_INTEGER,      "Brightness", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER, NULL                        },
+    {V4L2_CID_CONTRAST  ,    V4L2_CTRL_TYPE_INTEGER,        "Contrast", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER, NULL                        },
+    {V4L2_CID_SATURATION,    V4L2_CTRL_TYPE_INTEGER,      "Saturation", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER, NULL                        },
+    {V4L2_CID_HUE       ,    V4L2_CTRL_TYPE_INTEGER,             "Hue", -359, 359, 1, 0,     V4L2_CTRL_FLAG_SLIDER, NULL                        },
+    {V4L2_CID_HFLIP     ,    V4L2_CTRL_TYPE_BOOLEAN, "Horizontal Flip",    0,   1, 1, 0,                         0, NULL                        },
+    {V4L2_CID_VFLIP     ,    V4L2_CTRL_TYPE_BOOLEAN,   "Vertical Flip",    0,   1, 1, 0,                         0, NULL                        },
+    {V4L2_CID_COLORFX   ,       V4L2_CTRL_TYPE_MENU,   "Color Effects",    0,   1, 1, 0,                         0, akvcam_controls_colorfx_menu},
+    {0                  ,                         0,                "",    0,   0, 0, 0,                         0, NULL                        },
 };
 
-size_t akvcam_controls_count(void);
+akvcam_menu_item_t akvcam_controls_scaling_menu(size_t *size,
+                                                bool *int_menu);
+akvcam_menu_item_t akvcam_controls_aspect_menu(size_t *size,
+                                               bool *int_menu);
+
+static akvcam_control_params akvcam_controls_output[] = {
+    {V4L2_CID_USER_CLASS    , V4L2_CTRL_TYPE_CTRL_CLASS,      "User Controls", 0, 0, 0, 0, V4L2_CTRL_FLAG_READ_ONLY
+                                                                                         | V4L2_CTRL_FLAG_WRITE_ONLY, NULL                        },
+    {V4L2_CID_HFLIP         ,    V4L2_CTRL_TYPE_BOOLEAN,    "Horizontal Flip", 0, 1, 1, 0,                         0, NULL                        },
+    {V4L2_CID_VFLIP         ,    V4L2_CTRL_TYPE_BOOLEAN,      "Vertical Flip", 0, 1, 1, 0,                         0, NULL                        },
+    {AKVCAM_CID_SCALING     ,       V4L2_CTRL_TYPE_MENU,       "Scaling Mode", 0, 1, 1, 0,                         0, akvcam_controls_scaling_menu},
+    {AKVCAM_CID_ASPECT_RATIO,       V4L2_CTRL_TYPE_MENU,  "Aspect Ratio Mode", 0, 2, 1, 0,                         0, akvcam_controls_aspect_menu },
+    {AKVCAM_CID_SWAP_RGB    ,    V4L2_CTRL_TYPE_BOOLEAN, "Swap Read and Blue", 0, 1, 1, 0,                         0, NULL                        },
+    {0                      ,                         0,                   "", 0, 0, 0, 0,                         0, NULL                        },
+};
+
+size_t akvcam_controls_capture_count(void);
+size_t akvcam_controls_output_count(void);
 akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,
                                                    __u32 id);
 akvcam_control_params_t akvcam_controls_params_by_id(const akvcam_controls_t self,
                                                      __u32 id);
 
-akvcam_controls_t akvcam_controls_new(void)
+akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE type)
 {
     size_t i;
     akvcam_controls_t self = kzalloc(sizeof(struct akvcam_controls), GFP_KERNEL);
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_controls_delete);
-    self->n_controls = akvcam_controls_count();
 
     // Initialize controls with default values.
+    if (type == AKVCAM_DEVICE_TYPE_OUTPUT) {
+        self->n_controls = akvcam_controls_output_count();
+        self->control_params = akvcam_controls_output;
+    } else {
+        self->n_controls = akvcam_controls_capture_count();
+        self->control_params = akvcam_controls_capture;
+    }
+
     self->values = kzalloc(self->n_controls * sizeof(akvcam_control_value), GFP_KERNEL);
 
     for (i = 0; i < self->n_controls; i++) {
-        self->values[i].id = akvcam_controls_private[i].id;
-        self->values[i].value = akvcam_controls_private[i].default_value;
+        self->values[i].id = self->control_params[i].id;
+        self->values[i].value = self->control_params[i].default_value;
     }
 
     return self;
@@ -129,40 +170,82 @@ int akvcam_controls_fill(const akvcam_controls_t self,
 #endif
 }
 
+int akvcam_controls_fill_menu(const akvcam_controls_t self,
+                              struct v4l2_querymenu *menu)
+{
+    akvcam_menu_item_t menu_items;
+    size_t size = 0;
+    bool int_menu = false;
+    akvcam_control_params_t params;
+
+    params = akvcam_controls_params_by_id(self, menu->id);
+    menu->reserved = 0;
+
+    if (!params || !params->menu)
+        return -EINVAL;
+
+    menu_items = params->menu(&size, &int_menu);
+
+    if (!menu_items || size < 1)
+        return -EINVAL;
+
+    if ((ssize_t) menu->index < params->minimum
+        || (ssize_t) menu->index > params->maximum
+        || menu->index >= size)
+        return -EINVAL;
+
+    if (int_menu)
+        menu->value = menu_items[menu->index].value;
+    else
+        snprintf((char*) menu->name, 32, "%s", menu_items[menu->index].name);
+
+    return 0;
+}
+
 #ifdef VIDIOC_QUERY_EXT_CTRL
 int akvcam_controls_fill_ext(const akvcam_controls_t self,
                              struct v4l2_query_ext_ctrl *control)
 {
     size_t i;
-    __u32 id = control->id & V4L2_CTRL_ID_MASK;
+    __u32 priv_id;
+    __u32 id = control->id
+             & ~(V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND);
     bool next = control->id
               & (V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND);
+    bool is_private;
     akvcam_control_params_t _control = NULL;
 
     if (self->n_controls < 1)
         return -EINVAL;
 
-    if (!id && next)
-        _control = akvcam_controls_private;
-    else
-        for (i = 0; i < self->n_controls; i++) {
-            akvcam_control_params_t ctrl = akvcam_controls_private + i;
+    if (!id && next) {
+        _control = self->control_params;
+    } else {
+        priv_id = V4L2_CID_PRIVATE_BASE;
 
-            if (ctrl->id == id) {
+        for (i = 0; i < self->n_controls; i++) {
+            akvcam_control_params_t ctrl = self->control_params + i;
+            is_private = V4L2_CTRL_DRIVER_PRIV(ctrl->id);
+
+            if (ctrl->id == id || (is_private && priv_id == id)) {
                 if (!next)
                     _control = ctrl;
                 else if (i + 1 < self->n_controls)
-                    _control = akvcam_controls_private + i + 1;
+                    _control = self->control_params + i + 1;
                 else
                     return -EINVAL;
 
                 break;
             }
+
+            if (is_private)
+                priv_id++;
         }
+    }
 
     if (_control) {
         memset(control, 0, sizeof(struct v4l2_query_ext_ctrl));
-        control->id = _control->id;
+        control->id = id >= V4L2_CID_PRIVATE_BASE? id: _control->id;
         control->type = _control->type;
         snprintf(control->name, 32, "%s", _control->name);
         control->minimum = _control->minimum;
@@ -184,9 +267,9 @@ int akvcam_controls_get(const akvcam_controls_t self,
     int result;
     struct v4l2_ext_controls ext_controls;
     struct v4l2_ext_control ext_control;
+
     memset(&ext_control, 0, sizeof(struct v4l2_ext_control));
     ext_control.id = control->id;
-
     memset(&ext_controls, 0, sizeof(struct v4l2_ext_controls));
 
 #ifdef V4L2_CTRL_WHICH_CUR_VAL
@@ -220,6 +303,7 @@ int akvcam_controls_get_ext(const akvcam_controls_t self,
     struct v4l2_ext_control *control = NULL;
     akvcam_control_value_t _control;
     bool kernel = flags & AKVCAM_CONTROLS_FLAG_KERNEL;
+
     int result = akvcam_controls_try_ext(self,
                                          controls,
                                          flags
@@ -370,6 +454,7 @@ int akvcam_controls_try_ext(akvcam_controls_t self,
     uint32_t mode = flags & 0x3;
     bool kernel = flags & AKVCAM_CONTROLS_FLAG_KERNEL;
     __u32 which_control;
+
     controls->error_idx = controls->count;
     memset(controls->reserved, 0, 2 * sizeof(__u32));
 
@@ -445,7 +530,7 @@ bool akvcam_controls_contains(const akvcam_controls_t self, __u32 id)
     size_t i;
 
     for (i = 0; i < self->n_controls; i++)
-        if (akvcam_controls_private[i].id == id)
+        if (self->control_params[i].id == id)
             return true;
 
     return false;
@@ -460,9 +545,9 @@ bool akvcam_controls_generate_event(const akvcam_controls_t self,
     akvcam_control_value_t control;
 
     for (i = 0; i < self->n_controls; i++)
-        if (akvcam_controls_private[i].id == id) {
+        if (self->control_params[i].id == id) {
             control = self->values + i;
-            control_params = akvcam_controls_private + i;
+            control_params = self->control_params + i;
 
             if (control_params->type == V4L2_CTRL_TYPE_CTRL_CLASS)
                 return false;
@@ -490,28 +575,99 @@ void akvcam_controls_set_changed_callback(akvcam_controls_t self,
     self->controls_changed = callback;
 }
 
-size_t akvcam_controls_count(void)
+size_t akvcam_controls_capture_count(void)
 {
     size_t i;
     static size_t count = 0;
 
     if (count < 1)
-        for (i = 0; akvcam_controls_private[i].id; i++)
+        for (i = 0; akvcam_controls_capture[i].id; i++)
             count++;
 
     return count;
+}
+
+size_t akvcam_controls_output_count(void)
+{
+    size_t i;
+    static size_t count = 0;
+
+    if (count < 1)
+        for (i = 0; akvcam_controls_output[i].id; i++)
+            count++;
+
+    return count;
+}
+
+akvcam_menu_item_t akvcam_controls_colorfx_menu(size_t *size,
+                                                bool *int_menu)
+{
+    static akvcam_menu_item colorfx[] = {
+        {.name = "None"         },
+        {.name = "Black & White"},
+    };
+
+    if (size)
+        *size = 2;
+
+    if (int_menu)
+        *int_menu = false;
+
+    return colorfx;
+}
+
+akvcam_menu_item_t akvcam_controls_scaling_menu(size_t *size,
+                                                bool *int_menu)
+{
+    static akvcam_menu_item scaling[] = {
+        {.name = "Fast"  },
+        {.name = "Linear"},
+    };
+
+    if (size)
+        *size = 2;
+
+    if (int_menu)
+        *int_menu = false;
+
+    return scaling;
+}
+
+akvcam_menu_item_t akvcam_controls_aspect_menu(size_t *size,
+                                               bool *int_menu)
+{
+    static akvcam_menu_item aspect[] = {
+        {.name = "Ignore"   },
+        {.name = "Keep"     },
+        {.name = "Expanding"},
+    };
+
+    if (size)
+        *size = 3;
+
+    if (int_menu)
+        *int_menu = false;
+
+    return aspect;
 }
 
 akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,
                                                    __u32 id)
 {
     size_t i;
+    __u32 priv_id = V4L2_CID_PRIVATE_BASE;
+    bool is_private;
+    akvcam_control_value_t value;
 
     for (i = 0; i < self->n_controls; i++) {
-        akvcam_control_value_t value = self->values + i;
+        value = self->values + i;
+        is_private = V4L2_CTRL_DRIVER_PRIV(value->id);
 
-        if (value->id == id)
+        if (value->id == id || (is_private && priv_id == id))
             return value;
+
+        if (is_private)
+            priv_id++;
     }
 
     return NULL;
@@ -521,12 +677,19 @@ akvcam_control_params_t akvcam_controls_params_by_id(const akvcam_controls_t sel
                                                      __u32 id)
 {
     size_t i;
+    __u32 priv_id = V4L2_CID_PRIVATE_BASE;
+    bool is_private;
+    akvcam_control_params_t param;
 
     for (i = 0; i < self->n_controls; i++) {
-        akvcam_control_params_t value = akvcam_controls_private + i;
+        param = self->control_params + i;
+        is_private = V4L2_CTRL_DRIVER_PRIV(param->id);
 
-        if (value->id == id)
-            return value;
+        if (param->id == id || (is_private && priv_id == id))
+            return param;
+
+        if (is_private)
+            priv_id++;
     }
 
     return NULL;

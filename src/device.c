@@ -41,7 +41,7 @@ struct akvcam_device
     akvcam_format_t format;
     akvcam_controls_t controls;
     akvcam_nodes_list_t nodes;
-    akvcam_devices_list_t capture_devices;
+    akvcam_devices_list_t connected_devices;
     akvcam_node_t priority_node;
     akvcam_buffers_t buffers;
     struct v4l2_device v4l2_dev;
@@ -74,7 +74,7 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->description = akvcam_strdup(description, AKVCAM_MEMORY_TYPE_KMALLOC);
     self->formats = akvcam_list_new();
     self->format = akvcam_format_new(0, 0, 0, NULL);
-    self->controls = akvcam_controls_new();
+    self->controls = akvcam_controls_new(type);
     controls_changed.user_data = self;
     controls_changed.callback =
             (akvcam_controls_changed_proc) akvcam_device_event_received;
@@ -373,16 +373,16 @@ bool akvcam_device_prepare_frame(akvcam_device_t self)
     return result;
 }
 
-akvcam_devices_list_t akvcam_device_capture_devices_nr(const akvcam_device_t self)
+akvcam_devices_list_t akvcam_device_connected_devices_nr(const akvcam_device_t self)
 {
-    return self->capture_devices;
+    return self->connected_devices;
 }
 
-akvcam_devices_list_t akvcam_device_capture_devices(const akvcam_device_t self)
+akvcam_devices_list_t akvcam_device_connected_devices(const akvcam_device_t self)
 {
-    akvcam_object_ref(AKVCAM_TO_OBJECT(self->capture_devices));
+    akvcam_object_ref(AKVCAM_TO_OBJECT(self->connected_devices));
 
-    return self->capture_devices;
+    return self->connected_devices;
 }
 
 bool akvcam_device_multiplanar(const akvcam_device_t self)

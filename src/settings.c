@@ -86,7 +86,7 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
     char *line;
     char *current_group = NULL;
 
-    memset(&element, 0, sizeof(akvcam_settings_element));    
+    memset(&element, 0, sizeof(akvcam_settings_element));
     akvcam_settings_clear(self);
 
     if (!file_name || strlen(file_name) < 1)

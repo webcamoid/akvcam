@@ -238,12 +238,13 @@ static __poll_t akvcam_node_poll(struct file *filp,
 
     printk(KERN_INFO "%s()\n", __FUNCTION__);
 
-    if (akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_OUTPUT)
-        return AK_EPOLLOUT | AK_EPOLLWRNORM;
-
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE
-        && !akvcam_buffers_allocated(buffers))
-        return AK_EPOLLIN | AK_EPOLLPRI | AK_EPOLLRDNORM;
+        && !akvcam_buffers_allocated(buffers)) {
+        if (akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_OUTPUT)
+            return AK_EPOLLOUT | AK_EPOLLWRNORM;
+        else
+            return AK_EPOLLIN | AK_EPOLLPRI | AK_EPOLLRDNORM;
+    }
 
     return akvcam_events_poll(node->events, filp, wait);
 }

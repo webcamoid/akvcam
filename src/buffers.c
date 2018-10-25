@@ -27,6 +27,7 @@
 
 #include "buffers.h"
 #include "buffer.h"
+#include "controls.h"
 #include "device.h"
 #include "format.h"
 #include "frame.h"
@@ -50,15 +51,33 @@ struct akvcam_buffers
     wait_queue_head_t frame_is_ready;
     size_t rw_buffer_size;
     AKVCAM_RW_MODE rw_mode;
-    __u32 sequence;
+    __u32 sequence;    
+    bool horizontal_flip;   // Controlled by capture
+    bool vertical_flip;
+    bool horizontal_mirror; // Controlled by output
+    bool vertical_mirror;
+    AKVCAM_SCALING scaling;
+    AKVCAM_ASPECT_RATIO aspect_ratio;
+    bool swap_rgb;
+    int brightness;
+    int contrast;
+    int saturation;
+    int hue;
+    bool gray;
 };
 
 bool akvcam_buffers_is_supported(const akvcam_buffers_t self,
                                  enum v4l2_memory type);
 bool akvcam_buffers_frame_available(const akvcam_buffers_t self);
+akvcam_frame_t akvcam_buffers_frame_apply_adjusts(const akvcam_buffers_t self,
+                                                  akvcam_frame_t frame);
+void akvcam_buffers_controls_changed(akvcam_buffers_t self,
+                                     const struct v4l2_event *event);
 
 akvcam_buffers_t akvcam_buffers_new(akvcam_device_t device)
 {
+    akvcam_controls_t controls;
+    akvcam_controls_changed_callback controls_changed;
     akvcam_buffers_t self = kzalloc(sizeof(struct akvcam_buffers), GFP_KERNEL);
     self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_buffers_delete);
     self->buffers = akvcam_list_new();
@@ -68,6 +87,12 @@ akvcam_buffers_t akvcam_buffers_new(akvcam_device_t device)
     self->rw_mode = akvcam_device_rw_mode(device);
     self->rw_buffer_size = AKVCAM_BUFFERS_MIN;
     init_waitqueue_head(&self->frame_is_ready);
+
+    controls = akvcam_device_controls_nr(device);
+    controls_changed.user_data = self;
+    controls_changed.callback =
+            (akvcam_controls_changed_proc) akvcam_buffers_controls_changed;
+    akvcam_controls_set_changed_callback(controls, controls_changed);
 
     return self;
 }
@@ -661,6 +686,8 @@ bool akvcam_buffers_write_frame(akvcam_buffers_t self,
     size_t length;
     void *data;
     bool ok = false;
+    akvcam_frame_t adjusted_frame =
+            akvcam_buffers_frame_apply_adjusts(self, frame);
 
     spin_lock(&self->slock);
 
@@ -676,9 +703,9 @@ bool akvcam_buffers_write_frame(akvcam_buffers_t self,
         if (buffer
             && (v4l2_buff->memory == V4L2_MEMORY_MMAP
                 || v4l2_buff->memory == V4L2_MEMORY_USERPTR)) {
-            data = akvcam_frame_data(frame);
+            data = akvcam_frame_data(adjusted_frame);
             length = akvcam_min((size_t) v4l2_buff->length,
-                                akvcam_frame_size(frame));
+                                akvcam_frame_size(adjusted_frame));
 
             if (data && length > 0)
                 memcpy(akvcam_buffer_data(buffer), data, length);
@@ -690,12 +717,13 @@ bool akvcam_buffers_write_frame(akvcam_buffers_t self,
         }
     } else if (self->rw_mode & AKVCAM_RW_MODE_READWRITE) {
         akvcam_rbuffer_queue_bytes(self->rw_buffers,
-                                   akvcam_frame_data(frame),
-                                   akvcam_frame_size(frame));
+                                   akvcam_frame_data(adjusted_frame),
+                                   akvcam_frame_size(adjusted_frame));
         ok = true;
     }
 
     spin_unlock(&self->slock);
+    akvcam_frame_delete(&adjusted_frame);
 
     if (ok)
         wake_up_all(&self->frame_is_ready);
@@ -769,6 +797,142 @@ bool akvcam_buffers_frame_available(const akvcam_buffers_t self)
     spin_unlock(&self->slock);
 
     return it != NULL;
+}
+
+akvcam_frame_t akvcam_buffers_frame_apply_adjusts(const akvcam_buffers_t self,
+                                                  akvcam_frame_t frame)
+{
+    bool horizontal_flip = self->horizontal_flip != self->horizontal_mirror;
+    bool vertical_flip = self->vertical_flip != self->vertical_mirror;
+
+    akvcam_format_t device_format = akvcam_device_format_nr(self->device);
+    akvcam_format_t frame_format = akvcam_frame_format_nr(frame);
+
+    __u32 fourcc = akvcam_format_fourcc(device_format);
+    size_t iwidth = akvcam_format_width(frame_format);
+    size_t iheight = akvcam_format_height(frame_format);
+    size_t owidth = akvcam_format_width(device_format);
+    size_t oheight = akvcam_format_height(device_format);
+
+    akvcam_frame_t new_frame = akvcam_frame_new(NULL, NULL, 0);
+    akvcam_frame_copy(new_frame, frame);
+
+    if (owidth * oheight > iwidth * iheight) {
+        akvcam_frame_mirror(new_frame,
+                            horizontal_flip,
+                            vertical_flip);
+
+        if (self->swap_rgb)
+            akvcam_frame_swap_rgb(new_frame);
+
+        akvcam_frame_adjust(new_frame,
+                            self->hue,
+                            self->saturation,
+                            self->brightness,
+                            self->contrast,
+                            self->gray);
+        akvcam_frame_scaled(new_frame,
+                            owidth,
+                            oheight,
+                            self->scaling,
+                            self->aspect_ratio);
+        akvcam_frame_convert(new_frame, fourcc);
+    } else {
+        akvcam_frame_scaled(new_frame,
+                            owidth,
+                            oheight,
+                            self->scaling,
+                            self->aspect_ratio);
+        akvcam_frame_mirror(new_frame,
+                            horizontal_flip,
+                            vertical_flip);
+
+        if (self->swap_rgb)
+            akvcam_frame_swap_rgb(new_frame);
+
+        akvcam_frame_adjust(new_frame,
+                            self->hue,
+                            self->saturation,
+                            self->brightness,
+                            self->contrast,
+                            self->gray);
+        akvcam_frame_convert(new_frame, fourcc);
+    }
+
+    return new_frame;
+}
+
+void akvcam_buffers_controls_changed(akvcam_buffers_t self,
+                                     const struct v4l2_event *event)
+{
+    akvcam_list_element_t it = NULL;
+    akvcam_devices_list_t capture_devices;
+    akvcam_buffers_t capture_buffers;
+    akvcam_device_t device;
+
+    switch (event->id) {
+    case V4L2_CID_BRIGHTNESS:
+        self->brightness = event->u.ctrl.value;
+        break;
+
+    case V4L2_CID_CONTRAST:
+        self->contrast = event->u.ctrl.value;
+        break;
+
+    case V4L2_CID_SATURATION:
+        self->saturation = event->u.ctrl.value;
+        break;
+
+    case V4L2_CID_HUE:
+        self->hue = event->u.ctrl.value;
+        break;
+
+    case V4L2_CID_HFLIP:
+        self->horizontal_flip = event->u.ctrl.value;
+        break;
+
+    case V4L2_CID_VFLIP:
+        self->vertical_flip = event->u.ctrl.value;
+        break;
+
+    case V4L2_CID_COLORFX:
+        self->gray = event->u.ctrl.value == V4L2_COLORFX_BW;
+        break;
+
+    case AKVCAM_CID_SCALING:
+        self->scaling = (AKVCAM_SCALING) event->u.ctrl.value;
+        break;
+
+    case AKVCAM_CID_ASPECT_RATIO:
+        self->aspect_ratio = (AKVCAM_ASPECT_RATIO) event->u.ctrl.value;
+        break;
+
+    case AKVCAM_CID_SWAP_RGB:
+        self->swap_rgb = event->u.ctrl.value;
+        break;
+
+    default:
+        break;
+    }
+
+    if (akvcam_device_type(self->device) == AKVCAM_DEVICE_TYPE_CAPTURE)
+        return;
+
+    capture_devices = akvcam_device_connected_devices_nr(self->device);
+
+    for (;;) {
+        device = akvcam_list_next(capture_devices, &it);
+
+        if (!it)
+            break;
+
+        capture_buffers = akvcam_device_buffers_nr(device);
+        capture_buffers->horizontal_mirror = self->horizontal_flip;
+        capture_buffers->vertical_mirror = self->vertical_flip;
+        capture_buffers->scaling = self->scaling;
+        capture_buffers->aspect_ratio = self->aspect_ratio;
+        capture_buffers->swap_rgb = self->swap_rgb;
+    }
 }
 
 size_t akvcam_buffers_sizeof(void)

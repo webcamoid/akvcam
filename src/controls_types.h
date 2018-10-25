@@ -24,6 +24,11 @@
 #define AKVCAM_CONTROLS_FLAG_SET    0x2
 #define AKVCAM_CONTROLS_FLAG_KERNEL 0x4
 
+#define AKVCAM_CID_BASE         (V4L2_CID_USER_BASE | 0xe000)
+#define AKVCAM_CID_SCALING      (AKVCAM_CID_BASE + 0)
+#define AKVCAM_CID_ASPECT_RATIO (AKVCAM_CID_BASE + 1)
+#define AKVCAM_CID_SWAP_RGB     (AKVCAM_CID_BASE + 2)
+
 struct akvcam_controls;
 typedef struct akvcam_controls *akvcam_controls_t;
 

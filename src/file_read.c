@@ -36,6 +36,7 @@ struct akvcam_file
     akvcam_rbuffer_tt(char *) buffer;
     size_t size;
     size_t bytes_read;
+    size_t file_bytes_read;
     bool is_open;
 };
 
@@ -100,6 +101,7 @@ bool akvcam_file_open(akvcam_file_t self)
                           AKVCAM_MEMORY_TYPE_VMALLOC);
     akvcam_rbuffer_clear(self->buffer);
     self->bytes_read = 0;
+    self->file_bytes_read = 0;
     self->is_open = true;
 
     return true;
@@ -119,6 +121,7 @@ void akvcam_file_close(akvcam_file_t self)
                           AKVCAM_MEMORY_TYPE_VMALLOC);
     self->size = 0;
     self->bytes_read = 0;
+    self->file_bytes_read = 0;
     self->is_open = false;
 }
 
@@ -176,12 +179,14 @@ bool akvcam_file_seek(akvcam_file_t self, ssize_t offset, AKVCAM_FILE_SEEK pos)
     switch (pos) {
     case AKVCAM_FILE_SEEK_BEG:
         self->bytes_read =
+        self->file_bytes_read =
                 (size_t) akvcam_bound(0, offset, (ssize_t) self->size);
 
         break;
 
     case AKVCAM_FILE_SEEK_CUR:
         self->bytes_read =
+        self->file_bytes_read =
                 (size_t) akvcam_bound(0,
                                       (ssize_t) self->bytes_read + offset,
                                       (ssize_t) self->size);
@@ -190,6 +195,7 @@ bool akvcam_file_seek(akvcam_file_t self, ssize_t offset, AKVCAM_FILE_SEEK pos)
 
     case AKVCAM_FILE_SEEK_END:
         self->bytes_read =
+        self->file_bytes_read =
                 (size_t) akvcam_bound(0,
                                       (ssize_t) self->size + offset,
                                       (ssize_t) self->size);
@@ -211,8 +217,9 @@ size_t akvcam_file_read(akvcam_file_t self, char *data, size_t size)
     if (!self->is_open || size < 1)
         return 0;
 
-    while (!akvcam_file_eof(self) && akvcam_rbuffer_size(self->buffer) < size) {
-        offset = 0;
+    while (self->file_bytes_read < self->size
+           && akvcam_rbuffer_size(self->buffer) < size) {
+        offset = (loff_t) self->file_bytes_read;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
         bytes_read = kernel_read(self->filp,
@@ -230,7 +237,7 @@ size_t akvcam_file_read(akvcam_file_t self, char *data, size_t size)
             break;
 
         akvcam_rbuffer_queue_bytes(self->buffer, read_block, (size_t) bytes_read);
-        self->bytes_read += (size_t) bytes_read;
+        self->file_bytes_read += (size_t) bytes_read;
     }
 
     size = akvcam_min(akvcam_rbuffer_size(self->buffer), size);
@@ -239,6 +246,7 @@ size_t akvcam_file_read(akvcam_file_t self, char *data, size_t size)
         return 0;
 
     akvcam_rbuffer_dequeue_bytes(self->buffer, data, &size, false);
+    self->bytes_read += size;
 
     return size;
 }
@@ -261,7 +269,7 @@ char *akvcam_file_read_line(akvcam_file_t self)
     if (!self->is_open)
         return vzalloc(1);
 
-    while (!akvcam_file_eof(self)) {
+    for (;;) {
         new_line = 0;
         akvcam_rbuffer_find(self->buffer,
                             "\n",
@@ -272,45 +280,52 @@ char *akvcam_file_read_line(akvcam_file_t self)
         if (new_line >= 0)
             break;
 
-        offset = 0;
+        if (self->file_bytes_read >= self->size)
+            break;
+
+        bytes_read = (ssize_t) akvcam_min(AKVCAM_READ_BLOCK,
+                                          self->size - self->file_bytes_read);
+
+        if (bytes_read < 1)
+            break;
+
+        offset = (loff_t) self->file_bytes_read;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
         bytes_read = kernel_read(self->filp,
                                  offset,
                                  read_block,
-                                 AKVCAM_READ_BLOCK);
+                                 (size_t) bytes_read);
 #else
         bytes_read = kernel_read(self->filp,
                                  read_block,
-                                 AKVCAM_READ_BLOCK,
+                                 (size_t) bytes_read,
                                  &offset);
 #endif
 
-        if (bytes_read < 1)
-            break;
-
         akvcam_rbuffer_queue_bytes(self->buffer, read_block, (size_t) bytes_read);
-        self->bytes_read += (size_t) bytes_read;
+        self->file_bytes_read += (size_t) bytes_read;
     }
 
-    if (akvcam_file_eof(self)) {
+    if (new_line >= 0) {
+        line = vzalloc((size_t) new_line + 2);
+        new_line++;
+        akvcam_rbuffer_dequeue_bytes(self->buffer,
+                                     line,
+                                     (size_t *) &new_line,
+                                     false);
+        line[(size_t) new_line - 1] = 0;
+        self->bytes_read += (size_t) new_line;
+    } else if (self->bytes_read < self->size) {
         new_line = (ssize_t) akvcam_rbuffer_data_size(self->buffer);
         line = vzalloc((size_t) new_line + 1);
         akvcam_rbuffer_dequeue_bytes(self->buffer,
                                      line,
                                      (size_t *) &new_line,
                                      false);
+        self->bytes_read += (size_t) new_line;
     } else {
-        line = vzalloc((size_t) new_line + 2);
-        new_line++;
-
-        if (new_line > 0) {
-            akvcam_rbuffer_dequeue_bytes(self->buffer,
-                                         line,
-                                         (size_t *) &new_line,
-                                         false);
-            line[(size_t) new_line - 1] = 0;
-        }
+        line = vzalloc(1);
     }
 
     return line;
