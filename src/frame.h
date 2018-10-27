@@ -57,12 +57,14 @@ void akvcam_frame_adjust_hsl(akvcam_frame_t self,
                              int saturation,
                              int luminance);
 void akvcam_frame_adjust_contrast(akvcam_frame_t self, int contrast);
+void akvcam_frame_adjust_gamma(akvcam_frame_t self, int gamma);
 void akvcam_frame_to_gray_scale(akvcam_frame_t self);
 void akvcam_frame_adjust(akvcam_frame_t self,
                          int hue,
                          int saturation,
                          int luminance,
                          int contrast,
+                         int gamma,
                          bool gray);
 
 // public static

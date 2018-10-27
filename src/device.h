@@ -61,6 +61,7 @@ void akvcam_device_set_priority(akvcam_device_t self,
 enum v4l2_priority akvcam_device_priority(const akvcam_device_t self);
 bool akvcam_device_streaming(const akvcam_device_t self);
 void akvcam_device_set_streaming(akvcam_device_t self, bool streaming);
+void akvcam_device_set_streaming_rw(akvcam_device_t self, bool streaming);
 bool akvcam_device_prepare_frame(akvcam_device_t self);
 akvcam_devices_list_t akvcam_device_connected_devices_nr(const akvcam_device_t self);
 akvcam_devices_list_t akvcam_device_connected_devices(const akvcam_device_t self);

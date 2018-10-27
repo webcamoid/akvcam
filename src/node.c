@@ -206,6 +206,7 @@ static ssize_t akvcam_node_write(struct file *filp,
     if (offset)
         *offset = 0;
 
+    akvcam_device_set_streaming_rw(device, true);
     vdata = vmalloc(size);
     copy_from_user(vdata, data, size);
     bytes_written = akvcam_buffers_write_rw(buffers,
@@ -279,6 +280,7 @@ static int akvcam_node_release(struct file *filp)
     if (!it)
         return -ENOTTY;
 
+    akvcam_device_set_streaming_rw(device, false);
     akvcam_list_erase(nodes, it);
 
     return 0;

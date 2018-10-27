@@ -247,6 +247,15 @@ static struct
 void akvcam_contrast_table_init(void);
 void akvcam_contrast_table_uninit(void);
 
+static struct
+{
+    uint8_t *data;
+    ssize_t ref;
+} akvcam_gamma_table = {NULL, 0};
+
+void akvcam_gamma_table_init(void);
+void akvcam_gamma_table_uninit(void);
+
 struct akvcam_frame
 {
     akvcam_object_t self;
@@ -279,6 +288,7 @@ akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
     }
 
     akvcam_contrast_table_init();
+    akvcam_gamma_table_init();
 
     return self;
 }
@@ -288,10 +298,11 @@ void akvcam_frame_delete(akvcam_frame_t *self)
     if (!self || !*self)
         return;
 
-    akvcam_contrast_table_uninit();
-
     if (akvcam_object_unref((*self)->self) > 0)
         return;
+
+    akvcam_gamma_table_uninit();
+    akvcam_contrast_table_uninit();
 
     if ((*self)->data)
         vfree((*self)->data);
@@ -841,6 +852,41 @@ void akvcam_frame_adjust_contrast(akvcam_frame_t self, int contrast)
     }
 }
 
+void akvcam_frame_adjust_gamma(akvcam_frame_t self, int gamma)
+{
+    __u32 fourcc;
+    size_t width;
+    size_t height;
+    size_t x;
+    size_t y;
+    akvcam_RGB24_t line;
+    size_t gamma_offset;
+
+    if (!akvcam_gamma_table.data || gamma == 0)
+        return;
+
+    fourcc = akvcam_format_fourcc(self->format);
+
+    if (!akvcam_frame_adjust_format_supported(fourcc))
+        return;
+
+    width = akvcam_format_width(self->format);
+    height = akvcam_format_height(self->format);
+
+    gamma = akvcam_bound(-255, gamma, 255);
+    gamma_offset = (size_t) (gamma + 255) << 8;
+
+    for (y = 0; y < height; y++) {
+        line = akvcam_frame_line(self, 0, y);
+
+        for (x = 0; x < width; x++) {
+            line[x].r = akvcam_gamma_table.data[gamma_offset | line[x].r];
+            line[x].g = akvcam_gamma_table.data[gamma_offset | line[x].g];
+            line[x].b = akvcam_gamma_table.data[gamma_offset | line[x].b];
+        }
+    }
+}
+
 void akvcam_frame_to_gray_scale(akvcam_frame_t self)
 {
     __u32 fourcc;
@@ -877,6 +923,7 @@ void akvcam_frame_adjust(akvcam_frame_t self,
                          int saturation,
                          int luminance,
                          int contrast,
+                         int gamma,
                          bool gray)
 {
     __u32 fourcc;
@@ -893,11 +940,13 @@ void akvcam_frame_adjust(akvcam_frame_t self,
     int b;
     int luma;
     size_t contrast_offset;
+    size_t gamma_offset;
 
     if (hue == 0
         && saturation == 0
         && luminance == 0
         && contrast == 0
+        && gamma == 0
         && !gray)
         return;
 
@@ -908,8 +957,12 @@ void akvcam_frame_adjust(akvcam_frame_t self,
 
     width = akvcam_format_width(self->format);
     height = akvcam_format_height(self->format);
+
     contrast = akvcam_bound(-255, contrast, 255);
     contrast_offset = (size_t) (contrast + 255) << 8;
+
+    gamma = akvcam_bound(-255, gamma, 255);
+    gamma_offset = (size_t) (gamma + 255) << 8;
 
     for (y = 0; y < height; y++) {
         line = akvcam_frame_line(self, 0, y);
@@ -927,6 +980,12 @@ void akvcam_frame_adjust(akvcam_frame_t self,
                 l = akvcam_bound(0, l + luminance, 255);
 
                 akvcam_hsl_to_rgb(h, s, l, &r, &g, &b);
+            }
+
+            if (gamma != 0) {
+                r = akvcam_gamma_table.data[gamma_offset | (size_t) r];
+                g = akvcam_gamma_table.data[gamma_offset | (size_t) g];
+                b = akvcam_gamma_table.data[gamma_offset | (size_t) b];
             }
 
             if (contrast != 0) {
@@ -1780,7 +1839,6 @@ void akvcam_contrast_table_init(void)
 
 void akvcam_contrast_table_uninit(void)
 {
-
     if (akvcam_contrast_table.ref > 0)
         akvcam_contrast_table.ref--;
 
@@ -1790,6 +1848,111 @@ void akvcam_contrast_table_uninit(void)
     if (akvcam_contrast_table.data) {
         vfree(akvcam_contrast_table.data);
         akvcam_contrast_table.data = NULL;
+    }
+}
+
+/* Gamma correction is traditionally computed with the following formula:
+ *
+ * c = N * (c / N) ^ gamma
+ *
+ * Where 'c' is the color component and 'N' is the maximum value of the color
+ * component, 255 in this case. The formula will define a curve between 0 and
+ * N. When 'gamma' is 1 it will draw a rect, returning the identity image at the
+ * output. when 'gamma' is near to 0 it will draw a decreasing curve (mountain),
+ * Giving more light to darker colors. When 'gamma' is higher than 1 it will
+ * draw a increasing curve (valley), making bright colors darker.
+ *
+ * Explained in a simple way, gamma correction will modify image brightness
+ * preserving the contrast.
+ *
+ * The problem with the original formula is that it requires floating point
+ * computing which is not possible in the kernel because not all target
+ * architectures have a FPU.
+ *
+ * So instead, we will use a quadric function, that even if it does not returns
+ * the same values, it will cause the same effect and is good enough for our
+ * purpose. We use the formula:
+ *
+ * y = a * x ^ 2 + b * x
+ *
+ * and because we have the point (0, N) already defined, then we can calculate
+ * b as :
+ *
+ * b = 1 - a * N
+ *
+ * and replacing
+ *
+ * y = a * x ^ 2 + (1 - a * N) * x
+ *
+ * we are missing a third point (x', y') to fully define the value of 'a', so
+ * the value of 'a' will be given by:
+ *
+ * a = (y' - x') / (x' ^ 2 - N * x')
+ *
+ * we will take the point (x', y') from the segment ortogonal to the curve
+ * segment, that is:
+ *
+ * y' = N - x'
+ *
+ * Here x' will be our fake 'gamma' value.
+ * Then the value of 'a' becomes:
+ *
+ * a = (N - 2 * x') / (x' ^ 2 - N * x')
+ *
+ * finally we clamp/bound the resulting value between 0 and N and that's what
+ * this code does.
+ */
+void akvcam_gamma_table_init(void)
+{
+    ssize_t i;
+    size_t j = 0;
+    ssize_t gamma;
+    ssize_t f_num;
+    ssize_t f_den;
+    ssize_t g;
+    ssize_t ig;
+
+    if (akvcam_gamma_table.ref > 0) {
+        akvcam_gamma_table.ref++;
+
+        return;
+    }
+
+    akvcam_gamma_table.data = vmalloc(511 * 256);
+
+    for (gamma = -255; gamma < 256; gamma++) {
+        g = (255 + gamma) >> 1;
+        f_num = 2 * g - 255;
+        f_den = g * (g - 255);
+
+        for (i = 0; i < 256; i++, j++) {
+            if (g > 0 && g != 255) {
+                ig = (f_num * i * i + (f_den - f_num * 255) * i) / f_den;
+                ig = akvcam_bound(0, ig, 255);
+            } else if (g != 255) {
+                ig = 0;
+            } else {
+                ig = 255;
+            }
+
+            akvcam_gamma_table.data[j] = (uint8_t) ig;
+        }
+    }
+
+    akvcam_gamma_table.ref++;
+}
+
+void akvcam_gamma_table_uninit(void)
+{
+    if (akvcam_gamma_table.ref > 0)
+        akvcam_gamma_table.ref--;
+
+    if (akvcam_gamma_table.ref > 0)
+        return;
+
+    if (akvcam_gamma_table.data) {
+        vfree(akvcam_gamma_table.data);
+        akvcam_gamma_table.data = NULL;
     }
 }
 

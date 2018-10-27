@@ -61,6 +61,7 @@ struct akvcam_buffers
     bool swap_rgb;
     int brightness;
     int contrast;
+    int gamma;
     int saturation;
     int hue;
     bool gray;
@@ -830,6 +831,7 @@ akvcam_frame_t akvcam_buffers_frame_apply_adjusts(const akvcam_buffers_t self,
                             self->saturation,
                             self->brightness,
                             self->contrast,
+                            self->gamma,
                             self->gray);
         akvcam_frame_scaled(new_frame,
                             owidth,
@@ -855,6 +857,7 @@ akvcam_frame_t akvcam_buffers_frame_apply_adjusts(const akvcam_buffers_t self,
                             self->saturation,
                             self->brightness,
                             self->contrast,
+                            self->gamma,
                             self->gray);
         akvcam_frame_convert(new_frame, fourcc);
     }
@@ -885,6 +888,10 @@ void akvcam_buffers_controls_changed(akvcam_buffers_t self,
 
     case V4L2_CID_HUE:
         self->hue = event->u.ctrl.value;
+        break;
+
+    case V4L2_CID_GAMMA:
+        self->gamma = event->u.ctrl.value;
         break;
 
     case V4L2_CID_HFLIP:

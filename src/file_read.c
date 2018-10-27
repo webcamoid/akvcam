@@ -208,7 +208,7 @@ bool akvcam_file_seek(akvcam_file_t self, ssize_t offset, AKVCAM_FILE_SEEK pos)
     return true;
 }
 
-size_t akvcam_file_read(akvcam_file_t self, char *data, size_t size)
+size_t akvcam_file_read(akvcam_file_t self, void *data, size_t size)
 {
     loff_t offset;
     ssize_t bytes_read;
@@ -218,7 +218,7 @@ size_t akvcam_file_read(akvcam_file_t self, char *data, size_t size)
         return 0;
 
     while (self->file_bytes_read < self->size
-           && akvcam_rbuffer_size(self->buffer) < size) {
+           && akvcam_rbuffer_data_size(self->buffer) < size) {
         offset = (loff_t) self->file_bytes_read;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)

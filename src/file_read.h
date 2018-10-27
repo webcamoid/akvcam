@@ -44,7 +44,7 @@ bool akvcam_file_exists(akvcam_file_t self);
 size_t akvcam_file_size(akvcam_file_t self);
 bool akvcam_file_eof(akvcam_file_t self);
 bool akvcam_file_seek(akvcam_file_t self, ssize_t offset, AKVCAM_FILE_SEEK pos);
-size_t akvcam_file_read(akvcam_file_t self, char *data, size_t size);
+size_t akvcam_file_read(akvcam_file_t self, void *data, size_t size);
 char *akvcam_file_read_line(akvcam_file_t self);
 
 #endif // AKVCAM_FILE_H
