@@ -255,6 +255,8 @@ static bool akvcam_file_find_new_line(const char *element,
                                       const char *new_line,
                                       size_t size)
 {
+    UNUSED(size);
+
     return strncmp(element, new_line, 1) == 0;
 }
 

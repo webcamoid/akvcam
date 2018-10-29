@@ -51,7 +51,7 @@ struct akvcam_buffers
     wait_queue_head_t frame_is_ready;
     size_t rw_buffer_size;
     AKVCAM_RW_MODE rw_mode;
-    __u32 sequence;    
+    __u32 sequence;
     bool horizontal_flip;   // Controlled by capture
     bool vertical_flip;
     bool horizontal_mirror; // Controlled by output
@@ -346,7 +346,7 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
         v4l2_buff->length = buffer->length;
         v4l2_buff->m.planes = buffer->m.planes;
     }
-    
+
     switch (buffer->memory) {
     case V4L2_MEMORY_MMAP:
         v4l2_buff->flags = buffer->flags;
@@ -383,6 +383,8 @@ static bool akvcam_buffers_is_ready(const akvcam_buffer_t buffer,
                                     const __u32 *flags,
                                     size_t size)
 {
+    UNUSED(size);
+
     return akvcam_buffer_get(buffer)->flags & *flags;
 }
 
@@ -507,6 +509,7 @@ static bool akvcam_buffers_equals_offset(const akvcam_buffer_t buffer,
 {
     size_t buffer_size = akvcam_buffer_size(buffer);
     __u32 buffer_offset = akvcam_buffer_offset(buffer);
+    UNUSED(size);
 
     return akvcam_between(buffer_offset,
                           *offset,
@@ -585,6 +588,8 @@ ssize_t akvcam_buffers_read_rw(akvcam_buffers_t self,
     size_t data_size;
     size_t format_size;
     __u32 tsleep;
+
+    UNUSED(node);
 
     if (!(self->rw_mode & AKVCAM_RW_MODE_READWRITE))
         return 0;
@@ -673,6 +678,8 @@ static bool akvcam_buffers_is_queued(const akvcam_buffer_t buffer,
                                      size_t size)
 {
     struct v4l2_buffer *v4l2_buff = akvcam_buffer_get(buffer);
+    UNUSED(flags);
+    UNUSED(size);
 
     return !(v4l2_buff->flags & V4L2_BUF_FLAG_DONE)
             && v4l2_buff->flags & V4L2_BUF_FLAG_QUEUED;

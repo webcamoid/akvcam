@@ -1174,7 +1174,7 @@ int akvcam_ioctl_streamon(akvcam_node_t node, const int *type)
     printk(KERN_INFO "%s()\n", __FUNCTION__);
     device = akvcam_node_device_nr(node);
 
-    if (*type != akvcam_device_v4l2_type(device))
+    if ((enum v4l2_buf_type) *type != akvcam_device_v4l2_type(device))
         return -EINVAL;
 
     akvcam_device_set_streaming(device, true);
@@ -1189,7 +1189,7 @@ int akvcam_ioctl_streamoff(akvcam_node_t node, const int *type)
     printk(KERN_INFO "%s()\n", __FUNCTION__);
     device = akvcam_node_device_nr(node);
 
-    if (*type != akvcam_device_v4l2_type(device))
+    if ((enum v4l2_buf_type) *type != akvcam_device_v4l2_type(device))
         return -EINVAL;
 
     akvcam_device_set_streaming(device, false);

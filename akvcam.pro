@@ -78,9 +78,12 @@ isEmpty(KERNEL_DIR): KERNEL_DIR = /lib/modules/$${KERNEL_RELEASE}/build
 isEmpty(SPARSE_MODE): SPARSE_MODE=2
 
 INCLUDEPATH += \
+    src \
     $${KERNEL_DIR}/include \
     $${KERNEL_DIR}/include/linux \
-    $${KERNEL_DIR}/arch/x86/include
+    $${KERNEL_DIR}/include/uapi \
+    $${KERNEL_DIR}/arch/x86/include \
+    $${KERNEL_DIR}/arch/x86/include/generated
 
 DEFINES += \
     __KERNEL__ \

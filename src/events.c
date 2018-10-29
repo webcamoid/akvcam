@@ -129,6 +129,8 @@ static bool akvcam_events_check(const struct v4l2_event_subscription *sub,
                                 const struct v4l2_event *event,
                                 size_t size)
 {
+    UNUSED(size);
+
     return sub->type == event->type && sub->id == event->id;
 }
 

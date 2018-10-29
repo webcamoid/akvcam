@@ -353,6 +353,8 @@ static bool akvcam_device_are_equals(const akvcam_device_t device,
 {
     bool equals;
     char *devname = kzalloc(1024, GFP_KERNEL);
+    UNUSED(size);
+
     snprintf(devname, 1024, "video%d", device->vdev->num);
     equals = strcmp(devname, (char *) filp->f_path.dentry->d_iname) == 0;
     kfree(devname);

@@ -86,6 +86,8 @@ static bool akvcam_map_equals_keys(const akvcam_map_element_t element,
                                    const char *key,
                                    size_t size)
 {
+    UNUSED(size);
+
     return strcmp(element->key, key) == 0;
 }
 
