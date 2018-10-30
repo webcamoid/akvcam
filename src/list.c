@@ -46,7 +46,9 @@ void akvcam_matrix_combine_p(akvcam_matrix_t matrix,
 akvcam_list_t akvcam_list_new(void)
 {
     akvcam_list_t self = kzalloc(sizeof(struct akvcam_list), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_list_delete);
+    self->self = akvcam_object_new("list",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_list_delete);
 
     return self;
 }

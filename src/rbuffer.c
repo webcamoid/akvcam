@@ -42,7 +42,8 @@ void akvcam_rbuffer_free(AKVCAM_MEMORY_TYPE memory_type, void *data);
 akvcam_rbuffer_t akvcam_rbuffer_new(void)
 {
     akvcam_rbuffer_t self = kzalloc(sizeof(struct akvcam_rbuffer), GFP_KERNEL);
-    self->self = akvcam_object_new(self,
+    self->self = akvcam_object_new("rbuffer",
+                                   self,
                                    (akvcam_deleter_t) akvcam_rbuffer_delete);
     self->memory_type = AKVCAM_MEMORY_TYPE_KMALLOC;
 

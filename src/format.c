@@ -79,7 +79,9 @@ akvcam_format_t akvcam_format_new(__u32 fourcc,
                                   const struct v4l2_fract *frame_rate)
 {
     akvcam_format_t self = kzalloc(sizeof(struct akvcam_format), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_format_delete);
+    self->self = akvcam_object_new("format",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_format_delete);
     self->fourcc = fourcc;
     self->width = width;
     self->height = height;

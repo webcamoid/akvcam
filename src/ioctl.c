@@ -200,7 +200,9 @@ akvcam_ioctl_t akvcam_ioctl_new(void)
 {
     size_t i;
     akvcam_ioctl_t self = kzalloc(sizeof(struct akvcam_ioctl), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_ioctl_delete);
+    self->self = akvcam_object_new("ioctl",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_ioctl_delete);
 
     // Check the number of ioctls available.
     self->n_ioctls = 0;

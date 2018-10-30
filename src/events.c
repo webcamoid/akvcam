@@ -43,7 +43,9 @@ void akvcam_events_remove_unsub(akvcam_events_t self,
 akvcam_events_t akvcam_events_new(void)
 {
     akvcam_events_t self = kzalloc(sizeof(struct akvcam_events), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_events_delete);
+    self->self = akvcam_object_new("events",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_events_delete);
     self->subscriptions = akvcam_list_new();
     init_waitqueue_head(&self->event_signaled);
     self->events = akvcam_rbuffer_new();

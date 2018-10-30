@@ -45,7 +45,9 @@ static struct v4l2_file_operations akvcam_fops;
 akvcam_node_t akvcam_node_new(akvcam_device_t device)
 {
     akvcam_node_t self = kzalloc(sizeof(struct akvcam_node), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_node_delete);
+    self->self = akvcam_object_new("node",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_node_delete);
     self->device = device;
     self->events = akvcam_events_new();
     self->ioctls = akvcam_ioctl_new();

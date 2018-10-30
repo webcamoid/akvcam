@@ -272,7 +272,9 @@ akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
                                 size_t size)
 {
     akvcam_frame_t self = kzalloc(sizeof(struct akvcam_frame), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_frame_delete);
+    self->self = akvcam_object_new("frame",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_frame_delete);
     self->format = akvcam_format_new(0, 0, 0, NULL);
     akvcam_format_copy(self->format, format);
 

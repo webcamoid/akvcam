@@ -35,7 +35,9 @@ struct akvcam_buffer
 akvcam_buffer_t akvcam_buffer_new(size_t size)
 {
     akvcam_buffer_t self = kzalloc(sizeof(struct akvcam_buffer), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_buffer_delete);
+    self->self = akvcam_object_new("buffer",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_buffer_delete);
     self->data = vzalloc(size);
     self->size = size;
 

@@ -41,7 +41,9 @@ struct akvcam_map
 akvcam_map_t akvcam_map_new(void)
 {
     akvcam_map_t self = kzalloc(sizeof(struct akvcam_map), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_map_delete);
+    self->self = akvcam_object_new("map",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_map_delete);
     self->elements = akvcam_list_new();
 
     return self;

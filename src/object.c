@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 
 #include "object.h"
+#include "log.h"
 #include "utils.h"
 
 struct akvcam_object
@@ -26,6 +27,7 @@ struct akvcam_object
     akvcam_object_t self;
     void *parent;
     akvcam_deleter_t deleter;
+    char name[1024];
     int64_t ref;
 };
 
@@ -35,7 +37,9 @@ void akvcam_delete_data(void **data)
     *data = NULL;
 }
 
-akvcam_object_t akvcam_object_new(void *parent, akvcam_deleter_t deleter)
+akvcam_object_t akvcam_object_new(const char *name,
+                                  void *parent,
+                                  akvcam_deleter_t deleter)
 {
     akvcam_object_t self = kzalloc(sizeof(struct akvcam_object), GFP_KERNEL);
 
@@ -48,6 +52,7 @@ akvcam_object_t akvcam_object_new(void *parent, akvcam_deleter_t deleter)
     self->self = self;
     self->parent = parent;
     self->deleter = deleter;
+    snprintf(self->name, 1024, "%s", name);
     self->ref = 1;
     akvcam_set_last_error(0);
 
@@ -92,4 +97,9 @@ int64_t akvcam_object_ref(akvcam_object_t self)
 int64_t akvcam_object_unref(akvcam_object_t self)
 {
     return --self->ref;
+}
+
+const char *akvcam_object_name(akvcam_object_t self)
+{
+    return self->name;
 }

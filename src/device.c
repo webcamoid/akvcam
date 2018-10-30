@@ -87,7 +87,9 @@ akvcam_device_t akvcam_device_new(const char *name,
     akvcam_frame_written_callback frame_written;
 
     akvcam_device_t self = kzalloc(sizeof(struct akvcam_device), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_device_delete);
+    self->self = akvcam_object_new("device",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_device_delete);
     self->description = akvcam_strdup(description, AKVCAM_MEMORY_TYPE_KMALLOC);
     self->formats = akvcam_list_new();
     self->format = akvcam_format_new(0, 0, 0, NULL);
@@ -428,7 +430,7 @@ void akvcam_device_frame_written(akvcam_device_t self,
 bool akvcam_device_prepare_frame(akvcam_device_t self)
 {
     akvcam_device_t output_device;
-    akvcam_frame_t frame;
+    akvcam_frame_t frame = NULL;
     bool result;
 
     output_device = akvcam_list_front(self->connected_devices);
@@ -437,20 +439,25 @@ bool akvcam_device_prepare_frame(akvcam_device_t self)
     if (output_device
         && (output_device->streaming || output_device->streaming_rw)
         && self->current_frame) {
-        frame = self->current_frame;
-        akvcam_object_ref(AKVCAM_TO_OBJECT(frame));
-    } else if (akvcam_default_frame.frame) {
-        frame = akvcam_default_frame.frame;
-        akvcam_object_ref(AKVCAM_TO_OBJECT(frame));
-    } else {
-        frame = akvcam_frame_new(self->format, NULL, 0);
-        get_random_bytes(akvcam_frame_data(frame),
-                         (int) akvcam_frame_size(frame));
+        frame = akvcam_frame_new(NULL, NULL, 0);
+        akvcam_frame_copy(frame, self->current_frame);
+    }
+
+    spin_unlock(&self->slock);
+
+    if (!frame) {
+        if (akvcam_default_frame.frame) {
+            frame = akvcam_default_frame.frame;
+            akvcam_object_ref(AKVCAM_TO_OBJECT(frame));
+        } else {
+            frame = akvcam_frame_new(self->format, NULL, 0);
+            get_random_bytes(akvcam_frame_data(frame),
+                             (int) akvcam_frame_size(frame));
+        }
     }
 
     result = akvcam_buffers_write_frame(self->buffers, frame);
     akvcam_frame_delete(&frame);
-    spin_unlock(&self->slock);
 
     return result;
 }

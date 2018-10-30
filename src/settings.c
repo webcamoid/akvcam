@@ -61,7 +61,9 @@ akvcam_string_map_t akvcam_settings_group_configs(const akvcam_settings_t self);
 akvcam_settings_t akvcam_settings_new(void)
 {
     akvcam_settings_t self = kzalloc(sizeof(struct akvcam_settings), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_settings_delete);
+    self->self = akvcam_object_new("setting",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_settings_delete);
     self->configs = akvcam_map_new();
 
     return self;

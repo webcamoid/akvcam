@@ -73,7 +73,8 @@ int akvcam_driver_init(const char *name, const char *description)
 
     akvcam_driver_global = kzalloc(sizeof(akvcam_driver), GFP_KERNEL);
     akvcam_driver_global->self =
-            akvcam_object_new(akvcam_driver_global,
+            akvcam_object_new("driver",
+                              akvcam_driver_global,
                               (akvcam_deleter_t) akvcam_driver_delete);
     snprintf(akvcam_driver_global->name, AKVCAM_MAX_STRING_SIZE, "%s", name);
     snprintf(akvcam_driver_global->description, AKVCAM_MAX_STRING_SIZE, "%s", description);
@@ -539,12 +540,12 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
                         akvcam_list_push_back(connected_outputs,
                                               output,
                                               akvcam_device_sizeof(),
-                                              (akvcam_deleter_t) akvcam_device_delete,
+                                              NULL,
                                               true);
                         akvcam_list_push_back(akvcam_device_connected_devices_nr(output),
                                               device,
                                               akvcam_device_sizeof(),
-                                              (akvcam_deleter_t) akvcam_device_delete,
+                                              NULL,
                                               true);
                     } else {
                         akpr_warning("Connection between %u and %u rejected, "

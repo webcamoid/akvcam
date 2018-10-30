@@ -109,7 +109,9 @@ akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE type)
 {
     size_t i;
     akvcam_controls_t self = kzalloc(sizeof(struct akvcam_controls), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_controls_delete);
+    self->self = akvcam_object_new("controls",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_controls_delete);
 
     // Initialize controls with default values.
     if (type == AKVCAM_DEVICE_TYPE_OUTPUT) {

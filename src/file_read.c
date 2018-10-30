@@ -43,7 +43,9 @@ struct akvcam_file
 akvcam_file_t akvcam_file_new(const char *file_name)
 {
     akvcam_file_t self = kzalloc(sizeof(struct akvcam_file), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_file_delete);
+    self->self = akvcam_object_new("file",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_file_delete);
     self->file_name = akvcam_strdup(file_name, AKVCAM_MEMORY_TYPE_KMALLOC);
     self->buffer = akvcam_rbuffer_new();
 

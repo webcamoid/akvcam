@@ -80,7 +80,9 @@ akvcam_buffers_t akvcam_buffers_new(akvcam_device_t device)
     akvcam_controls_t controls;
     akvcam_controls_changed_callback controls_changed;
     akvcam_buffers_t self = kzalloc(sizeof(struct akvcam_buffers), GFP_KERNEL);
-    self->self = akvcam_object_new(self, (akvcam_deleter_t) akvcam_buffers_delete);
+    self->self = akvcam_object_new("buffers",
+                                   self,
+                                   (akvcam_deleter_t) akvcam_buffers_delete);
     self->buffers = akvcam_list_new();
     self->rw_buffers = akvcam_rbuffer_new();
     spin_lock_init(&self->slock);
