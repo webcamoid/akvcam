@@ -23,6 +23,7 @@
 #include "frame.h"
 #include "file_read.h"
 #include "format.h"
+#include "log.h"
 #include "object.h"
 #include "utils.h"
 
@@ -407,18 +408,27 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
 
     akvcam_frame_clear(self);
 
-    if (!file_name || strlen(file_name) < 1)
+    if (!file_name || strlen(file_name) < 1) {
+        akpr_err("Bitmap file name not valid\n");
+
         return false;
+    }
 
     bmp_file = akvcam_file_new(file_name);
 
-    if (!akvcam_file_open(bmp_file))
+    if (!akvcam_file_open(bmp_file)) {
+        akpr_err("Can't open bitmap file: %s\n", file_name);
+
         goto akvcam_frame_load_failed;
+    }
 
     akvcam_file_read(bmp_file, type, 2);
 
-    if (memcmp(type, "BM", 2) != 0)
+    if (memcmp(type, "BM", 2) != 0) {
+        akpr_err("Invalid bitmap signature: %c%c\n", type[0], type[1]);
+
         goto akvcam_frame_load_failed;
+    }
 
     akvcam_file_read(bmp_file,
                      (char *) &header,
@@ -432,8 +442,11 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
     akvcam_format_set_height(self->format, image_header.height);
     self->size = akvcam_format_size(self->format);
 
-    if (!self->size)
+    if (!self->size) {
+        akpr_err("Bitmap format is invalid\n");
+
         goto akvcam_frame_load_failed;
+    }
 
     self->data = vmalloc(self->size);
 
@@ -471,6 +484,9 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
             break;
 
         default:
+            akpr_err("Bit count not supported in bitmap: %u\n",
+                     image_header.bitCount);
+
             goto akvcam_frame_load_failed;
     }
 
@@ -1889,7 +1905,7 @@ void akvcam_contrast_table_uninit(void)
  *
  * a = (y' - x') / (x' ^ 2 - N * x')
  *
- * we will take the point (x', y') from the segment ortogonal to the curve
+ * we will take the point (x', y') from the segment orthogonal to the curve's
  * segment, that is:
  *
  * y' = N - x'

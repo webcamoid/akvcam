@@ -60,5 +60,7 @@ uint32_t akvcam_settings_to_uint32(const char *value);
 akvcam_string_list_t akvcam_settings_to_list(const char *value,
                                              const char *separators);
 struct v4l2_fract akvcam_settings_to_frac(const char *value);
+const char *akvcam_settings_file(void);
+void akvcam_settings_set_file(const char *file_name);
 
 #endif // AKVCAM_SETTINGS_H

@@ -130,6 +130,16 @@ void akvcam_format_set_fourcc(akvcam_format_t self, __u32 fourcc)
     self->fourcc = fourcc;
 }
 
+const char *akvcam_format_fourcc_str(const akvcam_format_t self)
+{
+    return akvcam_format_string_from_fourcc(self->fourcc);
+}
+
+void akvcam_format_set_fourcc_str(akvcam_format_t self, const char *fourcc)
+{
+    self->fourcc = akvcam_format_fourcc_from_string(fourcc);
+}
+
 size_t akvcam_format_width(const akvcam_format_t self)
 {
     return self->width;

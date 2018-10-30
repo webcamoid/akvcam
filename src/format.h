@@ -36,6 +36,8 @@ void akvcam_format_delete(akvcam_format_t *self);
 void akvcam_format_copy(akvcam_format_t self, const akvcam_format_t other);
 __u32 akvcam_format_fourcc(const akvcam_format_t self);
 void akvcam_format_set_fourcc(akvcam_format_t self, __u32 fourcc);
+const char *akvcam_format_fourcc_str(const akvcam_format_t self);
+void akvcam_format_set_fourcc_str(akvcam_format_t self, const char *fourcc);
 size_t akvcam_format_width(const akvcam_format_t self);
 void akvcam_format_set_width(akvcam_format_t self, size_t width);
 size_t akvcam_format_height(const akvcam_format_t self);

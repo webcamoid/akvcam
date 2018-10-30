@@ -21,9 +21,19 @@
 #include <linux/module.h>
 
 #include "driver.h"
+#include "log.h"
+#include "settings.h"
 
 #define AKVCAM_DRIVER_NAME        "akvcam"
 #define AKVCAM_DRIVER_DESCRIPTION "AkVCam Virtual Camera"
+
+static int loglevel = 0;
+module_param(loglevel, int, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(loglevel, "Debug verbosity (-2 to 7)");
+
+static char config_file[4096] = "/etc/akvcam/config.ini";
+module_param_string(config_file, config_file, 4096, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(config_file, "Full path to virtual cameras config file");
 
 static int __init akvcam_init(void)
 {
@@ -31,6 +41,9 @@ static int __init akvcam_init(void)
 
     if (result)
         return result;
+
+    akvcam_log_set_level(loglevel);
+    akvcam_settings_set_file(config_file);
 
     return akvcam_driver_init(AKVCAM_DRIVER_NAME, AKVCAM_DRIVER_DESCRIPTION);
 }

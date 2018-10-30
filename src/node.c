@@ -27,6 +27,7 @@
 #include "format.h"
 #include "ioctl.h"
 #include "list.h"
+#include "log.h"
 #include "mmap.h"
 #include "object.h"
 
@@ -127,7 +128,8 @@ static int akvcam_node_open(struct file *filp)
 {
     akvcam_device_t device;
     akvcam_nodes_list_t nodes;
-    printk(KERN_INFO "%s()\n", __FUNCTION__);
+
+    akpr_function();
     device = akvcam_device_from_file_nr(filp);
 
     if (!device)
@@ -157,7 +159,7 @@ static ssize_t akvcam_node_read(struct file *filp,
     ssize_t bytes_read = 0;
     void *vdata;
 
-    printk(KERN_INFO "%s()\n", __FUNCTION__);
+    akpr_function();
     device = akvcam_device_from_file_nr(filp);
     buffers = akvcam_device_buffers_nr(device);
 
@@ -193,7 +195,7 @@ static ssize_t akvcam_node_write(struct file *filp,
     ssize_t bytes_written = 0;
     void *vdata;
 
-    printk(KERN_INFO "%s()\n", __FUNCTION__);
+    akpr_function();
     device = akvcam_device_from_file_nr(filp);
     buffers = akvcam_device_buffers_nr(device);
 
@@ -237,7 +239,7 @@ static __poll_t akvcam_node_poll(struct file *filp,
     akvcam_device_t device = akvcam_device_from_file_nr(filp);
     akvcam_buffers_t buffers = akvcam_device_buffers_nr(device);
 
-    printk(KERN_INFO "%s()\n", __FUNCTION__);
+    akpr_function();
 
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE
         && !akvcam_buffers_allocated(buffers)) {
@@ -252,7 +254,7 @@ static __poll_t akvcam_node_poll(struct file *filp,
 
 static int akvcam_node_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-    printk(KERN_INFO "%s()\n", __FUNCTION__);
+    akpr_function();
 
     return akvcam_mmap_do(filp, vma);
 }
@@ -263,7 +265,8 @@ static int akvcam_node_release(struct file *filp)
     akvcam_nodes_list_t nodes;
     akvcam_list_element_t it;
     akvcam_device_t device;
-    printk(KERN_INFO "%s()\n", __FUNCTION__);
+
+    akpr_function();
     device = akvcam_device_from_file_nr(filp);
 
     if (!device)

@@ -22,6 +22,7 @@ akvcam-objs := \
 	frame.o \
 	ioctl.o \
 	list.o \
+	log.o \
 	map.o \
 	mmap.o \
 	node.o \

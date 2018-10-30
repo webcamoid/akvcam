@@ -23,6 +23,7 @@
 #include "settings.h"
 #include "file_read.h"
 #include "list.h"
+#include "log.h"
 #include "map.h"
 #include "object.h"
 #include "rbuffer.h"
@@ -46,6 +47,11 @@ struct akvcam_settings
     char *current_array;
     size_t array_index;
 };
+
+static struct akvcam_log
+{
+    char file_name[4096];
+} akvcam_settings_private;
 
 bool akvcam_settings_parse(const char *line, akvcam_settings_element_t element);
 char *akvcam_settings_parse_string(char *str, bool move);
@@ -89,18 +95,26 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
     memset(&element, 0, sizeof(akvcam_settings_element));
     akvcam_settings_clear(self);
 
-    if (!file_name || strlen(file_name) < 1)
+    if (!file_name || strlen(file_name) < 1) {
+        akpr_err("Settings file name not valid\n");
+
         return false;
+    }
 
     config_file = akvcam_file_new(file_name);
 
-    if (!akvcam_file_open(config_file))
+    if (!akvcam_file_open(config_file)) {
+        akpr_err("Can't open settings file: %s\n", file_name);
+
         goto akvcam_settings_load_failed;
+    }
 
     while (!akvcam_file_eof(config_file)) {
         line = akvcam_file_read_line(config_file);
 
         if (!akvcam_settings_parse(line, &element)) {
+            akpr_err("Error parsing settings file: %s\n", file_name);
+            akpr_err("Line: %s\n", line);
             vfree(line);
 
             goto akvcam_settings_load_failed;
@@ -455,6 +469,16 @@ struct v4l2_fract akvcam_settings_to_frac(const char *value)
     akvcam_list_delete(&frac_list);
 
     return frac;
+}
+
+const char *akvcam_settings_file(void)
+{
+    return akvcam_settings_private.file_name;
+}
+
+void akvcam_settings_set_file(const char *file_name)
+{
+    snprintf(akvcam_settings_private.file_name, 4096, "%s", file_name);
 }
 
 bool akvcam_settings_parse(const char *line, akvcam_settings_element_t element)

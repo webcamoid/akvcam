@@ -509,7 +509,7 @@ void akvcam_default_frame_init(void)
 
     settings = akvcam_settings_new();
 
-    if (akvcam_settings_load(settings, "/etc/akvcam/config.ini")) {
+    if (akvcam_settings_load(settings, akvcam_settings_file())) {
         akvcam_settings_begin_group(settings, "General");
         file_name = akvcam_settings_value(settings, "default_frame");
         akvcam_default_frame.frame = akvcam_frame_new(NULL, NULL, 0);

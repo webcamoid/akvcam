@@ -41,6 +41,7 @@ lupdate_only {
         src/ioctl.h \
         src/list.h \
         src/list_types.h \
+        src/log.h \
         src/map.h \
         src/mmap.h \
         src/node.h \
@@ -63,6 +64,7 @@ lupdate_only {
         src/frame.c \
         src/ioctl.c \
         src/list.c \
+        src/log.c \
         src/map.c \
         src/mmap.c \
         src/node.c \
