@@ -1,4 +1,21 @@
 #!/bin/bash
+#
+# akvcam, virtual camera for Linux.
+# Copyright (C) 2018  Gonzalo Exequiel Pedone
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 DRIVER_FILE=akvcam.ko
 DEFERRED_LOG=1
@@ -49,7 +66,12 @@ if [ ! -z "${USE_QEMU}" ]; then
     # Install bootstrap system
     mkdir ${system_mount_point}
     mount -o loop ${system_image} ${system_mount_point}
-    debootstrap --components=main,universe,multiverse --include=autofs,kmod,systemd,systemd-sysv,v4l-utils --arch ${SYSTEM_ARCH} --variant=minbase ${SYSTEM_VERSION} ${system_mount_point}
+    debootstrap \
+        --components=main,universe,multiverse \
+        --include=autofs,kmod,systemd,systemd-sysv,v4l-utils \
+        --arch ${SYSTEM_ARCH} \
+        --variant=minbase \
+        ${SYSTEM_VERSION} ${system_mount_point}
     mkdir -p ${system_mount_point}/{dev,proc,sys}
 
     # Copy kernel modules
@@ -99,6 +121,15 @@ if [ ! -z "${USE_QEMU}" ]; then
     # Copy config.ini file.
     mkdir -p ${system_mount_point}/etc/akvcam
     cp -vf ports/ci/travis/config.ini ${system_mount_point}/etc/akvcam/config.ini
+
+    # Choose a random wallpaper and use it as default frame.
+    wallpaper=$(ls /usr/share/backgrounds/*.{jpg,png} | shuf -n1)
+    magick convert \
+        "$wallpaper" \
+        -verbose \
+        -alpha off \
+        -resize 640x480 \
+        ${system_mount_point}/etc/akvcam/default_frame.bmp
 
     umount ${system_mount_point}
 
