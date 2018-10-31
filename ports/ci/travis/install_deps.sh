@@ -36,6 +36,7 @@ ${EXEC} apt-get -y install \
     initramfs-tools \
     qemu-system-x86 \
     qemu-utils \
+    ffmpeg \
     ubuntu-wallpapers
 fi
 
