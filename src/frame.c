@@ -23,6 +23,7 @@
 #include "frame.h"
 #include "file_read.h"
 #include "format.h"
+#include "global_deleter.h"
 #include "log.h"
 #include "object.h"
 #include "utils.h"
@@ -239,24 +240,6 @@ static akvcam_video_convert akvcam_frame_convert_table[] = {
 size_t akvcam_convert_funcs_count(void);
 akvcam_video_convert_funtion_t akvcam_convert_func(__u32 from, __u32 to);
 
-static struct
-{
-    uint8_t *data;
-    ssize_t ref;
-} akvcam_contrast_table = {NULL, 0};
-
-void akvcam_contrast_table_init(void);
-void akvcam_contrast_table_uninit(void);
-
-static struct
-{
-    uint8_t *data;
-    ssize_t ref;
-} akvcam_gamma_table = {NULL, 0};
-
-void akvcam_gamma_table_init(void);
-void akvcam_gamma_table_uninit(void);
-
 struct akvcam_frame
 {
     akvcam_object_t self;
@@ -266,6 +249,9 @@ struct akvcam_frame
 };
 
 bool akvcam_frame_adjust_format_supported(__u32 fourcc);
+const uint8_t *akvcam_contrast_table(void);
+const uint8_t *akvcam_gamma_table(void);
+void akvcam_lookup_table_delete(uint8_t **data);
 
 akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
                                 const void *data,
@@ -290,9 +276,6 @@ akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
             memcpy(self->data, data, size);
     }
 
-    akvcam_contrast_table_init();
-    akvcam_gamma_table_init();
-
     return self;
 }
 
@@ -303,9 +286,6 @@ void akvcam_frame_delete(akvcam_frame_t *self)
 
     if (akvcam_object_unref((*self)->self) > 0)
         return;
-
-    akvcam_gamma_table_uninit();
-    akvcam_contrast_table_uninit();
 
     if ((*self)->data)
         vfree((*self)->data);
@@ -843,9 +823,10 @@ void akvcam_frame_adjust_contrast(akvcam_frame_t self, int contrast)
     size_t x;
     size_t y;
     akvcam_RGB24_t line;
+    const uint8_t *contrast_table = akvcam_contrast_table();
     size_t contrast_offset;
 
-    if (!akvcam_contrast_table.data || contrast == 0)
+    if (!contrast_table || contrast == 0)
         return;
 
     fourcc = akvcam_format_fourcc(self->format);
@@ -863,9 +844,9 @@ void akvcam_frame_adjust_contrast(akvcam_frame_t self, int contrast)
         line = akvcam_frame_line(self, 0, y);
 
         for (x = 0; x < width; x++) {
-            line[x].r = akvcam_contrast_table.data[contrast_offset | line[x].r];
-            line[x].g = akvcam_contrast_table.data[contrast_offset | line[x].g];
-            line[x].b = akvcam_contrast_table.data[contrast_offset | line[x].b];
+            line[x].r = contrast_table[contrast_offset | line[x].r];
+            line[x].g = contrast_table[contrast_offset | line[x].g];
+            line[x].b = contrast_table[contrast_offset | line[x].b];
         }
     }
 }
@@ -878,9 +859,10 @@ void akvcam_frame_adjust_gamma(akvcam_frame_t self, int gamma)
     size_t x;
     size_t y;
     akvcam_RGB24_t line;
+    const uint8_t *gamma_table = akvcam_gamma_table();
     size_t gamma_offset;
 
-    if (!akvcam_gamma_table.data || gamma == 0)
+    if (!gamma_table || gamma == 0)
         return;
 
     fourcc = akvcam_format_fourcc(self->format);
@@ -898,9 +880,9 @@ void akvcam_frame_adjust_gamma(akvcam_frame_t self, int gamma)
         line = akvcam_frame_line(self, 0, y);
 
         for (x = 0; x < width; x++) {
-            line[x].r = akvcam_gamma_table.data[gamma_offset | line[x].r];
-            line[x].g = akvcam_gamma_table.data[gamma_offset | line[x].g];
-            line[x].b = akvcam_gamma_table.data[gamma_offset | line[x].b];
+            line[x].r = gamma_table[gamma_offset | line[x].r];
+            line[x].g = gamma_table[gamma_offset | line[x].g];
+            line[x].b = gamma_table[gamma_offset | line[x].b];
         }
     }
 }
@@ -957,6 +939,8 @@ void akvcam_frame_adjust(akvcam_frame_t self,
     int g;
     int b;
     int luma;
+    const uint8_t *contrast_table = akvcam_contrast_table();
+    const uint8_t *gamma_table = akvcam_gamma_table();
     size_t contrast_offset;
     size_t gamma_offset;
 
@@ -1000,16 +984,16 @@ void akvcam_frame_adjust(akvcam_frame_t self,
                 akvcam_hsl_to_rgb(h, s, l, &r, &g, &b);
             }
 
-            if (gamma != 0) {
-                r = akvcam_gamma_table.data[gamma_offset | (size_t) r];
-                g = akvcam_gamma_table.data[gamma_offset | (size_t) g];
-                b = akvcam_gamma_table.data[gamma_offset | (size_t) b];
+            if (gamma_table && gamma != 0) {
+                r = gamma_table[gamma_offset | (size_t) r];
+                g = gamma_table[gamma_offset | (size_t) g];
+                b = gamma_table[gamma_offset | (size_t) b];
             }
 
-            if (contrast != 0) {
-                r = akvcam_contrast_table.data[contrast_offset | (size_t) r];
-                g = akvcam_contrast_table.data[contrast_offset | (size_t) g];
-                b = akvcam_contrast_table.data[contrast_offset | (size_t) b];
+            if (contrast_table && contrast != 0) {
+                r = contrast_table[contrast_offset | (size_t) r];
+                g = contrast_table[contrast_offset | (size_t) g];
+                b = contrast_table[contrast_offset | (size_t) b];
             }
 
             if (gray) {
@@ -1825,8 +1809,25 @@ akvcam_video_convert_funtion_t akvcam_convert_func(__u32 from, __u32 to)
     return NULL;
 }
 
-void akvcam_contrast_table_init(void)
+bool akvcam_frame_adjust_format_supported(__u32 fourcc)
 {
+    size_t i;
+    static const __u32 adjust_formats[] = {
+        V4L2_PIX_FMT_BGR24,
+        V4L2_PIX_FMT_RGB24,
+        0
+    };
+
+    for (i = 0; adjust_formats[i]; i++)
+        if (adjust_formats[i] == fourcc)
+            return true;
+
+    return false;
+}
+
+const uint8_t *akvcam_contrast_table(void)
+{
+    static uint8_t *contrast_table = NULL;
     size_t i;
     size_t j = 0;
     ssize_t contrast;
@@ -1834,13 +1835,10 @@ void akvcam_contrast_table_init(void)
     ssize_t f_den;
     ssize_t ic;
 
-    if (akvcam_contrast_table.ref > 0) {
-        akvcam_contrast_table.ref++;
+    if (contrast_table)
+        return contrast_table;
 
-        return;
-    }
-
-    akvcam_contrast_table.data = vmalloc(511 * 256);
+    contrast_table = vmalloc(511 * 256);
 
     for (contrast = -255; contrast < 256; contrast++) {
         f_num = 259 * (255 + contrast);
@@ -1848,25 +1846,14 @@ void akvcam_contrast_table_init(void)
 
         for (i = 0; i < 256; i++, j++) {
             ic = (f_num * ((ssize_t) i - 128) + 128 * f_den) / f_den;
-            akvcam_contrast_table.data[j] = (uint8_t) akvcam_bound(0, ic, 255);
+            contrast_table[j] = (uint8_t) akvcam_bound(0, ic, 255);
         }
     }
 
-    akvcam_contrast_table.ref++;
-}
+    akvcam_global_deleter_add(contrast_table,
+                              (akvcam_deleter_t) akvcam_lookup_table_delete);
 
-void akvcam_contrast_table_uninit(void)
-{
-    if (akvcam_contrast_table.ref > 0)
-        akvcam_contrast_table.ref--;
-
-    if (akvcam_contrast_table.ref > 0)
-        return;
-
-    if (akvcam_contrast_table.data) {
-        vfree(akvcam_contrast_table.data);
-        akvcam_contrast_table.data = NULL;
-    }
+    return contrast_table;
 }
 
 /* Gamma correction is traditionally computed with the following formula:
@@ -1920,8 +1907,9 @@ void akvcam_contrast_table_uninit(void)
  * finally we clamp/bound the resulting value between 0 and N and that's what
  * this code does.
  */
-void akvcam_gamma_table_init(void)
+const uint8_t *akvcam_gamma_table(void)
 {
+    static uint8_t *gamma_table = NULL;
     ssize_t i;
     size_t j = 0;
     ssize_t gamma;
@@ -1930,13 +1918,10 @@ void akvcam_gamma_table_init(void)
     ssize_t g;
     ssize_t ig;
 
-    if (akvcam_gamma_table.ref > 0) {
-        akvcam_gamma_table.ref++;
+    if (gamma_table)
+        return gamma_table;
 
-        return;
-    }
-
-    akvcam_gamma_table.data = vmalloc(511 * 256);
+    gamma_table = vmalloc(511 * 256);
 
     for (gamma = -255; gamma < 256; gamma++) {
         g = (255 + gamma) >> 1;
@@ -1953,39 +1938,21 @@ void akvcam_gamma_table_init(void)
                 ig = 255;
             }
 
-            akvcam_gamma_table.data[j] = (uint8_t) ig;
+            gamma_table[j] = (uint8_t) ig;
         }
     }
 
-    akvcam_gamma_table.ref++;
+    akvcam_global_deleter_add(gamma_table,
+                              (akvcam_deleter_t) akvcam_lookup_table_delete);
+
+    return gamma_table;
 }
 
-void akvcam_gamma_table_uninit(void)
+void akvcam_lookup_table_delete(uint8_t **data)
 {
-    if (akvcam_gamma_table.ref > 0)
-        akvcam_gamma_table.ref--;
-
-    if (akvcam_gamma_table.ref > 0)
+    if (!data || !*data)
         return;
 
-    if (akvcam_gamma_table.data) {
-        vfree(akvcam_gamma_table.data);
-        akvcam_gamma_table.data = NULL;
-    }
-}
-
-bool akvcam_frame_adjust_format_supported(__u32 fourcc)
-{
-    size_t i;
-    __u32 adjust_formats[] = {
-        V4L2_PIX_FMT_BGR24,
-        V4L2_PIX_FMT_RGB24,
-        0
-    };
-
-    for (i = 0; adjust_formats[i]; i++)
-        if (adjust_formats[i] == fourcc)
-            return true;
-
-    return false;
+    vfree(*data);
+    *data = NULL;
 }

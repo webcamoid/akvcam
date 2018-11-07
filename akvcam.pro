@@ -38,6 +38,7 @@ lupdate_only {
         src/format_types.h \
         src/frame.h \
         src/frame_types.h \
+        src/global_deleter.h \
         src/ioctl.h \
         src/list.h \
         src/list_types.h \
@@ -47,6 +48,7 @@ lupdate_only {
         src/node.h \
         src/node_types.h \
         src/object.h \
+        src/object_types.h \
         src/rbuffer.h \
         src/settings.h \
         src/utils.h
@@ -62,6 +64,7 @@ lupdate_only {
         src/file_read.c \
         src/format.c \
         src/frame.c \
+        src/global_deleter.c \
         src/ioctl.c \
         src/list.c \
         src/log.c \

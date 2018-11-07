@@ -16,23 +16,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef AKVCAM_OBJECT_H
-#define AKVCAM_OBJECT_H
-
-#include <linux/types.h>
+#ifndef AKVCAM_GLOBAL_DELETER_H
+#define AKVCAM_GLOBAL_DELETER_H
 
 #include "object_types.h"
 
-// public
-void akvcam_delete_data(void **data);
-akvcam_object_t akvcam_object_new(const char *name,
-                                  void *parent,
-                                  akvcam_deleter_t deleter);
-void akvcam_object_delete(akvcam_object_t *self);
+void akvcam_global_deleter_add(void *user_data, akvcam_deleter_t deleter);
+void akvcam_global_deleter_run(void);
 
-void akvcam_object_free(akvcam_object_t *self);
-int64_t akvcam_object_ref(akvcam_object_t self);
-int64_t akvcam_object_unref(akvcam_object_t self);
-const char *akvcam_object_name(akvcam_object_t self);
-
-#endif // AKVCAM_OBJECT_H
+#endif // AKVCAM_GLOBAL_DELETER_H

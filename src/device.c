@@ -30,19 +30,11 @@
 #include "events.h"
 #include "format.h"
 #include "frame.h"
+#include "global_deleter.h"
 #include "list.h"
 #include "node.h"
 #include "object.h"
 #include "settings.h"
-
-static struct
-{
-    akvcam_frame_t frame;
-    ssize_t ref;
-} akvcam_default_frame = {NULL, 0};
-
-void akvcam_default_frame_init(void);
-void akvcam_default_frame_uninit(void);
 
 struct akvcam_device
 {
@@ -69,13 +61,14 @@ struct akvcam_device
     bool streaming_rw;
 };
 
-typedef int (*akvacam_thread_t)(void *data);
+typedef int (*akvcam_thread_t)(void *data);
 
 void akvcam_device_event_received(akvcam_device_t self,
                                   struct v4l2_event *event);
 void akvcam_device_frame_written(akvcam_device_t self,
                                  const akvcam_frame_t frame);
 int akvcam_device_send_frames(akvcam_device_t self);
+akvcam_frame_t akvcam_default_frame(void);
 
 akvcam_device_t akvcam_device_new(const char *name,
                                   const char *description,
@@ -136,8 +129,6 @@ akvcam_device_t akvcam_device_new(const char *name,
             (akvcam_frame_written_proc) akvcam_device_frame_written;
     akvcam_buffers_set_frame_written_callback(self->buffers, frame_written);
 
-    akvcam_default_frame_init();
-
     return self;
 }
 
@@ -149,7 +140,6 @@ void akvcam_device_delete(akvcam_device_t *self)
     if (akvcam_object_unref((*self)->self) > 0)
         return;
 
-    akvcam_default_frame_uninit();
     akvcam_buffers_delete(&((*self)->buffers));
     akvcam_device_unregister(*self);
     video_device_release((*self)->vdev);
@@ -314,7 +304,7 @@ void akvcam_device_set_streaming(akvcam_device_t self, bool streaming)
     if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
         if (!self->streaming && streaming) {
             akvcam_buffers_reset_sequence(self->buffers);
-            self->thread = kthread_run((akvacam_thread_t)
+            self->thread = kthread_run((akvcam_thread_t)
                                        akvcam_device_send_frames,
                                        self,
                                        "akvcam-thread-%llu",
@@ -431,6 +421,7 @@ bool akvcam_device_prepare_frame(akvcam_device_t self)
 {
     akvcam_device_t output_device;
     akvcam_frame_t frame = NULL;
+    akvcam_frame_t default_frame = akvcam_default_frame();
     bool result;
 
     output_device = akvcam_list_front(self->connected_devices);
@@ -446,8 +437,8 @@ bool akvcam_device_prepare_frame(akvcam_device_t self)
     spin_unlock(&self->slock);
 
     if (!frame) {
-        if (akvcam_default_frame.frame) {
-            frame = akvcam_default_frame.frame;
+        if (default_frame) {
+            frame = default_frame;
             akvcam_object_ref(AKVCAM_TO_OBJECT(frame));
         } else {
             frame = akvcam_frame_new(self->format, NULL, 0);
@@ -502,43 +493,33 @@ int akvcam_device_send_frames(akvcam_device_t self)
     return 0;
 }
 
-void akvcam_default_frame_init(void)
+akvcam_frame_t akvcam_default_frame(void)
 {
+    static akvcam_frame_t frame = NULL;
     akvcam_settings_t settings;
     char *file_name;
     bool loaded = false;
 
-    if (akvcam_default_frame.ref > 0) {
-        akvcam_default_frame.ref++;
-
-        return;
-    }
+    if (frame)
+        return frame;
 
     settings = akvcam_settings_new();
 
     if (akvcam_settings_load(settings, akvcam_settings_file())) {
         akvcam_settings_begin_group(settings, "General");
         file_name = akvcam_settings_value(settings, "default_frame");
-        akvcam_default_frame.frame = akvcam_frame_new(NULL, NULL, 0);
-        loaded = akvcam_frame_load(akvcam_default_frame.frame, file_name);
+        frame = akvcam_frame_new(NULL, NULL, 0);
+        loaded = akvcam_frame_load(frame, file_name);
         akvcam_settings_end_group(settings);
     }
 
     akvcam_settings_delete(&settings);
 
-    if (!loaded)
-        akvcam_frame_delete(&akvcam_default_frame.frame);
+    if (loaded)
+        akvcam_global_deleter_add(frame,
+                                  (akvcam_deleter_t) akvcam_frame_delete);
+    else
+        akvcam_frame_delete(&frame);
 
-    akvcam_default_frame.ref++;
-}
-
-void akvcam_default_frame_uninit(void)
-{
-    if (akvcam_default_frame.ref > 0)
-        akvcam_default_frame.ref--;
-
-    if (akvcam_default_frame.ref > 0)
-        return;
-
-    akvcam_frame_delete(&akvcam_default_frame.frame);
+    return frame;
 }

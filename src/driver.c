@@ -26,6 +26,7 @@
 #include "format.h"
 #include "list.h"
 #include "log.h"
+#include "object.h"
 #include "settings.h"
 
 typedef struct

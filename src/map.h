@@ -21,7 +21,7 @@
 
 #include <linux/types.h>
 
-#include "object.h"
+#include "object_types.h"
 
 #define akvcam_map_tt(value_type) akvcam_map_t
 

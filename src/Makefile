@@ -20,6 +20,7 @@ akvcam-objs := \
 	file_read.o \
 	format.o \
 	frame.o \
+	global_deleter.o \
 	ioctl.o \
 	list.o \
 	log.o \
