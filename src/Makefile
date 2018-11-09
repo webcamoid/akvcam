@@ -1,4 +1,10 @@
-KERNEL_DIR ?= /lib/modules/$(shell uname -r)/build
+KERNEL_ROOT ?= /lib/modules/$(shell uname -r)
+KERNEL_DIR ?= $(KERNEL_ROOT)/build
+KERNEL_EXTRA ?= $(KERNEL_ROOT)/extra
+INSTALL = install -m 644
+INSTALL_DIR = install -p -m 755 -d
+UNINSTALL = rm -vf
+
 HAVE_SPARSE := $(shell which sparse 2>/dev/null)
 SPARSE_MODE ?= 2
 
@@ -39,4 +45,8 @@ clean:
 	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) clean
 
 install:
-	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) modules_install
+	$(INSTALL_DIR) "$(DESTDIR)$(KERNEL_EXTRA)"
+	$(INSTALL) akvcam.ko "$(DESTDIR)$(KERNEL_EXTRA)"
+
+uninstall:
+	$(UNINSTALL) "$(DESTDIR)$(KERNEL_EXTRA)/akvcam.ko"
