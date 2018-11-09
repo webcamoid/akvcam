@@ -99,6 +99,7 @@ DEFINES += \
     KBUILD_MODNAME=\"\\\"\\\"\"
 
 OTHER_FILES += \
+    src/dkms.conf \
     src/Makefile \
     share/config_example.ini
 
