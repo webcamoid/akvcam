@@ -36,7 +36,7 @@ struct v4l2_query_ext_ctrl;
 #endif
 
 // public
-akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE type);
+akvcam_controls_t akvcam_controls_new(akvcam_device_t device);
 void akvcam_controls_delete(akvcam_controls_t *self);
 
 int akvcam_controls_fill(const akvcam_controls_t self,

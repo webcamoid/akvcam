@@ -83,10 +83,11 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->self = akvcam_object_new("device",
                                    self,
                                    (akvcam_deleter_t) akvcam_device_delete);
+    self->type = type;
     self->description = akvcam_strdup(description, AKVCAM_MEMORY_TYPE_KMALLOC);
     self->formats = akvcam_list_new();
     self->format = akvcam_format_new(0, 0, 0, NULL);
-    self->controls = akvcam_controls_new(type);
+    self->controls = akvcam_controls_new(self);
     self->connected_devices = akvcam_list_new();
     controls_changed.user_data = self;
     controls_changed.callback =
@@ -94,7 +95,6 @@ akvcam_device_t akvcam_device_new(const char *name,
     akvcam_controls_set_changed_callback(self->controls, controls_changed);
     self->nodes = akvcam_list_new();
     self->priority_node = NULL;
-    self->type = type;
     self->rw_mode = rw_mode;
     self->priority = V4L2_PRIORITY_DEFAULT;
     spin_lock_init(&self->slock);
@@ -116,7 +116,6 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->vdev->release = video_device_release_empty;
     video_set_drvdata(self->vdev, self);
     self->is_registered = false;
-
     self->buffers = akvcam_buffers_new(self);
 
     frame_ready.user_data = self;
@@ -299,6 +298,11 @@ bool akvcam_device_streaming(const akvcam_device_t self)
     return self->streaming;
 }
 
+bool akvcam_device_streaming_rw(const akvcam_device_t self)
+{
+    return self->streaming_rw;
+}
+
 void akvcam_device_set_streaming(akvcam_device_t self, bool streaming)
 {
     if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
@@ -429,7 +433,8 @@ bool akvcam_device_prepare_frame(akvcam_device_t self)
 
     if (output_device
         && (output_device->streaming || output_device->streaming_rw)
-        && self->current_frame) {
+        && self->current_frame
+        && akvcam_buffers_enabled(self->buffers)) {
         frame = akvcam_frame_new(NULL, NULL, 0);
         akvcam_frame_copy(frame, self->current_frame);
     }

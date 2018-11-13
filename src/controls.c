@@ -20,7 +20,9 @@
 #include <linux/uaccess.h>
 
 #include "controls.h"
+#include "device.h"
 #include "frame_types.h"
+#include "list.h"
 #include "object.h"
 
 #ifndef V4L2_CTRL_FLAG_NEXT_COMPOUND
@@ -33,7 +35,8 @@ typedef union
     __s64 value;
 } akvcam_menu_item, *akvcam_menu_item_t;
 
-typedef akvcam_menu_item_t (*akvcam_control_menu_t)(size_t *size,
+typedef akvcam_menu_item_t (*akvcam_control_menu_t)(akvcam_controls_t controls,
+                                                    size_t *size,
                                                     bool *int_menu);
 
 typedef struct
@@ -53,11 +56,13 @@ typedef struct
 {
     __u32 id;
     __s32 value;
+    char value_str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_control_value, *akvcam_control_value_t;
 
 struct akvcam_controls
 {
     akvcam_object_t self;
+    akvcam_device_t device;
     akvcam_control_value_t values;
     akvcam_controls_changed_callback controls_changed;
     akvcam_control_params_t control_params;
@@ -65,7 +70,8 @@ struct akvcam_controls
     AKVCAM_DEVICE_TYPE type;
 };
 
-akvcam_menu_item_t akvcam_controls_colorfx_menu(size_t *size,
+akvcam_menu_item_t akvcam_controls_colorfx_menu(akvcam_controls_t controls,
+                                                size_t *size,
                                                 bool *int_menu);
 
 static akvcam_control_params akvcam_controls_capture[] = {
@@ -78,24 +84,40 @@ static akvcam_control_params akvcam_controls_capture[] = {
     {V4L2_CID_GAMMA     ,    V4L2_CTRL_TYPE_INTEGER,           "Gamma", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER, NULL                        },
     {V4L2_CID_HFLIP     ,    V4L2_CTRL_TYPE_BOOLEAN, "Horizontal Flip",    0,   1, 1, 0,                         0, NULL                        },
     {V4L2_CID_VFLIP     ,    V4L2_CTRL_TYPE_BOOLEAN,   "Vertical Flip",    0,   1, 1, 0,                         0, NULL                        },
-    {V4L2_CID_COLORFX   ,       V4L2_CTRL_TYPE_MENU,   "Color Effects",    0,   1, 1, 0,                         0, akvcam_controls_colorfx_menu},
+    {V4L2_CID_COLORFX   ,       V4L2_CTRL_TYPE_MENU,   "Color Effects",    0,   0, 1, 0,                         0, akvcam_controls_colorfx_menu},
     {0                  ,                         0,                "",    0,   0, 0, 0,                         0, NULL                        },
 };
 
-akvcam_menu_item_t akvcam_controls_scaling_menu(size_t *size,
+akvcam_menu_item_t akvcam_controls_scaling_menu(akvcam_controls_t controls,
+                                                size_t *size,
                                                 bool *int_menu);
-akvcam_menu_item_t akvcam_controls_aspect_menu(size_t *size,
+akvcam_menu_item_t akvcam_controls_aspect_menu(akvcam_controls_t controls,
+                                               size_t *size,
                                                bool *int_menu);
+akvcam_menu_item_t akvcam_controls_capture_devices_menu(akvcam_controls_t controls,
+                                                        size_t *size,
+                                                        bool *int_menu);
+akvcam_menu_item_t akvcam_controls_preferred_device_menu(akvcam_controls_t controls,
+                                                         size_t *size,
+                                                         bool *int_menu);
+akvcam_menu_item_t akvcam_controls_listeners_menu(akvcam_controls_t controls,
+                                                  size_t *size,
+                                                  bool *int_menu);
 
 static akvcam_control_params akvcam_controls_output[] = {
-    {V4L2_CID_USER_CLASS    , V4L2_CTRL_TYPE_CTRL_CLASS,      "User Controls", 0, 0, 0, 0, V4L2_CTRL_FLAG_READ_ONLY
-                                                                                         | V4L2_CTRL_FLAG_WRITE_ONLY, NULL                        },
-    {V4L2_CID_HFLIP         ,    V4L2_CTRL_TYPE_BOOLEAN,    "Horizontal Flip", 0, 1, 1, 0,                         0, NULL                        },
-    {V4L2_CID_VFLIP         ,    V4L2_CTRL_TYPE_BOOLEAN,      "Vertical Flip", 0, 1, 1, 0,                         0, NULL                        },
-    {AKVCAM_CID_SCALING     ,       V4L2_CTRL_TYPE_MENU,       "Scaling Mode", 0, 1, 1, 0,                         0, akvcam_controls_scaling_menu},
-    {AKVCAM_CID_ASPECT_RATIO,       V4L2_CTRL_TYPE_MENU,  "Aspect Ratio Mode", 0, 2, 1, 0,                         0, akvcam_controls_aspect_menu },
-    {AKVCAM_CID_SWAP_RGB    ,    V4L2_CTRL_TYPE_BOOLEAN, "Swap Read and Blue", 0, 1, 1, 0,                         0, NULL                        },
-    {0                      ,                         0,                   "", 0, 0, 0, 0,                         0, NULL                        },
+    {V4L2_CID_USER_CLASS        , V4L2_CTRL_TYPE_CTRL_CLASS,      "User Controls", 0, 0, 0, 0, V4L2_CTRL_FLAG_READ_ONLY
+                                                                                             | V4L2_CTRL_FLAG_WRITE_ONLY, NULL                                 },
+    {V4L2_CID_HFLIP             ,    V4L2_CTRL_TYPE_BOOLEAN,    "Horizontal Flip", 0, 1, 1, 0,                         0, NULL                                 },
+    {V4L2_CID_VFLIP             ,    V4L2_CTRL_TYPE_BOOLEAN,      "Vertical Flip", 0, 1, 1, 0,                         0, NULL                                 },
+    {AKVCAM_CID_SCALING         ,       V4L2_CTRL_TYPE_MENU,       "Scaling Mode", 0, 0, 1, 0,                         0, akvcam_controls_scaling_menu         },
+    {AKVCAM_CID_ASPECT_RATIO    ,       V4L2_CTRL_TYPE_MENU,  "Aspect Ratio Mode", 0, 0, 1, 0,                         0, akvcam_controls_aspect_menu          },
+    {AKVCAM_CID_SWAP_RGB        ,    V4L2_CTRL_TYPE_BOOLEAN, "Swap Read and Blue", 0, 1, 1, 0,                         0, NULL                                 },
+    {AKVCAM_CID_CAPTURE_DEVICES ,       V4L2_CTRL_TYPE_MENU,    "Capture Devices", 0, 0, 1, 0,  V4L2_CTRL_FLAG_READ_ONLY
+                                                                                             |   V4L2_CTRL_FLAG_INACTIVE, akvcam_controls_capture_devices_menu },
+    {AKVCAM_CID_PREFERRED_DEVICE,       V4L2_CTRL_TYPE_MENU,   "Preferred Device", 0, 0, 1, 0,                         0, akvcam_controls_preferred_device_menu},
+    {AKVCAM_CID_LISTENERS       ,       V4L2_CTRL_TYPE_MENU,          "Listeners", 0, 0, 1, 0,  V4L2_CTRL_FLAG_READ_ONLY
+                                                                                             |   V4L2_CTRL_FLAG_INACTIVE, akvcam_controls_listeners_menu       },
+    {0                          ,                         0,                   "", 0, 0, 0, 0,                         0, NULL                                 },
 };
 
 size_t akvcam_controls_capture_count(void);
@@ -105,16 +127,17 @@ akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,
 akvcam_control_params_t akvcam_controls_params_by_id(const akvcam_controls_t self,
                                                      __u32 id);
 
-akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE type)
+akvcam_controls_t akvcam_controls_new(akvcam_device_t device)
 {
     size_t i;
     akvcam_controls_t self = kzalloc(sizeof(struct akvcam_controls), GFP_KERNEL);
     self->self = akvcam_object_new("controls",
                                    self,
                                    (akvcam_deleter_t) akvcam_controls_delete);
+    self->device = device;
 
     // Initialize controls with default values.
-    if (type == AKVCAM_DEVICE_TYPE_OUTPUT) {
+    if (akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_OUTPUT) {
         self->n_controls = akvcam_controls_output_count();
         self->control_params = akvcam_controls_output;
     } else {
@@ -127,6 +150,7 @@ akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE type)
     for (i = 0; i < self->n_controls; i++) {
         self->values[i].id = self->control_params[i].id;
         self->values[i].value = self->control_params[i].default_value;
+        memset(self->values[i].value_str, 0, AKVCAM_MAX_STRING_SIZE);
     }
 
     return self;
@@ -187,13 +211,12 @@ int akvcam_controls_fill_menu(const akvcam_controls_t self,
     if (!params || !params->menu)
         return -EINVAL;
 
-    menu_items = params->menu(&size, &int_menu);
+    menu_items = params->menu(self, &size, &int_menu);
 
     if (!menu_items || size < 1)
         return -EINVAL;
 
     if ((ssize_t) menu->index < params->minimum
-        || (ssize_t) menu->index > params->maximum
         || menu->index >= size)
         return -EINVAL;
 
@@ -217,6 +240,7 @@ int akvcam_controls_fill_ext(const akvcam_controls_t self,
               & (V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND);
     bool is_private;
     akvcam_control_params_t _control = NULL;
+     size_t menu_size = 0;
 
     if (self->n_controls < 1)
         return -EINVAL;
@@ -252,7 +276,14 @@ int akvcam_controls_fill_ext(const akvcam_controls_t self,
         control->type = _control->type;
         snprintf(control->name, 32, "%s", _control->name);
         control->minimum = _control->minimum;
-        control->maximum = _control->maximum;
+
+        if (_control->menu) {
+            _control->menu(self, &menu_size, NULL);
+            control->maximum = (__s64) akvcam_max(menu_size - 1, 0);
+        } else {
+            control->maximum = _control->maximum;
+        }
+
         control->step = (__u64) _control->step;
         control->default_value = _control->default_value;
         control->flags = _control->flags;
@@ -302,9 +333,11 @@ int akvcam_controls_get_ext(const akvcam_controls_t self,
 {
 #ifdef VIDIOC_QUERY_EXT_CTRL
     size_t i;
-    __u32 id;
     struct v4l2_ext_control *control = NULL;
     akvcam_control_value_t _control;
+    akvcam_control_params_t control_params;
+    __u32 buffer_size;
+    __kernel_size_t str_len;
     bool kernel = flags & AKVCAM_CONTROLS_FLAG_KERNEL;
 
     int result = akvcam_controls_try_ext(self,
@@ -332,11 +365,38 @@ int akvcam_controls_get_ext(const akvcam_controls_t self,
             }
         }
 
-        id = control->id;
-        _control = akvcam_controls_value_by_id(self, id);
-        memset(control, 0, sizeof(struct v4l2_ext_control));
-        control->id = id;
-        control->value = _control->value;
+        control_params = akvcam_controls_params_by_id(self, control->id);
+        _control = akvcam_controls_value_by_id(self, control->id);
+
+        if (control_params->type == V4L2_CTRL_TYPE_STRING) {
+            buffer_size = akvcam_min(control->size, AKVCAM_MAX_STRING_SIZE);
+            str_len = strnlen(_control->value_str, AKVCAM_MAX_STRING_SIZE);
+
+            if (buffer_size < str_len) {
+                result = -ENOSPC;
+
+                break;
+            }
+
+            if (clear_user((char __user *) control->string,
+                           control->size) != 0) {
+                result = -EIO;
+
+                break;
+            }
+
+            if (copy_to_user((char __user *) control->string,
+                             _control->value_str,
+                             str_len) != 0) {
+                result = -EIO;
+
+                break;
+            }
+        } else {
+            control->value = _control->value;
+        }
+
+        memset(control->reserved2, 0, sizeof(__u32));
 
         if (!kernel)
             if (copy_to_user((struct v4l2_ext_control __user *)
@@ -397,6 +457,7 @@ int akvcam_controls_set_ext(akvcam_controls_t self,
                                          controls,
                                          flags
                                          | AKVCAM_CONTROLS_FLAG_SET);
+    size_t menu_size = 0;
 
     if (result != 0)
         return result;
@@ -431,7 +492,14 @@ int akvcam_controls_set_ext(akvcam_controls_t self,
             event.u.ctrl.value = control->value;
             event.u.ctrl.flags = control_params->flags;
             event.u.ctrl.minimum = control_params->minimum;
-            event.u.ctrl.maximum = control_params->maximum;
+
+            if (control_params->menu) {
+                control_params->menu(self, &menu_size, NULL);
+                event.u.ctrl.maximum = (__s32) akvcam_max(menu_size - 1, 0);
+            } else {
+                event.u.ctrl.maximum = control_params->maximum;
+            }
+
             event.u.ctrl.step = control_params->step;
             event.u.ctrl.default_value = control_params->default_value;
 
@@ -457,6 +525,7 @@ int akvcam_controls_try_ext(akvcam_controls_t self,
     uint32_t mode = flags & 0x3;
     bool kernel = flags & AKVCAM_CONTROLS_FLAG_KERNEL;
     __u32 which_control;
+    size_t menu_size = 0;
 
     controls->error_idx = controls->count;
     memset(controls->reserved, 0, 2 * sizeof(__u32));
@@ -514,8 +583,21 @@ int akvcam_controls_try_ext(akvcam_controls_t self,
         if (mode == AKVCAM_CONTROLS_FLAG_GET)
             continue;
 
-        if (control->value < _control->minimum
-            || control->value > _control->maximum) {
+        if (control->value < _control->minimum) {
+            result = -ERANGE;
+
+            break;
+        }
+
+        if (_control->menu) {
+            _control->menu(self, &menu_size, NULL);
+
+            if (control->value >= (__s32) menu_size) {
+                result = -ERANGE;
+
+                break;
+            }
+        } else if (control->value > _control->maximum) {
             result = -ERANGE;
 
             break;
@@ -546,6 +628,7 @@ bool akvcam_controls_generate_event(const akvcam_controls_t self,
     size_t i;
     akvcam_control_params_t control_params;
     akvcam_control_value_t control;
+    size_t menu_size = 0;
 
     for (i = 0; i < self->n_controls; i++)
         if (self->control_params[i].id == id) {
@@ -562,7 +645,14 @@ bool akvcam_controls_generate_event(const akvcam_controls_t self,
             event->u.ctrl.value = control->value;
             event->u.ctrl.flags = control_params->flags;
             event->u.ctrl.minimum = control_params->minimum;
-            event->u.ctrl.maximum = control_params->maximum;
+
+            if (control_params->menu) {
+                control_params->menu(self, &menu_size, NULL);
+                event->u.ctrl.maximum = (__s32) akvcam_max(menu_size - 1, 0);
+            } else {
+                event->u.ctrl.maximum = control_params->maximum;
+            }
+
             event->u.ctrl.step = control_params->step;
             event->u.ctrl.default_value = control_params->default_value;
 
@@ -602,13 +692,16 @@ size_t akvcam_controls_output_count(void)
     return count;
 }
 
-akvcam_menu_item_t akvcam_controls_colorfx_menu(size_t *size,
+akvcam_menu_item_t akvcam_controls_colorfx_menu(akvcam_controls_t controls,
+                                                size_t *size,
                                                 bool *int_menu)
 {
     static akvcam_menu_item colorfx[] = {
         {.name = "None"         },
         {.name = "Black & White"},
     };
+
+    UNUSED(controls);
 
     if (size)
         *size = 2;
@@ -619,13 +712,16 @@ akvcam_menu_item_t akvcam_controls_colorfx_menu(size_t *size,
     return colorfx;
 }
 
-akvcam_menu_item_t akvcam_controls_scaling_menu(size_t *size,
+akvcam_menu_item_t akvcam_controls_scaling_menu(akvcam_controls_t controls,
+                                                size_t *size,
                                                 bool *int_menu)
 {
     static akvcam_menu_item scaling[] = {
         {.name = "Fast"  },
         {.name = "Linear"},
     };
+
+    UNUSED(controls);
 
     if (size)
         *size = 2;
@@ -636,7 +732,8 @@ akvcam_menu_item_t akvcam_controls_scaling_menu(size_t *size,
     return scaling;
 }
 
-akvcam_menu_item_t akvcam_controls_aspect_menu(size_t *size,
+akvcam_menu_item_t akvcam_controls_aspect_menu(akvcam_controls_t controls,
+                                               size_t *size,
                                                bool *int_menu)
 {
     static akvcam_menu_item aspect[] = {
@@ -645,6 +742,8 @@ akvcam_menu_item_t akvcam_controls_aspect_menu(size_t *size,
         {.name = "Expanding"},
     };
 
+    UNUSED(controls);
+
     if (size)
         *size = 3;
 
@@ -652,6 +751,122 @@ akvcam_menu_item_t akvcam_controls_aspect_menu(size_t *size,
         *int_menu = false;
 
     return aspect;
+}
+
+akvcam_menu_item_t akvcam_controls_capture_devices_menu(akvcam_controls_t controls,
+                                                        size_t *size,
+                                                        bool *int_menu)
+{
+    akvcam_devices_list_t devices;
+    akvcam_device_t device;
+    akvcam_list_element_t it = NULL;
+    static akvcam_menu_item capture_devices[64];
+    size_t i;
+
+    devices = akvcam_device_connected_devices_nr(controls->device);
+
+    if (size)
+        *size = akvcam_min(akvcam_list_size(devices), 1);
+
+    if (int_menu)
+        *int_menu = false;
+
+    memset(capture_devices, 0, 64 * sizeof(akvcam_menu_item));
+
+    for (i = 0; i < 64; i++) {
+        device = akvcam_list_next(devices, &it);
+
+        if (!it)
+            break;
+
+        snprintf((char *) capture_devices[i].name,
+                 32,
+                 "/dev/video%u",
+                 akvcam_device_num(device));
+    }
+
+    if (i < 1)
+        snprintf((char *) capture_devices[0].name, 32, "/dev/null");
+
+    return capture_devices;
+}
+
+akvcam_menu_item_t akvcam_controls_preferred_device_menu(akvcam_controls_t controls,
+                                                         size_t *size,
+                                                         bool *int_menu)
+{
+    akvcam_devices_list_t devices;
+    akvcam_device_t device;
+    akvcam_list_element_t it = NULL;
+    static akvcam_menu_item preferred_devices[65];
+    size_t i;
+
+    devices = akvcam_device_connected_devices_nr(controls->device);
+
+    if (size)
+        *size = akvcam_list_size(devices) + 1;
+
+    if (int_menu)
+        *int_menu = false;
+
+    memset(preferred_devices, 0, 65 * sizeof(akvcam_menu_item));
+    snprintf((char *) preferred_devices[0].name, 32, "None");
+
+    for (i = 1; i < 65; i++) {
+        device = akvcam_list_next(devices, &it);
+
+        if (!it)
+            break;
+
+        snprintf((char *) preferred_devices[i].name,
+                 32,
+                 "/dev/video%u",
+                 akvcam_device_num(device));
+    }
+
+    return preferred_devices;
+}
+
+akvcam_menu_item_t akvcam_controls_listeners_menu(akvcam_controls_t controls,
+                                                  size_t *size,
+                                                  bool *int_menu)
+{
+    akvcam_devices_list_t devices;
+    akvcam_device_t device;
+    akvcam_list_element_t it = NULL;
+    static akvcam_menu_item listeners[64];
+    size_t i;
+
+    devices = akvcam_device_connected_devices_nr(controls->device);
+
+    if (size)
+        *size = akvcam_min(akvcam_list_size(devices), 1);
+
+    if (int_menu)
+        *int_menu = false;
+
+    memset(listeners, 0, 64 * sizeof(akvcam_menu_item));
+
+    for (i = 0; i < 64;) {
+        device = akvcam_list_next(devices, &it);
+
+        if (!it)
+            break;
+
+        if (akvcam_device_streaming(device)
+            || akvcam_device_streaming_rw(device)) {
+            snprintf((char *) listeners[i].name,
+                     32,
+                     "/dev/video%u",
+                     akvcam_device_num(device));
+            i++;
+        }
+    }
+
+    if (i < 1)
+        snprintf((char *) listeners[0].name, 32, "/dev/null");
+
+    return listeners;
 }
 
 akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,
