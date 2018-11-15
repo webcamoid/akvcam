@@ -23,6 +23,7 @@ TEMPLATE = lib
 
 lupdate_only {
     HEADERS += \
+        src/attributes.h \
         src/buffer.h \
         src/buffers.h \
         src/buffers_types.h \
@@ -54,6 +55,7 @@ lupdate_only {
         src/utils.h
 
     SOURCES += \
+        src/attributes.c \
         src/module.c \
         src/buffer.c \
         src/buffers.c \

@@ -24,6 +24,7 @@
 #include <media/v4l2-device.h>
 
 #include "device.h"
+#include "attributes.h"
 #include "buffers.h"
 #include "controls.h"
 #include "driver.h"
@@ -43,6 +44,7 @@ struct akvcam_device
     akvcam_formats_list_t formats;
     akvcam_format_t format;
     akvcam_controls_t controls;
+    akvcam_attributes_t attributes;
     akvcam_nodes_list_t nodes;
     akvcam_devices_list_t connected_devices;
     akvcam_node_t priority_node;
@@ -88,6 +90,7 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->formats = akvcam_list_new();
     self->format = akvcam_format_new(0, 0, 0, NULL);
     self->controls = akvcam_controls_new(self);
+    self->attributes = akvcam_attributes_new(self);
     self->connected_devices = akvcam_list_new();
     controls_changed.user_data = self;
     controls_changed.callback =
@@ -114,6 +117,7 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->vdev->fops = akvcam_node_fops();
     self->vdev->tvnorms = V4L2_STD_ALL;
     self->vdev->release = video_device_release_empty;
+    akvcam_attributes_set(self->attributes, &self->vdev->dev);
     video_set_drvdata(self->vdev, self);
     self->is_registered = false;
     self->buffers = akvcam_buffers_new(self);
@@ -144,6 +148,7 @@ void akvcam_device_delete(akvcam_device_t *self)
     video_device_release((*self)->vdev);
     akvcam_list_delete(&((*self)->nodes));
     akvcam_list_delete(&((*self)->connected_devices));
+    akvcam_attributes_delete(&((*self)->attributes));
     akvcam_controls_delete(&((*self)->controls));
     akvcam_format_delete(&((*self)->format));
     akvcam_list_delete(&((*self)->formats));
@@ -162,8 +167,12 @@ bool akvcam_device_register(akvcam_device_t self)
 
     result = v4l2_device_register(NULL, &self->v4l2_dev);
 
-    if (!result)
+    if (!result) {
         result = video_register_device(self->vdev, VFL_TYPE_GRABBER, -1);
+
+        if (result)
+            v4l2_device_unregister(&self->v4l2_dev);
+    }
 
     akvcam_set_last_error(result);
     self->is_registered = result? false: true;
@@ -433,8 +442,7 @@ bool akvcam_device_prepare_frame(akvcam_device_t self)
 
     if (output_device
         && (output_device->streaming || output_device->streaming_rw)
-        && self->current_frame
-        && akvcam_buffers_enabled(self->buffers)) {
+        && self->current_frame) {
         frame = akvcam_frame_new(NULL, NULL, 0);
         akvcam_frame_copy(frame, self->current_frame);
     }

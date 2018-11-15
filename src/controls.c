@@ -94,30 +94,16 @@ akvcam_menu_item_t akvcam_controls_scaling_menu(akvcam_controls_t controls,
 akvcam_menu_item_t akvcam_controls_aspect_menu(akvcam_controls_t controls,
                                                size_t *size,
                                                bool *int_menu);
-akvcam_menu_item_t akvcam_controls_capture_devices_menu(akvcam_controls_t controls,
-                                                        size_t *size,
-                                                        bool *int_menu);
-akvcam_menu_item_t akvcam_controls_preferred_device_menu(akvcam_controls_t controls,
-                                                         size_t *size,
-                                                         bool *int_menu);
-akvcam_menu_item_t akvcam_controls_listeners_menu(akvcam_controls_t controls,
-                                                  size_t *size,
-                                                  bool *int_menu);
 
 static akvcam_control_params akvcam_controls_output[] = {
-    {V4L2_CID_USER_CLASS        , V4L2_CTRL_TYPE_CTRL_CLASS,      "User Controls", 0, 0, 0, 0, V4L2_CTRL_FLAG_READ_ONLY
-                                                                                             | V4L2_CTRL_FLAG_WRITE_ONLY, NULL                                 },
-    {V4L2_CID_HFLIP             ,    V4L2_CTRL_TYPE_BOOLEAN,    "Horizontal Flip", 0, 1, 1, 0,                         0, NULL                                 },
-    {V4L2_CID_VFLIP             ,    V4L2_CTRL_TYPE_BOOLEAN,      "Vertical Flip", 0, 1, 1, 0,                         0, NULL                                 },
-    {AKVCAM_CID_SCALING         ,       V4L2_CTRL_TYPE_MENU,       "Scaling Mode", 0, 0, 1, 0,                         0, akvcam_controls_scaling_menu         },
-    {AKVCAM_CID_ASPECT_RATIO    ,       V4L2_CTRL_TYPE_MENU,  "Aspect Ratio Mode", 0, 0, 1, 0,                         0, akvcam_controls_aspect_menu          },
-    {AKVCAM_CID_SWAP_RGB        ,    V4L2_CTRL_TYPE_BOOLEAN, "Swap Read and Blue", 0, 1, 1, 0,                         0, NULL                                 },
-    {AKVCAM_CID_CAPTURE_DEVICES ,       V4L2_CTRL_TYPE_MENU,    "Capture Devices", 0, 0, 1, 0,  V4L2_CTRL_FLAG_READ_ONLY
-                                                                                             |   V4L2_CTRL_FLAG_INACTIVE, akvcam_controls_capture_devices_menu },
-    {AKVCAM_CID_PREFERRED_DEVICE,       V4L2_CTRL_TYPE_MENU,   "Preferred Device", 0, 0, 1, 0,                         0, akvcam_controls_preferred_device_menu},
-    {AKVCAM_CID_LISTENERS       ,       V4L2_CTRL_TYPE_MENU,          "Listeners", 0, 0, 1, 0,  V4L2_CTRL_FLAG_READ_ONLY
-                                                                                             |   V4L2_CTRL_FLAG_INACTIVE, akvcam_controls_listeners_menu       },
-    {0                          ,                         0,                   "", 0, 0, 0, 0,                         0, NULL                                 },
+    {V4L2_CID_USER_CLASS    , V4L2_CTRL_TYPE_CTRL_CLASS,      "User Controls", 0, 0, 0, 0, V4L2_CTRL_FLAG_READ_ONLY
+                                                                                         | V4L2_CTRL_FLAG_WRITE_ONLY, NULL                        },
+    {V4L2_CID_HFLIP         ,    V4L2_CTRL_TYPE_BOOLEAN,    "Horizontal Flip", 0, 1, 1, 0,                         0, NULL                        },
+    {V4L2_CID_VFLIP         ,    V4L2_CTRL_TYPE_BOOLEAN,      "Vertical Flip", 0, 1, 1, 0,                         0, NULL                        },
+    {AKVCAM_CID_SCALING     ,       V4L2_CTRL_TYPE_MENU,       "Scaling Mode", 0, 0, 1, 0,                         0, akvcam_controls_scaling_menu},
+    {AKVCAM_CID_ASPECT_RATIO,       V4L2_CTRL_TYPE_MENU,  "Aspect Ratio Mode", 0, 0, 1, 0,                         0, akvcam_controls_aspect_menu },
+    {AKVCAM_CID_SWAP_RGB    ,    V4L2_CTRL_TYPE_BOOLEAN, "Swap Read and Blue", 0, 1, 1, 0,                         0, NULL                        },
+    {0                      ,                         0,                   "", 0, 0, 0, 0,                         0, NULL                        },
 };
 
 size_t akvcam_controls_capture_count(void);
@@ -751,122 +737,6 @@ akvcam_menu_item_t akvcam_controls_aspect_menu(akvcam_controls_t controls,
         *int_menu = false;
 
     return aspect;
-}
-
-akvcam_menu_item_t akvcam_controls_capture_devices_menu(akvcam_controls_t controls,
-                                                        size_t *size,
-                                                        bool *int_menu)
-{
-    akvcam_devices_list_t devices;
-    akvcam_device_t device;
-    akvcam_list_element_t it = NULL;
-    static akvcam_menu_item capture_devices[64];
-    size_t i;
-
-    devices = akvcam_device_connected_devices_nr(controls->device);
-
-    if (size)
-        *size = akvcam_min(akvcam_list_size(devices), 1);
-
-    if (int_menu)
-        *int_menu = false;
-
-    memset(capture_devices, 0, 64 * sizeof(akvcam_menu_item));
-
-    for (i = 0; i < 64; i++) {
-        device = akvcam_list_next(devices, &it);
-
-        if (!it)
-            break;
-
-        snprintf((char *) capture_devices[i].name,
-                 32,
-                 "/dev/video%u",
-                 akvcam_device_num(device));
-    }
-
-    if (i < 1)
-        snprintf((char *) capture_devices[0].name, 32, "/dev/null");
-
-    return capture_devices;
-}
-
-akvcam_menu_item_t akvcam_controls_preferred_device_menu(akvcam_controls_t controls,
-                                                         size_t *size,
-                                                         bool *int_menu)
-{
-    akvcam_devices_list_t devices;
-    akvcam_device_t device;
-    akvcam_list_element_t it = NULL;
-    static akvcam_menu_item preferred_devices[65];
-    size_t i;
-
-    devices = akvcam_device_connected_devices_nr(controls->device);
-
-    if (size)
-        *size = akvcam_list_size(devices) + 1;
-
-    if (int_menu)
-        *int_menu = false;
-
-    memset(preferred_devices, 0, 65 * sizeof(akvcam_menu_item));
-    snprintf((char *) preferred_devices[0].name, 32, "None");
-
-    for (i = 1; i < 65; i++) {
-        device = akvcam_list_next(devices, &it);
-
-        if (!it)
-            break;
-
-        snprintf((char *) preferred_devices[i].name,
-                 32,
-                 "/dev/video%u",
-                 akvcam_device_num(device));
-    }
-
-    return preferred_devices;
-}
-
-akvcam_menu_item_t akvcam_controls_listeners_menu(akvcam_controls_t controls,
-                                                  size_t *size,
-                                                  bool *int_menu)
-{
-    akvcam_devices_list_t devices;
-    akvcam_device_t device;
-    akvcam_list_element_t it = NULL;
-    static akvcam_menu_item listeners[64];
-    size_t i;
-
-    devices = akvcam_device_connected_devices_nr(controls->device);
-
-    if (size)
-        *size = akvcam_min(akvcam_list_size(devices), 1);
-
-    if (int_menu)
-        *int_menu = false;
-
-    memset(listeners, 0, 64 * sizeof(akvcam_menu_item));
-
-    for (i = 0; i < 64;) {
-        device = akvcam_list_next(devices, &it);
-
-        if (!it)
-            break;
-
-        if (akvcam_device_streaming(device)
-            || akvcam_device_streaming_rw(device)) {
-            snprintf((char *) listeners[i].name,
-                     32,
-                     "/dev/video%u",
-                     akvcam_device_num(device));
-            i++;
-        }
-    }
-
-    if (i < 1)
-        snprintf((char *) listeners[0].name, 32, "/dev/null");
-
-    return listeners;
 }
 
 akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,

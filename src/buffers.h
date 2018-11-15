@@ -37,7 +37,6 @@ struct v4l2_event;
 akvcam_buffers_t akvcam_buffers_new(akvcam_device_t device);
 void akvcam_buffers_delete(akvcam_buffers_t *self);
 
-bool akvcam_buffers_enabled(akvcam_buffers_t self);
 int akvcam_buffers_allocate(akvcam_buffers_t self,
                             akvcam_node_t node,
                             struct v4l2_requestbuffers *params);

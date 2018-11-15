@@ -64,9 +64,7 @@ struct akvcam_buffers
     int gamma;
     int saturation;
     int hue;
-    __s32 preferred_device;
     bool gray;
-    bool enabled;
 };
 
 bool akvcam_buffers_is_supported(const akvcam_buffers_t self,
@@ -91,7 +89,6 @@ akvcam_buffers_t akvcam_buffers_new(akvcam_device_t device)
     self->device = device;
     self->rw_mode = akvcam_device_rw_mode(device);
     self->rw_buffer_size = AKVCAM_BUFFERS_MIN;
-    self->enabled = true;
     init_waitqueue_head(&self->frame_is_ready);
 
     controls = akvcam_device_controls_nr(device);
@@ -116,11 +113,6 @@ void akvcam_buffers_delete(akvcam_buffers_t *self)
     akvcam_object_free(&((*self)->self));
     kfree(*self);
     *self = NULL;
-}
-
-bool akvcam_buffers_enabled(akvcam_buffers_t self)
-{
-    return self->enabled;
 }
 
 int akvcam_buffers_allocate(akvcam_buffers_t self,
@@ -936,10 +928,6 @@ void akvcam_buffers_controls_changed(akvcam_buffers_t self,
         self->swap_rgb = event->u.ctrl.value;
         break;
 
-    case AKVCAM_CID_PREFERRED_DEVICE:
-        self->preferred_device = event->u.ctrl.value;
-        break;
-
     default:
         break;
     }
@@ -961,8 +949,6 @@ void akvcam_buffers_controls_changed(akvcam_buffers_t self,
         capture_buffers->scaling = self->scaling;
         capture_buffers->aspect_ratio = self->aspect_ratio;
         capture_buffers->swap_rgb = self->swap_rgb;
-        capture_buffers->enabled = self->preferred_device == 0
-                                 || (ssize_t) i == self->preferred_device - 1;
     }
 }
 

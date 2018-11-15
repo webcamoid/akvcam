@@ -16,20 +16,19 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef AKVCAM_CONTROLS_TYPES_H
-#define AKVCAM_CONTROLS_TYPES_H
+#ifndef AKVCAM_ATTRIBUTES_H
+#define AKVCAM_ATTRIBUTES_H
 
-#define AKVCAM_CONTROLS_FLAG_TRY    0x0
-#define AKVCAM_CONTROLS_FLAG_GET    0x1
-#define AKVCAM_CONTROLS_FLAG_SET    0x2
-#define AKVCAM_CONTROLS_FLAG_KERNEL 0x4
+#include "device_types.h"
 
-#define AKVCAM_CID_BASE             (V4L2_CID_USER_BASE | 0xe000)
-#define AKVCAM_CID_SCALING          (AKVCAM_CID_BASE + 0)
-#define AKVCAM_CID_ASPECT_RATIO     (AKVCAM_CID_BASE + 1)
-#define AKVCAM_CID_SWAP_RGB         (AKVCAM_CID_BASE + 2)
+struct akvcam_attributes;
+typedef struct akvcam_attributes *akvcam_attributes_t;
+struct device;
 
-struct akvcam_controls;
-typedef struct akvcam_controls *akvcam_controls_t;
+// public
+akvcam_attributes_t akvcam_attributes_new(akvcam_device_t device);
+void akvcam_attributes_delete(akvcam_attributes_t *self);
 
-#endif // AKVCAM_CONTROLS_TYPES_H
+void akvcam_attributes_set(akvcam_attributes_t self, struct device *dev);
+
+#endif // AKVCAM_ATTRIBUTES_H

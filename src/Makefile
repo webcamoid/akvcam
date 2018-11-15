@@ -15,6 +15,7 @@ endif
 obj-m += akvcam.o
 akvcam-objs := \
 	module.o \
+	attributes.o \
 	buffer.o \
 	buffers.o \
 	controls.o \

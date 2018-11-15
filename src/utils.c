@@ -61,7 +61,9 @@ const char *akvcam_string_from_ioctl(uint cmd)
         {UVCIOC_CTRL_MAP           , "UVCIOC_CTRL_MAP"           },
         {UVCIOC_CTRL_QUERY         , "UVCIOC_CTRL_QUERY"         },
         {VIDIOC_QUERYCAP           , "VIDIOC_QUERYCAP"           },
+#ifdef VIDIOC_RESERVED
         {VIDIOC_RESERVED           , "VIDIOC_RESERVED"           },
+#endif
         {VIDIOC_ENUM_FMT           , "VIDIOC_ENUM_FMT"           },
         {VIDIOC_G_FMT              , "VIDIOC_G_FMT"              },
         {VIDIOC_S_FMT              , "VIDIOC_S_FMT"              },
