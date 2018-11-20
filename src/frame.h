@@ -34,10 +34,10 @@ void akvcam_frame_copy(akvcam_frame_t self, const akvcam_frame_t other);
 akvcam_format_t akvcam_frame_format_nr(const akvcam_frame_t self);
 akvcam_format_t akvcam_frame_format(const akvcam_frame_t self);
 void *akvcam_frame_data(const akvcam_frame_t self);
-void *akvcam_frame_line(const akvcam_frame_t self, size_t plane, size_t i);
+void *akvcam_frame_line(const akvcam_frame_t self, size_t plane, size_t y);
 const void *akvcam_frame_const_line(const akvcam_frame_t self,
                                     size_t plane,
-                                    size_t i);
+                                    size_t y);
 size_t akvcam_frame_size(const akvcam_frame_t self);
 void akvcam_frame_resize(akvcam_frame_t self, size_t size);
 void akvcam_frame_clear(akvcam_frame_t self);

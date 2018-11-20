@@ -331,16 +331,16 @@ void *akvcam_frame_data(const akvcam_frame_t self)
     return self->data;
 }
 
-void *akvcam_frame_line(const akvcam_frame_t self, size_t plane, size_t i)
+void *akvcam_frame_line(const akvcam_frame_t self, size_t plane, size_t y)
 {
     return (char *) self->data
             + akvcam_format_offset(self->format, plane)
-            + i * akvcam_format_bypl(self->format, plane);
+            + y * akvcam_format_bypl(self->format, plane);
 }
 
-const void *akvcam_frame_const_line(const akvcam_frame_t self, size_t plane, size_t i)
+const void *akvcam_frame_const_line(const akvcam_frame_t self, size_t plane, size_t y)
 {
-    return akvcam_frame_line(self, plane, i);
+    return akvcam_frame_line(self, plane, y);
 }
 
 size_t akvcam_frame_size(const akvcam_frame_t self)
