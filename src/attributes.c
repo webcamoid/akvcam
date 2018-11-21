@@ -150,9 +150,9 @@ static ssize_t akvcam_attributes_connected_devices_show(struct device *dev,
     return (ssize_t) (PAGE_SIZE - space_left);
 }
 
-static ssize_t akvcam_attributes_listeners_show(struct device *dev,
-                                                struct device_attribute *attribute,
-                                                char *buffer)
+static ssize_t akvcam_attributes_streaming_devices_show(struct device *dev,
+                                                        struct device_attribute *attribute,
+                                                        char *buffer)
 {
     struct video_device *vdev = to_video_device(dev);
     akvcam_device_t device = video_get_drvdata(vdev);
@@ -306,7 +306,11 @@ static DEVICE_ATTR(connected_devices,
                    NULL);
 static DEVICE_ATTR(listeners,
                    S_IRUGO,
-                   akvcam_attributes_listeners_show,
+                   akvcam_attributes_streaming_devices_show,
+                   NULL);
+static DEVICE_ATTR(broadcasters,
+                   S_IRUGO,
+                   akvcam_attributes_streaming_devices_show,
                    NULL);
 static DEVICE_ATTR(brightness,
                    S_IRUGO | S_IWUSR,
@@ -357,6 +361,7 @@ static DEVICE_ATTR(swap_rgb,
 
 static struct attribute	*akvcam_attributes_capture[] = {
     &dev_attr_connected_devices.attr,
+    &dev_attr_broadcasters.attr,
     &dev_attr_brightness.attr,
     &dev_attr_contrast.attr,
     &dev_attr_saturation.attr,
