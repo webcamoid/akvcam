@@ -2,6 +2,7 @@ KERNEL_ROOT ?= /lib/modules/$(shell uname -r)
 KERNEL_DIR ?= $(KERNEL_ROOT)/build
 KERNEL_EXTRA ?= $(KERNEL_ROOT)/extra
 UNINSTALL = rm -vf
+PWD := $(shell pwd)
 
 HAVE_SPARSE := $(shell which sparse 2>/dev/null)
 SPARSE_MODE ?= 2
@@ -48,3 +49,4 @@ install:
 
 uninstall:
 	$(UNINSTALL) "$(DESTDIR)$(KERNEL_EXTRA)/akvcam.ko"
+	$(UNINSTALL) "$(DESTDIR)$(KERNEL_EXTRA)/akvcam.ko.xz"
