@@ -38,11 +38,6 @@ MODULE_PARM_DESC(config_file, "Full path to virtual cameras config file");
 
 static int __init akvcam_init(void)
 {
-    int result = request_module("videodev");
-
-    if (result)
-        return result;
-
     akvcam_log_set_level(loglevel);
     akvcam_settings_set_file(config_file);
 
