@@ -384,7 +384,7 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
 
     akvcam_list_delete(&modes);
 
-    if (!modes)
+    if (!mode)
         mode |= AKVCAM_RW_MODE_MMAP | AKVCAM_RW_MODE_USERPTR;
 
     formats = akvcam_driver_read_device_formats(settings, available_formats);
