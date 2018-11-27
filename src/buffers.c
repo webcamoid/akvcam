@@ -378,6 +378,12 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
 akvcam_buffers_queue_failed:
     spin_unlock(&self->slock);
 
+    if (!result
+        && akvcam_device_type(self->device) == AKVCAM_DEVICE_TYPE_OUTPUT
+        && buffer->memory == V4L2_MEMORY_MMAP) {
+        akvcam_buffers_process_frame(self, buffer);
+    }
+
     return result;
 }
 
