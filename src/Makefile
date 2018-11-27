@@ -1,4 +1,4 @@
-KERNEL_ROOT ?= /lib/modules/$(shell uname -r)
+KERNEL_ROOT ?= $(shell realpath /lib/modules/$(shell uname -r))
 KERNEL_DIR ?= $(KERNEL_ROOT)/build
 KERNEL_EXTRA ?= $(KERNEL_ROOT)/extra
 UNINSTALL = rm -vf
