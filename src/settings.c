@@ -145,7 +145,7 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
                        && strlen(element.key) > 0
                        && strlen(element.value) > 0) {
                 if (!current_group) {
-                    current_group = akvcam_strdup("*",
+                    current_group = akvcam_strdup("General",
                                                   AKVCAM_MEMORY_TYPE_VMALLOC);
                     tmp_map = akvcam_map_new();
                     akvcam_map_set_value(self->configs,
@@ -642,7 +642,7 @@ akvcam_string_map_t akvcam_settings_group_configs(const akvcam_settings_t self)
     if (self->current_group)
         group_configs = akvcam_map_value(self->configs, self->current_group);
     else
-        group_configs = akvcam_map_value(self->configs, "*");
+        group_configs = akvcam_map_value(self->configs, "General");
 
     return group_configs;
 }
