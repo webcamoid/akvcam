@@ -262,3 +262,13 @@ size_t akvcam_str_count(const char *str, char c)
 
     return count;
 }
+
+void akvcam_replace(char *str, char from, char to)
+{
+    if (!str)
+        return;
+
+    for (; *str; str++)
+        if (*str == from)
+            *str = to;
+}

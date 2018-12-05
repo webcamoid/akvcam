@@ -515,6 +515,7 @@ bool akvcam_settings_parse(const char *line, akvcam_settings_element_t element)
                                         0,
                                         (size_t) (pair_sep - line),
                                         AKVCAM_MEMORY_TYPE_VMALLOC);
+    akvcam_replace(element->key, '\\', '/');
 
     if (strlen(element->key) < 1) {
         akvcam_settings_element_free(element);

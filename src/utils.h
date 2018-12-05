@@ -95,5 +95,6 @@ char *akvcam_strip_str_sub(const char *str,
                            AKVCAM_MEMORY_TYPE type);
 char *akvcam_strip_move_str(char *str, AKVCAM_MEMORY_TYPE type);
 size_t akvcam_str_count(const char *str, char c);
+void akvcam_replace(char *str, char from, char to);
 
 #endif // AKVCAM_UTILS_H
