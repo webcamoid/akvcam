@@ -187,6 +187,41 @@ static ssize_t akvcam_attributes_streaming_devices_show(struct device *dev,
     return (ssize_t) (PAGE_SIZE - space_left);
 }
 
+static ssize_t akvcam_attributes_device_modes_show(struct device *dev,
+                                                   struct device_attribute *attribute,
+                                                   char *buffer)
+{
+    struct video_device *vdev = to_video_device(dev);
+    akvcam_device_t device = video_get_drvdata(vdev);
+    AKVCAM_RW_MODE mode = akvcam_device_rw_mode(device);
+    size_t space_left = PAGE_SIZE;
+    int bytes_written;
+
+    UNUSED(attribute);
+    memset(buffer, 0, PAGE_SIZE);
+
+    if (mode & AKVCAM_RW_MODE_READWRITE) {
+        bytes_written = snprintf(buffer, space_left, "rw\n");
+        buffer += bytes_written;
+        space_left -= (size_t) bytes_written;
+    }
+
+    if (mode & AKVCAM_RW_MODE_MMAP) {
+        bytes_written = snprintf(buffer, space_left, "mmap\n");
+        buffer += bytes_written;
+        space_left -= (size_t) bytes_written;
+    }
+
+    if (mode & AKVCAM_RW_MODE_USERPTR) {
+        bytes_written = snprintf(buffer, space_left, "usrptr\n");
+        buffer += bytes_written;
+        space_left -= (size_t) bytes_written;
+    }
+
+    return (ssize_t) (PAGE_SIZE - space_left);
+}
+
+
 static ssize_t akvcam_attributes_int_show(struct device *dev,
                                           struct device_attribute *attribute,
                                           char *buffer)
@@ -312,6 +347,10 @@ static DEVICE_ATTR(broadcasters,
                    S_IRUGO,
                    akvcam_attributes_streaming_devices_show,
                    NULL);
+static DEVICE_ATTR(modes,
+                   S_IRUGO,
+                   akvcam_attributes_device_modes_show,
+                   NULL);
 static DEVICE_ATTR(brightness,
                    S_IRUGO | S_IWUSR,
                    akvcam_attributes_int_show,
@@ -362,6 +401,7 @@ static DEVICE_ATTR(swap_rgb,
 static struct attribute	*akvcam_attributes_capture[] = {
     &dev_attr_connected_devices.attr,
     &dev_attr_broadcasters.attr,
+    &dev_attr_modes.attr,
     &dev_attr_brightness.attr,
     &dev_attr_contrast.attr,
     &dev_attr_saturation.attr,
@@ -388,6 +428,7 @@ static const struct attribute_group *akvcam_attributes_capture_groups[] = {
 static struct attribute	*akvcam_attributes_output[] = {
     &dev_attr_connected_devices.attr,
     &dev_attr_listeners.attr,
+    &dev_attr_modes.attr,
     &dev_attr_hflip.attr,
     &dev_attr_vflip.attr,
     &dev_attr_aspect_ratio.attr,
