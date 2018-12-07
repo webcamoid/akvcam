@@ -163,6 +163,11 @@ static ssize_t akvcam_node_read(struct file *filp,
 
     akpr_function();
     device = akvcam_device_from_file_nr(filp);
+
+    if (akvcam_device_type(device) != AKVCAM_DEVICE_TYPE_CAPTURE
+        || !(akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE))
+        return -EINVAL;
+
     buffers = akvcam_device_buffers_nr(device);
 
     if (akvcam_buffers_allocated(buffers))
@@ -199,6 +204,11 @@ static ssize_t akvcam_node_write(struct file *filp,
 
     akpr_function();
     device = akvcam_device_from_file_nr(filp);
+
+    if (akvcam_device_type(device) != AKVCAM_DEVICE_TYPE_OUTPUT
+        || !(akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE))
+        return -EINVAL;
+
     buffers = akvcam_device_buffers_nr(device);
 
     if (akvcam_buffers_allocated(buffers))

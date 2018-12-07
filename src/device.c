@@ -132,6 +132,9 @@ akvcam_device_t akvcam_device_new(const char *name,
             (akvcam_frame_written_proc) akvcam_device_frame_written;
     akvcam_buffers_set_frame_written_callback(self->buffers, frame_written);
 
+    // Preload deault frame otherwise it will not get loaded in RW mode.
+    akvcam_default_frame();
+
     return self;
 }
 
@@ -450,7 +453,7 @@ bool akvcam_device_prepare_frame(akvcam_device_t self)
     spin_unlock(&self->slock);
 
     if (!frame) {
-        if (default_frame) {
+        if (default_frame && akvcam_frame_size(default_frame) > 0) {
             frame = default_frame;
             akvcam_object_ref(AKVCAM_TO_OBJECT(frame));
         } else {
