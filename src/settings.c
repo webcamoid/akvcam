@@ -549,8 +549,10 @@ char *akvcam_settings_parse_string(char *str, bool move)
     size_t i;
     size_t j;
     size_t len = strlen(str);
-    char escape_k[] = "'\"?\\abfnrtv";
-    char escape_v[] = "'\"?\\\a\b\f\n\r\t\v";
+    size_t start;
+    size_t end;
+    char escape_k[] = "'\"?\\abfnrtv0";
+    char escape_v[] = "'\"?\\\a\b\f\n\r\t\v\0";
 
     if (len < 2) {
         if (move)
@@ -561,25 +563,19 @@ char *akvcam_settings_parse_string(char *str, bool move)
 
     c = str[0];
 
-    if (c != '"' && c != '\'') {
-        if (move)
-            return str;
-
-        return akvcam_strdup(str, AKVCAM_MEMORY_TYPE_VMALLOC);
+    if ((c == '"' || c == '\'') && str[len - 1] == c) {
+        start = 1;
+        end  = len - 1;
+    } else {
+        start = 0;
+        end  = len;
     }
 
-    if (str[len - 1] != c) {
-        if (move)
-            return str;
-
-        return akvcam_strdup(str, AKVCAM_MEMORY_TYPE_VMALLOC);
-    }
-
-    str_tmp = vzalloc(len + 1);
+    str_tmp = vzalloc(end - start + 1);
     hex[2] = 0;
     j = 0;
 
-    for (i = 1; i < len - 1; i++) {
+    for (i = start; i < end; i++) {
         if (str[i] == '\\' && i < len - 2) {
             key = strchr(escape_k, str[i + 1]);
 
@@ -607,6 +603,7 @@ char *akvcam_settings_parse_string(char *str, bool move)
 
     len = strlen(str_tmp);
     str_parsed = vmalloc(len + 1);
+
     str_parsed[len] = 0;
     memcpy(str_parsed, str_tmp, len);
     vfree(str_tmp);
