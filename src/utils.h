@@ -78,6 +78,8 @@ typedef enum
     AKVCAM_MEMORY_TYPE_VMALLOC,
 } AKVCAM_MEMORY_TYPE;
 
+struct timeval;
+
 typedef bool (*akvcam_are_equals_t)(const void *element_data,
                                     const void *data,
                                     size_t size);
@@ -96,5 +98,6 @@ char *akvcam_strip_str_sub(const char *str,
 char *akvcam_strip_move_str(char *str, AKVCAM_MEMORY_TYPE type);
 size_t akvcam_str_count(const char *str, char c);
 void akvcam_replace(char *str, char from, char to);
+void akvcam_get_timestamp(struct timeval *tv);
 
 #endif // AKVCAM_UTILS_H

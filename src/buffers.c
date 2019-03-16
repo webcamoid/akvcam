@@ -485,7 +485,7 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
 
     if (buf_type == V4L2_BUF_TYPE_VIDEO_OUTPUT
         || buf_type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-        do_gettimeofday(&v4l2_buff->timestamp);
+        akvcam_get_timestamp(&v4l2_buff->timestamp);
         v4l2_buff->sequence = self->sequence;
         self->sequence++;
     }
@@ -726,7 +726,7 @@ bool akvcam_buffers_write_frame(akvcam_buffers_t self,
             if (data && length > 0)
                 memcpy(akvcam_buffer_data(buffer), data, length);
 
-            do_gettimeofday(&v4l2_buff->timestamp);
+            akvcam_get_timestamp(&v4l2_buff->timestamp);
             v4l2_buff->sequence = self->sequence;
             v4l2_buff->flags |= V4L2_BUF_FLAG_DONE;
             ok = true;

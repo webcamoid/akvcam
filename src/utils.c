@@ -272,3 +272,11 @@ void akvcam_replace(char *str, char from, char to)
         if (*str == from)
             *str = to;
 }
+
+void akvcam_get_timestamp(struct timeval *tv)
+{
+    struct timespec ts;
+    ktime_get_ts(&ts);
+    tv->tv_sec = ts.tv_sec;
+    tv->tv_usec = ts.tv_nsec / NSEC_PER_USEC;
+}

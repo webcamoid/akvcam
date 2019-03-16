@@ -9,9 +9,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v3.16.62
-      - KERNEL_VERSION=3.16.62-031662
-      - KERNEL_VERSION_C=201812170533
+      - REPOSITORY=v3.16.63
+      - KERNEL_VERSION=3.16.63-031663
+      - KERNEL_VERSION_C=201902112033
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -20,9 +20,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v3.18.130
-      - KERNEL_VERSION=3.18.130-0318130
-      - KERNEL_VERSION_C=201812171049
+      - REPOSITORY=v3.18.136
+      - KERNEL_VERSION=3.18.136-0318136
+      - KERNEL_VERSION_C=201902230608
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -31,9 +31,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.4.167
-      - KERNEL_VERSION=4.4.167-0404167
-      - KERNEL_VERSION_C=201812130444
+      - REPOSITORY=v4.4.176
+      - KERNEL_VERSION=4.4.176-0404176
+      - KERNEL_VERSION_C=201902230445
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -42,9 +42,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.9.146
-      - KERNEL_VERSION=4.9.146-0409146
-      - KERNEL_VERSION_C=201812170932
+      - REPOSITORY=v4.9.163
+      - KERNEL_VERSION=4.9.163-0409163
+      - KERNEL_VERSION_C=201903131846
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -53,9 +53,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.14.89
-      - KERNEL_VERSION=4.14.89-041489
-      - KERNEL_VERSION_C=201812170432
+      - REPOSITORY=v4.14.106
+      - KERNEL_VERSION=4.14.106-0414106
+      - KERNEL_VERSION_C=201903131950
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
       - export USE_QEMU=1
@@ -66,9 +66,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=disco
-      - REPOSITORY=v4.18.20
-      - KERNEL_VERSION=4.18.20-041820
-      - KERNEL_VERSION_C=201812030624
+      - REPOSITORY=v4.19.29
+      - KERNEL_VERSION=4.19.29-041929
+      - KERNEL_VERSION_C=201903132331
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
   - os: linux
@@ -78,9 +78,33 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=disco
-      - REPOSITORY=v4.19.10
-      - KERNEL_VERSION=4.19.10-041910
-      - KERNEL_VERSION_C=201812170433
+      - REPOSITORY=v4.20.16
+      - KERNEL_VERSION=4.20.16-042016
+      - KERNEL_VERSION_C=201903132232
+      - UNSIGNED_IMG=1
+      - NEED_MODULES=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=disco
+      - REPOSITORY=v5.0
+      - KERNEL_VERSION=5.0.0-050000
+      - KERNEL_VERSION_C=201903032031
+      - UNSIGNED_IMG=1
+      - NEED_MODULES=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=disco
+      - REPOSITORY=v5.0.2
+      - KERNEL_VERSION=5.0.2-050002
+      - KERNEL_VERSION_C=201903131832
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
 
