@@ -821,8 +821,8 @@ akvcam_frame_t akvcam_buffers_frame_apply_adjusts(const akvcam_buffers_t self,
     bool horizontal_flip = self->horizontal_flip != self->horizontal_mirror;
     bool vertical_flip = self->vertical_flip != self->vertical_mirror;
 
-    akvcam_format_t device_format = akvcam_device_format_nr(self->device);
     akvcam_format_t frame_format = akvcam_frame_format_nr(frame);
+    akvcam_format_t device_format = akvcam_device_format_nr(self->device);
 
     __u32 fourcc = akvcam_format_fourcc(device_format);
     size_t iwidth = akvcam_format_width(frame_format);

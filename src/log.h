@@ -56,7 +56,7 @@
     }
 
 #define akpr_function() \
-    akpr_debug("%s()\n", __FUNCTION__);
+    akpr_debug("%s()\n", __FUNCTION__)
 
 int akvcam_log_level(void);
 void akvcam_log_set_level(int level);

@@ -37,6 +37,7 @@ struct akvcam_format
     size_t width;
     size_t height;
     struct v4l2_fract frame_rate;
+    char str[1024];
 };
 
 typedef size_t (*akvcam_plane_offset_t)(size_t plane, size_t width, size_t height);
@@ -248,6 +249,21 @@ void akvcam_format_clear(akvcam_format_t self)
     self->frame_rate.denominator = 0;
 }
 
+const char *akvcam_format_to_string(const akvcam_format_t self)
+{
+    memset(self->str, 0, 1024);
+    snprintf(self->str,
+             1024,
+             "%s %zux%zu %u/%u Hz",
+             akvcam_format_string_from_fourcc(self->fourcc),
+             self->width,
+             self->height,
+             self->frame_rate.numerator,
+             self->frame_rate.denominator);
+
+    return self->str;
+}
+
 size_t akvcam_format_sizeof(void)
 {
     return sizeof(struct akvcam_format);
@@ -294,7 +310,7 @@ akvcam_format_t akvcam_format_nearest_nr(akvcam_formats_list_t formats,
     ssize_t diff_fps;
     size_t r;
     size_t s;
-    memset(&s, 0xff, sizeof(__u64));
+    memset(&s, 0xff, sizeof(size_t));
 
     for (;;) {
         temp_format = akvcam_list_next(formats, &element);
@@ -302,16 +318,16 @@ akvcam_format_t akvcam_format_nearest_nr(akvcam_formats_list_t formats,
         if (!element)
             break;
 
-        diff_fourcc = akvcam_format_fourcc(temp_format)
-                    - akvcam_format_fourcc(format);
+        diff_fourcc = (ssize_t) akvcam_format_fourcc(temp_format)
+                    - (ssize_t) akvcam_format_fourcc(format);
         diff_width = (ssize_t) akvcam_format_width(temp_format)
                    - (ssize_t) akvcam_format_width(format);
         diff_height = (ssize_t) akvcam_format_height(temp_format)
                     - (ssize_t) akvcam_format_height(format);
-        diff_fps = akvcam_format_frame_rate(temp_format)->numerator
-                 * akvcam_format_frame_rate(format)->denominator
-                 - akvcam_format_frame_rate(format)->numerator
-                 * akvcam_format_frame_rate(temp_format)->denominator;
+        diff_fps = (ssize_t) (akvcam_format_frame_rate(temp_format)->numerator
+                              * akvcam_format_frame_rate(format)->denominator)
+                 - (ssize_t) (akvcam_format_frame_rate(format)->numerator
+                              * akvcam_format_frame_rate(temp_format)->denominator);
 
         r = (size_t) (diff_fourcc * diff_fourcc)
           + (size_t) (diff_width * diff_width)

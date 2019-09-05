@@ -51,6 +51,7 @@ size_t akvcam_format_offset(const akvcam_format_t self, size_t plane);
 size_t akvcam_format_plane_size(const akvcam_format_t self, size_t plane);
 bool akvcam_format_is_valid(const akvcam_format_t self);
 void akvcam_format_clear(akvcam_format_t self);
+const char *akvcam_format_to_string(const akvcam_format_t self);
 
 // public static
 size_t akvcam_format_sizeof(void);

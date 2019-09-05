@@ -243,7 +243,7 @@ akvcam_formats_list_t akvcam_driver_read_format(akvcam_settings_t settings)
         || akvcam_list_empty(widths)
         || akvcam_list_empty(heights)
         || akvcam_list_empty(frame_rates)) {
-        akpr_err("Error reading formats\n");
+        akpr_err("Error reading formats\n")
 
         goto akvcam_driver_read_format_failed;
     }
@@ -473,7 +473,7 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
         n_nodes = akvcam_list_size(connections);
 
         if (n_nodes < 2) {
-            akpr_warning("No valid connection defined\n");
+            akpr_warning("No valid connection defined\n")
             akvcam_list_delete(&connections);
 
             continue;
@@ -490,13 +490,13 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
             index = 0;
 
             if (kstrtou32(index_str, 10, (u32 *) &index) != 0) {
-                akpr_err("No valid connection with: %s\n", index_str);
+                akpr_err("No valid connection with: %s\n", index_str)
 
                 break;
             }
 
             if (index < 1 || index > akvcam_list_size(devices)) {
-                akpr_err("Out of range connection index: %u\n", index);
+                akpr_err("Out of range connection index: %u\n", index)
 
                 break;
             }
@@ -505,14 +505,14 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
 
             if (j == 0
                 && akvcam_device_type(device) != AKVCAM_DEVICE_TYPE_OUTPUT) {
-                akpr_err("Index %u is not a output device\n", index);
+                akpr_err("Index %u is not a output device\n", index)
 
                 break;
             }
 
             if (j != 0
                 && akvcam_device_type(device) != AKVCAM_DEVICE_TYPE_CAPTURE) {
-                akpr_err("Index %u is not a capture device\n", index);
+                akpr_err("Index %u is not a capture device\n", index)
 
                 break;
             }
@@ -553,7 +553,7 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
                                      "because %u was already connected\n",
                                      connections_index[0] - 1,
                                      connections_index[j] - 1,
-                                     connections_index[j] - 1);
+                                     connections_index[j] - 1)
                     }
                 }
             }
@@ -587,13 +587,13 @@ void akvcam_driver_print_devices(void)
     if (!akvcam_driver_global
         || !akvcam_driver_global->devices
         || akvcam_list_empty(akvcam_driver_global->devices)) {
-        akpr_warning("No devices found\n");
+        akpr_warning("No devices found\n")
 
         return;
     }
 
-    akpr_info("Virtual Devices:\n");
-    akpr_info("\n");
+    akpr_info("Virtual Devices:\n")
+    akpr_info("\n")
 
     for (;;) {
         device = akvcam_list_next(akvcam_driver_global->devices, &it);
@@ -601,36 +601,36 @@ void akvcam_driver_print_devices(void)
         if (!it)
             break;
 
-        akpr_info("Device: /dev/video%d\n", akvcam_device_num(device));
-        akpr_info("\tDescription: %s\n", akvcam_device_description(device));
+        akpr_info("Device: /dev/video%d\n", akvcam_device_num(device))
+        akpr_info("\tDescription: %s\n", akvcam_device_description(device))
 
         if (akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_OUTPUT) {
-            akpr_info("\tType: Output\n");
+            akpr_info("\tType: Output\n")
         } else {
-            akpr_info("\tType: Capture\n");
+            akpr_info("\tType: Capture\n")
         }
 
-        akpr_info("\tModes:\n");
+        akpr_info("\tModes:\n")
         mode = akvcam_device_rw_mode(device);
 
         if (mode & AKVCAM_RW_MODE_READWRITE)
-            akpr_info("\t\tReadWrite\n");
+            akpr_info("\t\tReadWrite\n")
 
         if (mode & AKVCAM_RW_MODE_MMAP)
-            akpr_info("\t\tMMap\n");
+            akpr_info("\t\tMMap\n")
 
         if (mode & AKVCAM_RW_MODE_USERPTR)
-            akpr_info("\t\tUserPtr\n");
+            akpr_info("\t\tUserPtr\n")
 
         if (mode & AKVCAM_RW_MODE_READWRITE) {
-            akpr_info("\tUser Controls: No\n");
+            akpr_info("\tUser Controls: No\n")
         } else {
-            akpr_info("\tUser Controls: Yes\n");
+            akpr_info("\tUser Controls: Yes\n")
         }
 
         akvcam_driver_print_formats(device);
         akvcam_driver_print_connections(device);
-        akpr_info("\n");
+        akpr_info("\n")
     }
 }
 
@@ -644,12 +644,12 @@ void akvcam_driver_print_formats(const akvcam_device_t device)
     formats = akvcam_device_formats_nr(device);
 
     if (akvcam_list_empty(formats)) {
-        akpr_warning("No formats defined\n");
+        akpr_warning("No formats defined\n")
 
         return;
     }
 
-    akpr_info("\tFormats:\n");
+    akpr_info("\tFormats:\n")
 
     for (;;) {
         format = akvcam_list_next(formats, &it);
@@ -658,12 +658,7 @@ void akvcam_driver_print_formats(const akvcam_device_t device)
             break;
 
         frame_rate = akvcam_format_frame_rate(format);
-        akpr_info("\t\t%s %zux%zu %u/%u Hz\n",
-                  akvcam_format_fourcc_str(format),
-                  akvcam_format_width(format),
-                  akvcam_format_height(format),
-                  frame_rate->numerator,
-                  frame_rate->denominator);
+        akpr_info("\t\t%s\n", akvcam_format_to_string(format))
     }
 }
 
@@ -676,12 +671,12 @@ void akvcam_driver_print_connections(const akvcam_device_t device)
     devices = akvcam_device_connected_devices_nr(device);
 
     if (akvcam_list_empty(devices)) {
-        akpr_warning("No devices connected\n");
+        akpr_warning("No devices connected\n")
 
         return;
     }
 
-    akpr_info("\tConnections:\n");
+    akpr_info("\tConnections:\n")
 
     for (;;) {
         connected_device = akvcam_list_next(devices, &it);
@@ -689,6 +684,6 @@ void akvcam_driver_print_connections(const akvcam_device_t device)
         if (!it)
             break;
 
-        akpr_info("\t\t/dev/video%u\n", akvcam_device_num(connected_device));
+        akpr_info("\t\t/dev/video%u\n", akvcam_device_num(connected_device))
     }
 }
