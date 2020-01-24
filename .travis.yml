@@ -9,9 +9,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v3.16.73
-      - KERNEL_VERSION=3.16.73-031673
-      - KERNEL_VERSION_C=201908201731
+      - REPOSITORY=v3.16.81
+      - KERNEL_VERSION=3.16.81-031681
+      - KERNEL_VERSION_C=202001110932
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -20,9 +20,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.4.190
-      - KERNEL_VERSION=4.4.190-0404190
-      - KERNEL_VERSION_C=201908250946
+      - REPOSITORY=v4.4.211
+      - KERNEL_VERSION=4.4.211-0404211
+      - KERNEL_VERSION_C=202001230339
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -31,9 +31,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.9.190
-      - KERNEL_VERSION=4.9.190-0409190
-      - KERNEL_VERSION_C=201908250934
+      - REPOSITORY=v4.9.211
+      - KERNEL_VERSION=4.9.211-0409211
+      - KERNEL_VERSION_C=202001230833
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -42,9 +42,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.14.141
-      - KERNEL_VERSION=4.14.141-0414141
-      - KERNEL_VERSION_C=201908290342
+      - REPOSITORY=v4.14.167
+      - KERNEL_VERSION=4.14.167-0414167
+      - KERNEL_VERSION_C=202001230928
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
       - export USE_QEMU=1
@@ -55,9 +55,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=disco
-      - REPOSITORY=v4.19.69
-      - KERNEL_VERSION=4.19.69-041969
-      - KERNEL_VERSION_C=201908290733
+      - REPOSITORY=v4.19.98
+      - KERNEL_VERSION=4.19.98-041998
+      - KERNEL_VERSION_C=202001230334
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
   - os: linux
@@ -66,10 +66,10 @@ matrix:
       - docker
     compiler: gcc
     env:
-      - SYSTEM_VERSION=eoan
-      - REPOSITORY=v5.2.11
-      - KERNEL_VERSION=5.2.11-050211
-      - KERNEL_VERSION_C=201908290731
+      - SYSTEM_VERSION=focal
+      - REPOSITORY=v5.4.14
+      - KERNEL_VERSION=5.4.14-050414
+      - KERNEL_VERSION_C=202001230832
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
 
