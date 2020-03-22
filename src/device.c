@@ -71,6 +71,7 @@ void akvcam_device_frame_written(akvcam_device_t self,
                                  const akvcam_frame_t frame);
 int akvcam_device_send_frames(akvcam_device_t self);
 akvcam_frame_t akvcam_default_frame(void);
+void akvcam_device_set_device_caps(AKVCAM_DEVICE_TYPE type, struct video_device *vdev);
 
 akvcam_device_t akvcam_device_new(const char *name,
                                   const char *description,
@@ -118,6 +119,8 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->vdev->tvnorms = V4L2_STD_ALL;
     self->vdev->release = video_device_release_empty;
     akvcam_attributes_set(self->attributes, &self->vdev->dev);
+    akvcam_device_set_device_caps(self->type, self->vdev);
+
     video_set_drvdata(self->vdev, self);
     self->is_registered = false;
     self->buffers = akvcam_buffers_new(self);
@@ -191,6 +194,16 @@ void akvcam_device_unregister(akvcam_device_t self)
     video_unregister_device(self->vdev);
     v4l2_device_unregister(&self->v4l2_dev);
     self->is_registered = false;
+}
+
+void akvcam_device_set_device_caps(AKVCAM_DEVICE_TYPE type, struct video_device *vdev) {
+    #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
+        if (type == AKVCAM_DEVICE_TYPE_OUTPUT) {
+            vdev->device_caps = V4L2_CAP_VIDEO_OUTPUT | V4L2_CAP_READWRITE | V4L2_CAP_STREAMING;
+        } else {
+            vdev->device_caps = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_READWRITE | V4L2_CAP_STREAMING;
+        }
+    #endif
 }
 
 u16 akvcam_device_num(const akvcam_device_t self)
