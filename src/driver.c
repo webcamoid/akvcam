@@ -345,7 +345,6 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
     char *description;
     akvcam_formats_list_t formats;
     akvcam_buffers_t buffers;
-    bool multiplanar;
 
     type = strcmp(akvcam_settings_value(settings, "type"),
                   "output") == 0? AKVCAM_DEVICE_TYPE_OUTPUT:
@@ -396,15 +395,17 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
         return NULL;
     }
 
-    multiplanar = akvcam_format_have_multiplanar(formats);
-    device = akvcam_device_new("akvcam-device", description, type, mode);
+    device = akvcam_device_new("akvcam-device",
+                               description,
+                               type,
+                               mode,
+                               akvcam_format_have_multiplanar(formats));
     akvcam_list_append(akvcam_device_formats_nr(device), formats);
     akvcam_format_copy(akvcam_device_format_nr(device),
                        akvcam_list_front(formats));
     buffers = akvcam_device_buffers_nr(device);
     akvcam_buffers_resize_rw(buffers, AKVCAM_BUFFERS_MIN);
     akvcam_list_delete(&formats);
-    akvcam_device_set_multiplanar(device, multiplanar);
 
     if (!akvcam_device_v4l2_type(device))
         akvcam_device_delete(&device);

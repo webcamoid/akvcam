@@ -33,7 +33,8 @@ struct file;
 akvcam_device_t akvcam_device_new(const char *name,
                                   const char *description,
                                   AKVCAM_DEVICE_TYPE type,
-                                  AKVCAM_RW_MODE rw_mode);
+                                  AKVCAM_RW_MODE rw_mode,
+                                  bool multiplanar);
 void akvcam_device_delete(akvcam_device_t *self);
 
 bool akvcam_device_register(akvcam_device_t self);
@@ -68,6 +69,7 @@ akvcam_devices_list_t akvcam_device_connected_devices_nr(const akvcam_device_t s
 akvcam_devices_list_t akvcam_device_connected_devices(const akvcam_device_t self);
 bool akvcam_device_multiplanar(const akvcam_device_t self);
 void akvcam_device_set_multiplanar(akvcam_device_t self, bool multiplanar);
+__u32 akvcam_device_caps(const akvcam_device_t self);
 
 // public static
 size_t akvcam_device_sizeof(void);

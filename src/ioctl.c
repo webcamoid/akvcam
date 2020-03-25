@@ -268,7 +268,7 @@ int akvcam_ioctl_do(akvcam_ioctl_t self,
 int akvcam_ioctls_querycap(akvcam_node_t node,
                            struct v4l2_capability *capability)
 {
-    __u32 capabilities = 0;
+    __u32 caps = 0;
     akvcam_device_t device;
 
     akpr_function()
@@ -282,35 +282,9 @@ int akvcam_ioctls_querycap(akvcam_node_t node,
              32, "platform:akvcam-%d", akvcam_device_num(device));
     capability->version = akvcam_driver_version();
 
-    switch (akvcam_device_v4l2_type(device)) {
-    case V4L2_BUF_TYPE_VIDEO_CAPTURE:
-        capabilities = V4L2_CAP_VIDEO_CAPTURE;
-        break;
-
-    case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
-        capabilities = V4L2_CAP_VIDEO_CAPTURE_MPLANE;
-        break;
-
-    case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-        capabilities = V4L2_CAP_VIDEO_OUTPUT;
-        break;
-
-    default:
-        capabilities = V4L2_CAP_VIDEO_OUTPUT_MPLANE;
-        break;
-    }
-
-    if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE)
-        capabilities |= V4L2_CAP_READWRITE;
-
-    if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_MMAP
-        || akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_USERPTR)
-        capabilities |= V4L2_CAP_STREAMING;
-
-    capabilities |= V4L2_CAP_EXT_PIX_FORMAT;
-
-    capability->capabilities = capabilities | V4L2_CAP_DEVICE_CAPS;
-    capability->device_caps = capabilities;
+    caps = akvcam_device_caps(device);
+    capability->capabilities = caps | V4L2_CAP_DEVICE_CAPS;
+    capability->device_caps = caps;
 
     return 0;
 }

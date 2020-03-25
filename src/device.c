@@ -75,7 +75,8 @@ akvcam_frame_t akvcam_default_frame(void);
 akvcam_device_t akvcam_device_new(const char *name,
                                   const char *description,
                                   AKVCAM_DEVICE_TYPE type,
-                                  AKVCAM_RW_MODE rw_mode)
+                                  AKVCAM_RW_MODE rw_mode,
+                                  bool multiplanar)
 {
     akvcam_controls_changed_callback controls_changed;
     akvcam_frame_ready_callback frame_ready;
@@ -86,6 +87,7 @@ akvcam_device_t akvcam_device_new(const char *name,
                                    self,
                                    (akvcam_deleter_t) akvcam_device_delete);
     self->type = type;
+    self->multiplanar = multiplanar;
     self->description = akvcam_strdup(description, AKVCAM_MEMORY_TYPE_KMALLOC);
     self->formats = akvcam_list_new();
     self->format = akvcam_format_new(0, 0, 0, NULL);
@@ -118,6 +120,11 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->vdev->tvnorms = V4L2_STD_ALL;
     self->vdev->release = video_device_release_empty;
     akvcam_attributes_set(self->attributes, &self->vdev->dev);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
+    self->vdev->device_caps = akvcam_device_caps(self);
+#endif
+
     video_set_drvdata(self->vdev, self);
     self->is_registered = false;
     self->buffers = akvcam_buffers_new(self);
@@ -488,7 +495,41 @@ bool akvcam_device_multiplanar(const akvcam_device_t self)
 
 void akvcam_device_set_multiplanar(akvcam_device_t self, bool multiplanar)
 {
-    self->multiplanar =  multiplanar;
+    self->multiplanar = multiplanar;
+}
+
+__u32 akvcam_device_caps(const akvcam_device_t self)
+{
+    __u32 caps = 0;
+
+    switch (akvcam_device_v4l2_type(self)) {
+    case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+        caps = V4L2_CAP_VIDEO_CAPTURE;
+        break;
+
+    case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
+        caps = V4L2_CAP_VIDEO_CAPTURE_MPLANE;
+        break;
+
+    case V4L2_BUF_TYPE_VIDEO_OUTPUT:
+        caps = V4L2_CAP_VIDEO_OUTPUT;
+        break;
+
+    default:
+        caps = V4L2_CAP_VIDEO_OUTPUT_MPLANE;
+        break;
+    }
+
+    if (self->rw_mode & AKVCAM_RW_MODE_READWRITE)
+        caps |= V4L2_CAP_READWRITE;
+
+    if (self->rw_mode & AKVCAM_RW_MODE_MMAP
+        || self->rw_mode & AKVCAM_RW_MODE_USERPTR)
+        caps |= V4L2_CAP_STREAMING;
+
+    caps |= V4L2_CAP_EXT_PIX_FORMAT;
+
+    return caps;
 }
 
 int akvcam_device_send_frames(akvcam_device_t self)
