@@ -276,7 +276,7 @@ void akvcam_replace(char *str, char from, char to)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
 void akvcam_get_timespec(struct timespec *tv)
 {
-    ktime_get_ts(&tv);
+    ktime_get_ts(tv);
 }
 #else
 void akvcam_get_timespec(struct __kernel_timespec *tv)
