@@ -21,7 +21,6 @@
 #include <linux/random.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
-#include <linux/videodev2.h>
 #include <media/v4l2-device.h>
 
 #include "device.h"
@@ -37,6 +36,10 @@
 #include "node.h"
 #include "object.h"
 #include "settings.h"
+
+#ifndef V4L2_CAP_EXT_PIX_FORMAT
+#define V4L2_CAP_EXT_PIX_FORMAT 0x00200000
+#endif
 
 struct akvcam_device
 {
