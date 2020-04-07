@@ -78,7 +78,13 @@ typedef enum
     AKVCAM_MEMORY_TYPE_VMALLOC,
 } AKVCAM_MEMORY_TYPE;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
+struct timespec;
 struct timeval;
+#else
+struct __kernel_timespec;
+struct __kernel_v4l2_timeval;
+#endif
 
 typedef bool (*akvcam_are_equals_t)(const void *element_data,
                                     const void *data,
@@ -98,6 +104,16 @@ char *akvcam_strip_str_sub(const char *str,
 char *akvcam_strip_move_str(char *str, AKVCAM_MEMORY_TYPE type);
 size_t akvcam_str_count(const char *str, char c);
 void akvcam_replace(char *str, char from, char to);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
+void akvcam_get_timespec(struct timespec *tv);
+#else
+void akvcam_get_timespec(struct __kernel_timespec *tv);
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
 void akvcam_get_timestamp(struct timeval *tv);
+#else
+void akvcam_get_timestamp(struct __kernel_v4l2_timeval *tv);
+#endif
 
 #endif // AKVCAM_UTILS_H

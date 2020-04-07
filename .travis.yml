@@ -9,9 +9,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v3.16.81
-      - KERNEL_VERSION=3.16.81-031681
-      - KERNEL_VERSION_C=202001110932
+      - REPOSITORY=v3.16.82
+      - KERNEL_VERSION=3.16.82-031682
+      - KERNEL_VERSION_C=202002112136
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -20,9 +20,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.4.211
-      - KERNEL_VERSION=4.4.211-0404211
-      - KERNEL_VERSION_C=202001230339
+      - REPOSITORY=v4.4.218
+      - KERNEL_VERSION=4.4.218-0404218
+      - KERNEL_VERSION_C=202004021841
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -31,9 +31,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.9.211
-      - KERNEL_VERSION=4.9.211-0409211
-      - KERNEL_VERSION_C=202001230833
+      - REPOSITORY=v4.9.218
+      - KERNEL_VERSION=4.9.218-0409218
+      - KERNEL_VERSION_C=202004021416
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -42,9 +42,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.14.167
-      - KERNEL_VERSION=4.14.167-0414167
-      - KERNEL_VERSION_C=202001230928
+      - REPOSITORY=v4.14.175
+      - KERNEL_VERSION=4.14.175-0414175
+      - KERNEL_VERSION_C=202004021211
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
       - export USE_QEMU=1
@@ -55,9 +55,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=disco
-      - REPOSITORY=v4.19.98
-      - KERNEL_VERSION=4.19.98-041998
-      - KERNEL_VERSION_C=202001230334
+      - REPOSITORY=v4.19.114
+      - KERNEL_VERSION=4.19.114-0419114
+      - KERNEL_VERSION_C=202004021037
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
   - os: linux
@@ -67,9 +67,33 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=focal
-      - REPOSITORY=v5.4.14
-      - KERNEL_VERSION=5.4.14-050414
-      - KERNEL_VERSION_C=202001230832
+      - REPOSITORY=v5.4.30
+      - KERNEL_VERSION=5.4.30-050430
+      - KERNEL_VERSION_C=202004021433
+      - UNSIGNED_IMG=1
+      - NEED_MODULES=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=focal
+      - REPOSITORY=v5.5.15
+      - KERNEL_VERSION=5.5.15-050515
+      - KERNEL_VERSION_C=202004021032
+      - UNSIGNED_IMG=1
+      - NEED_MODULES=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=focal
+      - REPOSITORY=v5.6.2
+      - KERNEL_VERSION=5.6.2-050602
+      - KERNEL_VERSION_C=202004020822
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
 

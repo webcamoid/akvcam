@@ -273,6 +273,22 @@ void akvcam_replace(char *str, char from, char to)
             *str = to;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
+void akvcam_get_timespec(struct timespec *tv)
+{
+    ktime_get_ts(&tv);
+}
+#else
+void akvcam_get_timespec(struct __kernel_timespec *tv)
+{
+    struct timespec64 ts;
+    ktime_get_ts64(&ts);
+    tv->tv_sec = ts.tv_sec;
+    tv->tv_nsec = ts.tv_nsec;
+}
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
 void akvcam_get_timestamp(struct timeval *tv)
 {
     struct timespec ts;
@@ -280,3 +296,12 @@ void akvcam_get_timestamp(struct timeval *tv)
     tv->tv_sec = ts.tv_sec;
     tv->tv_usec = ts.tv_nsec / NSEC_PER_USEC;
 }
+#else
+void akvcam_get_timestamp(struct __kernel_v4l2_timeval *tv)
+{
+    struct timespec64 ts;
+    ktime_get_ts64(&ts);
+    tv->tv_sec = ts.tv_sec;
+    tv->tv_usec = ts.tv_nsec / NSEC_PER_USEC;
+}
+#endif

@@ -153,7 +153,7 @@ bool akvcam_events_enqueue(akvcam_events_t self,
 
     qevent = akvcam_rbuffer_queue(self->events, event);
     qevent->sequence = self->sequence++;
-    ktime_get_ts(&qevent->timestamp);
+    akvcam_get_timespec(&qevent->timestamp);
     memset(&qevent->reserved, 0, 8 * sizeof(__u32));
 
     // Inform about the new event.
