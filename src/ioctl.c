@@ -39,10 +39,6 @@
 #define DEFAULT_COLORSPACE V4L2_COLORSPACE_RAW
 #endif
 
-#ifndef V4L2_CAP_EXT_PIX_FORMAT
-#define V4L2_CAP_EXT_PIX_FORMAT 0x00200000
-#endif
-
 #define AKVCAM_HANDLER(cmd, proc, arg_type) \
     {cmd, (akvcam_proc_t) proc, sizeof(arg_type)}
 
