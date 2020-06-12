@@ -295,6 +295,7 @@ static int akvcam_node_release(struct file *filp)
     if (!it)
         return -ENOTTY;
 
+    akvcam_device_set_streaming(device, false);
     akvcam_device_set_streaming_rw(device, false);
     akvcam_list_erase(nodes, it);
 
