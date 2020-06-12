@@ -41,6 +41,10 @@
 #define V4L2_CAP_EXT_PIX_FORMAT 0x00200000
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 7, 0)
+#define VFL_TYPE_VIDEO VFL_TYPE_GRABBER
+#endif
+
 struct akvcam_device
 {
     akvcam_object_t self;
@@ -116,7 +120,7 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->vdev = video_device_alloc();
     snprintf(self->vdev->name, 32, "%s", name);
     self->vdev->v4l2_dev = &self->v4l2_dev;
-    self->vdev->vfl_type = VFL_TYPE_GRABBER;
+    self->vdev->vfl_type = VFL_TYPE_VIDEO;
     self->vdev->vfl_dir =
             type == AKVCAM_DEVICE_TYPE_OUTPUT? VFL_DIR_TX: VFL_DIR_RX;
     self->vdev->minor = -1;
@@ -182,7 +186,7 @@ bool akvcam_device_register(akvcam_device_t self)
     result = v4l2_device_register(NULL, &self->v4l2_dev);
 
     if (!result) {
-        result = video_register_device(self->vdev, VFL_TYPE_GRABBER, -1);
+        result = video_register_device(self->vdev, VFL_TYPE_VIDEO, -1);
 
         if (result)
             v4l2_device_unregister(&self->v4l2_dev);
