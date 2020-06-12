@@ -65,6 +65,7 @@ struct akvcam_device
     AKVCAM_DEVICE_TYPE type;
     AKVCAM_RW_MODE rw_mode;
     enum v4l2_priority priority;
+    int32_t videonr;
     bool multiplanar;
     bool is_registered;
     bool streaming;
@@ -109,6 +110,7 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->nodes = akvcam_list_new();
     self->priority_node = NULL;
     self->rw_mode = rw_mode;
+    self->videonr = -1;
     self->priority = V4L2_PRIORITY_DEFAULT;
     spin_lock_init(&self->slock);
 
@@ -186,7 +188,9 @@ bool akvcam_device_register(akvcam_device_t self)
     result = v4l2_device_register(NULL, &self->v4l2_dev);
 
     if (!result) {
-        result = video_register_device(self->vdev, VFL_TYPE_VIDEO, -1);
+        result = video_register_device(self->vdev,
+                                       VFL_TYPE_VIDEO,
+                                       self->videonr);
 
         if (result)
             v4l2_device_unregister(&self->v4l2_dev);
@@ -208,9 +212,21 @@ void akvcam_device_unregister(akvcam_device_t self)
     self->is_registered = false;
 }
 
-u16 akvcam_device_num(const akvcam_device_t self)
+int32_t akvcam_device_num(const akvcam_device_t self)
 {
-    return self->vdev->num;
+    return self->is_registered?
+                self->vdev->num:
+                self->videonr;
+}
+
+void akvcam_device_set_num(const akvcam_device_t self, int32_t num)
+{
+    self->videonr = num;
+}
+
+bool akvcam_device_is_registered(const akvcam_device_t self)
+{
+    return self->is_registered;
 }
 
 const char *akvcam_device_description(const akvcam_device_t self)

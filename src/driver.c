@@ -156,11 +156,30 @@ bool akvcam_driver_register(void)
     akvcam_list_element_t element = NULL;
     akvcam_device_t device;
 
+    // Register numbered devices first.
     for (;;) {
         device = akvcam_list_next(akvcam_driver_global->devices, &element);
 
         if (!element)
             break;
+
+        if (akvcam_device_num(device) >= 0)
+            akvcam_device_register(device);
+    }
+
+    // Register the remaining devices
+    element = NULL;
+
+    for (;;) {
+        device = akvcam_list_next(akvcam_driver_global->devices, &element);
+
+        if (!element)
+            break;
+
+        if (akvcam_device_is_registered(device))
+            continue;
+
+        akvcam_device_set_num(device, -1);
 
         if (!akvcam_device_register(device)) {
             akvcam_driver_unregister();
@@ -400,6 +419,11 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
                                type,
                                mode,
                                akvcam_format_have_multiplanar(formats));
+
+    if (akvcam_settings_contains(settings, "videonr"))
+        akvcam_device_set_num(device,
+                              akvcam_settings_value_int32(settings, "videonr"));
+
     akvcam_list_append(akvcam_device_formats_nr(device), formats);
     akvcam_format_copy(akvcam_device_format_nr(device),
                        akvcam_list_front(formats));
@@ -685,6 +709,6 @@ void akvcam_driver_print_connections(const akvcam_device_t device)
         if (!it)
             break;
 
-        akpr_info("\t\t/dev/video%u\n", akvcam_device_num(connected_device))
+        akpr_info("\t\t/dev/video%d\n", akvcam_device_num(connected_device))
     }
 }

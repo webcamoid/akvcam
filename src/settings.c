@@ -297,11 +297,26 @@ void akvcam_settings_clear(akvcam_settings_t self)
 bool akvcam_settings_contains(const akvcam_settings_t self, const char *key)
 {
     akvcam_string_map_t group_configs = akvcam_settings_group_configs(self);
+    char *array_key;
+    bool contains;
+    size_t array_key_size;
 
-    if (!group_configs)
+    if (!group_configs || !key || strlen(key) < 1)
         return false;
 
-    return akvcam_map_contains(group_configs, key);
+    if (self->current_array) {
+        array_key_size = strlen(self->current_array)
+                       + strlen(key) + 23;
+        array_key = vzalloc(array_key_size);
+        snprintf(array_key,
+                 array_key_size,
+                 "%s/%zu/%s", self->current_array, self->array_index + 1, key);
+        contains = akvcam_map_contains(group_configs, array_key);
+    } else {
+        contains = akvcam_map_contains(group_configs, key);
+    }
+
+    return contains;
 }
 
 char *akvcam_settings_value(const akvcam_settings_t self, const char *key)

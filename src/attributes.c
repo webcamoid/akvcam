@@ -141,7 +141,7 @@ static ssize_t akvcam_attributes_connected_devices_show(struct device *dev,
 
         bytes_written = snprintf(buffer,
                                  space_left,
-                                 "/dev/video%u\n",
+                                 "/dev/video%d\n",
                                  akvcam_device_num(device));
         buffer += bytes_written;
         space_left -= (size_t) bytes_written;
@@ -176,7 +176,7 @@ static ssize_t akvcam_attributes_streaming_devices_show(struct device *dev,
             || akvcam_device_streaming_rw(device)) {
             bytes_written = snprintf(buffer,
                                      space_left,
-                                     "/dev/video%u\n",
+                                     "/dev/video%d\n",
                                      akvcam_device_num(device));
             buffer += bytes_written;
             space_left -= (size_t) bytes_written;

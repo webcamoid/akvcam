@@ -39,7 +39,9 @@ void akvcam_device_delete(akvcam_device_t *self);
 
 bool akvcam_device_register(akvcam_device_t self);
 void akvcam_device_unregister(akvcam_device_t self);
-u16 akvcam_device_num(const akvcam_device_t self);
+int32_t akvcam_device_num(const akvcam_device_t self);
+void akvcam_device_set_num(const akvcam_device_t self, int32_t num);
+bool akvcam_device_is_registered(const akvcam_device_t self);
 const char *akvcam_device_description(const akvcam_device_t self);
 AKVCAM_DEVICE_TYPE akvcam_device_type(const akvcam_device_t self);
 enum v4l2_buf_type akvcam_device_v4l2_type(const akvcam_device_t self);
