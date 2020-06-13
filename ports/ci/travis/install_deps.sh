@@ -53,7 +53,8 @@ if [ ! -z "${USE_QEMU}" ]; then
         qemu-system-x86 \
         qemu-utils \
         ffmpeg \
-        ubuntu-wallpapers
+        ubuntu-wallpapers \
+        psmisc
 fi
 
 url=http://kernel.ubuntu.com/~kernel-ppa/mainline/${REPOSITORY}
