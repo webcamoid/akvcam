@@ -65,15 +65,15 @@ if [ ! -z "${USE_QEMU}" ]; then
 
     # Install bootstrap system
     mkdir ${system_mount_point}
-    mount -o loop ${system_image} ${system_mount_point}
+    mount -v -o loop ${system_image} ${system_mount_point}
 
+    mkdir -p ${system_mount_point}/{dev,proc,sys}
     debootstrap \
         --components=main,universe,multiverse \
         --include=autofs,kmod,systemd,systemd-sysv,v4l-utils \
         --arch ${SYSTEM_ARCH} \
         --variant=minbase \
         ${SYSTEM_VERSION} ${system_mount_point}
-    mkdir -p ${system_mount_point}/{dev,proc,sys}
 
     # Copy kernel modules
     mkdir -p ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
@@ -132,9 +132,7 @@ if [ ! -z "${USE_QEMU}" ]; then
         -pix_fmt bgr24 \
         ${system_mount_point}/etc/akvcam/default_frame.bmp
 
-    fuser -v -m ${system_mount_point}
-    cat ${system_mount_point}/debootstrap/debootstrap.log
-    umount -v ${system_mount_point}
+    umount -vf ${system_mount_point}/
 
     echo
     echo "Booting system with custom kernel:"
@@ -150,7 +148,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     if [ ! -z "${DEFERRED_LOG}" ]; then
         mount -o loop ${system_image} ${system_mount_point}
         cat ${system_mount_point}/root/driver_log.txt
-        umount -v ${system_mount_point}
+        umount -vf ${system_mount_point}/
     fi
 fi
 EOF
