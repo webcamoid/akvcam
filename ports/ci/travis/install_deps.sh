@@ -58,7 +58,7 @@ fi
 
 
 for package in ${image} ${headers} ${headers_generic} ${modules}; do
-    ${EXEC} wget -c "${url}/${package}"
+    ${EXEC} wget -c "${url}/${SYSTEM_ARCH}/${package}"
     ${EXEC} dpkg -i "${package}"
 done
 
