@@ -67,9 +67,6 @@ if [ ! -z "${USE_QEMU}" ]; then
     mkdir ${system_mount_point}
     mount -o loop ${system_image} ${system_mount_point}
 
-    echo MOUNT ${PWD}
-    ls -l
-
     debootstrap \
         --components=main,universe,multiverse \
         --include=autofs,kmod,systemd,systemd-sysv,v4l-utils \
@@ -135,9 +132,7 @@ if [ ! -z "${USE_QEMU}" ]; then
         -pix_fmt bgr24 \
         ${system_mount_point}/etc/akvcam/default_frame.bmp
 
-    echo UNMOUNT ${PWD}
-    ls -l
-    umount ${system_mount_point}
+    umount ${PWD}/${system_mount_point}
 
     echo
     echo "Booting system with custom kernel:"
@@ -145,7 +140,6 @@ if [ ! -z "${USE_QEMU}" ]; then
     qemu-system-x86_64 \\
         -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \\
         -initrd /boot/initrd.img-${KERNEL_VERSION}-generic \\
-        -localtime \\
         -m 512M \\
         -append "root=/dev/sda console=ttyS0,9600 systemd.unit=multi-user.target rw" \\
         -drive file=${system_image},format=raw \\
@@ -154,9 +148,9 @@ if [ ! -z "${USE_QEMU}" ]; then
         -net user,vlan=1
 
     if [ ! -z "${DEFERRED_LOG}" ]; then
-        mount -o loop ${system_image} ${system_mount_point}
-        cat ${system_mount_point}/root/driver_log.txt
-        umount ${system_mount_point}
+        mount -o loop ${system_image} ${PWD}/${system_mount_point}
+        cat ${PWD}/${system_mount_point}/root/driver_log.txt
+        umount ${PWD}/${system_mount_point}
     fi
 fi
 EOF
