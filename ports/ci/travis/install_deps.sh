@@ -17,7 +17,24 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-# Set default Docker command
+cat << EOF > configure_tzdata.sh
+#!/bin/sh
+
+export LC_ALL=C
+export DEBIAN_FRONTEND=noninteractive
+export TZ=UTC
+echo Configuring TZDATA
+apt-get update
+apt-get install -y tzdata
+ln -fs /usr/share/zoneinfo/UTC /etc/localtime
+dpkg-reconfigure --frontend noninteractive tzdata
+echo End configuring TZDATA
+EOF
+chmod +x configure_tzdata.sh
+
+${EXEC} bash configure_tzdata.sh
+
+
 ${EXEC} apt-get -y update
 ${EXEC} apt-get -y upgrade
 
@@ -31,13 +48,13 @@ ${EXEC} apt-get -y install \
     wget
 
 if [ ! -z "${USE_QEMU}" ]; then
-${EXEC} apt-get -y install \
-    debootstrap \
-    initramfs-tools \
-    qemu-system-x86 \
-    qemu-utils \
-    ffmpeg \
-    ubuntu-wallpapers
+    ${EXEC} apt-get -y install \
+        debootstrap \
+        initramfs-tools \
+        qemu-system-x86 \
+        qemu-utils \
+        ffmpeg \
+        ubuntu-wallpapers
 fi
 
 url=http://kernel.ubuntu.com/~kernel-ppa/mainline/${REPOSITORY}
