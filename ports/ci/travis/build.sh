@@ -131,7 +131,7 @@ if [ ! -z "${USE_QEMU}" ]; then
         -s 640x480 \
         -pix_fmt bgr24 \
         ${system_mount_point}/etc/akvcam/default_frame.bmp
-    umount -vf ${system_mount_point}/
+    umount -vf /sources/${system_mount_point}/
 
     echo
     echo "Booting system with custom kernel:"
