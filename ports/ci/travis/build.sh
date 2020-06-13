@@ -132,6 +132,7 @@ if [ ! -z "${USE_QEMU}" ]; then
         -pix_fmt bgr24 \
         ${system_mount_point}/etc/akvcam/default_frame.bmp
 
+    fuser -v -m ${system_mount_point}
     umount -v ${system_mount_point}
 
     echo
