@@ -133,6 +133,7 @@ if [ ! -z "${USE_QEMU}" ]; then
         ${system_mount_point}/etc/akvcam/default_frame.bmp
 
     fuser -v -m ${system_mount_point}
+    cat ${system_mount_point}/debootstrap/debootstrap.log
     umount -v ${system_mount_point}
 
     echo
