@@ -125,13 +125,12 @@ if [ ! -z "${USE_QEMU}" ]; then
 
     # Choose a random wallpaper and use it as default frame.
     wallpaper=\$(ls /usr/share/backgrounds/*.{jpg,png} | shuf -n1)
-#     ffmpeg \
-#         -y \
-#         -i "\$wallpaper" \
-#         -s 640x480 \
-#         -pix_fmt bgr24 \
-#         ${system_mount_point}/etc/akvcam/default_frame.bmp
-
+    ffmpeg \
+        -y \
+        -i "\$wallpaper" \
+        -s 640x480 \
+        -pix_fmt bgr24 \
+        ${system_mount_point}/etc/akvcam/default_frame.bmp
     umount -vf ${system_mount_point}/
 
     echo
