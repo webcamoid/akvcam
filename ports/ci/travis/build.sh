@@ -132,7 +132,7 @@ if [ ! -z "${USE_QEMU}" ]; then
         -pix_fmt bgr24 \
         ${system_mount_point}/etc/akvcam/default_frame.bmp
 
-    umount ${PWD}/${system_mount_point}
+    umount ${system_mount_point}
 
     echo
     echo "Booting system with custom kernel:"
@@ -143,14 +143,12 @@ if [ ! -z "${USE_QEMU}" ]; then
         -m 512M \\
         -append "root=/dev/sda console=ttyS0,9600 systemd.unit=multi-user.target rw" \\
         -drive file=${system_image},format=raw \\
-        --nographic \\
-        -net nic,vlan=1,model=ne2k_pci \\
-        -net user,vlan=1
+        --nographic
 
     if [ ! -z "${DEFERRED_LOG}" ]; then
-        mount -o loop ${system_image} ${PWD}/${system_mount_point}
-        cat ${PWD}/${system_mount_point}/root/driver_log.txt
-        umount ${PWD}/${system_mount_point}
+        mount -o loop ${system_image} ${system_mount_point}
+        cat ${system_mount_point}/root/driver_log.txt
+        umount ${system_mount_point}
     fi
 fi
 EOF
