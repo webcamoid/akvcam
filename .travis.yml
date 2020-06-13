@@ -96,6 +96,7 @@ matrix:
       - KERNEL_VERSION_C=202006101934
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
+      - export USE_QEMU=1
 
 before_install:
   - docker pull ubuntu:${SYSTEM_VERSION}

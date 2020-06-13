@@ -23,17 +23,16 @@ cat << EOF > configure_tzdata.sh
 export LC_ALL=C
 export DEBIAN_FRONTEND=noninteractive
 export TZ=UTC
-echo Configuring TZDATA
+
 apt-get update
 apt-get install -y tzdata
+
 ln -fs /usr/share/zoneinfo/UTC /etc/localtime
 dpkg-reconfigure --frontend noninteractive tzdata
-echo End configuring TZDATA
 EOF
 chmod +x configure_tzdata.sh
 
 ${EXEC} bash configure_tzdata.sh
-
 
 ${EXEC} apt-get -y update
 ${EXEC} apt-get -y upgrade
