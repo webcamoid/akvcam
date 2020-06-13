@@ -65,7 +65,7 @@ if [ ! -z "${USE_QEMU}" ]; then
 
     # Install bootstrap system
     mkdir ${system_mount_point}
-    mount -v -o loop ${system_image} ${system_mount_point}
+    mount -v -o loop,rw,sync ${system_image} ${system_mount_point}
 
     mkdir -p ${system_mount_point}/{dev,proc,sys}
     debootstrap \
@@ -145,7 +145,7 @@ if [ ! -z "${USE_QEMU}" ]; then
         --nographic
 
     if [ ! -z "${DEFERRED_LOG}" ]; then
-        mount -o loop ${system_image} ${system_mount_point}
+        mount -o loop,rw,sync ${system_image} ${system_mount_point}
         cat ${system_mount_point}/root/driver_log.txt
         umount -vf ${system_mount_point}/
     fi
