@@ -66,6 +66,10 @@ if [ ! -z "${USE_QEMU}" ]; then
     # Install bootstrap system
     mkdir ${system_mount_point}
     mount -o loop ${system_image} ${system_mount_point}
+
+    echo MOUNT ${PWD}
+    ls -l
+
     debootstrap \
         --components=main,universe,multiverse \
         --include=autofs,kmod,systemd,systemd-sysv,v4l-utils \
@@ -131,6 +135,8 @@ if [ ! -z "${USE_QEMU}" ]; then
         -pix_fmt bgr24 \
         ${system_mount_point}/etc/akvcam/default_frame.bmp
 
+    echo UNMOUNT ${PWD}
+    ls -l
     umount ${system_mount_point}
 
     echo
