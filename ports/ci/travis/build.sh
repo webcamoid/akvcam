@@ -138,8 +138,7 @@ if [ ! -z "${USE_QEMU}" ]; then
     # umount: system-mount-point: umount failed: No such file or directory.
     #
     # Patches welcome.
-    #umount -vf ${system_mount_point}
-    umount -vf ${system_image}
+    umount -vf ${system_mount_point}
 
     echo
     echo "Booting system with custom kernel:"
