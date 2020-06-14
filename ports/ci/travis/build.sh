@@ -131,7 +131,15 @@ if [ ! -z "${USE_QEMU}" ]; then
         -s 640x480 \
         -pix_fmt bgr24 \
         ${system_mount_point}/etc/akvcam/default_frame.bmp
-    umount -vf /sources/${system_mount_point}/
+
+    # FIXME: For Ubuntu > Groovy Gorilla the folder 'system-mount-point'
+    # magically disappears and umount returns the following message:
+    #
+    # umount: system-mount-point: umount failed: No such file or directory.
+    #
+    # Patches welcome.
+    #umount -vf ${system_mount_point}
+    umount -vf ${system_image}
 
     echo
     echo "Booting system with custom kernel:"
