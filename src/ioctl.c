@@ -33,11 +33,7 @@
 #include "node.h"
 #include "object.h"
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)
-#define DEFAULT_COLORSPACE V4L2_COLORSPACE_SRGB
-#else
 #define DEFAULT_COLORSPACE V4L2_COLORSPACE_RAW
-#endif
 
 #define AKVCAM_HANDLER(cmd, proc, arg_type) \
     {cmd, (akvcam_proc_t) proc, sizeof(arg_type)}

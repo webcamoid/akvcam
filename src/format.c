@@ -24,11 +24,7 @@
 #include "list.h"
 #include "object.h"
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)
-#define DEFAULT_COLORSPACE V4L2_COLORSPACE_SRGB
-#else
 #define DEFAULT_COLORSPACE V4L2_COLORSPACE_RAW
-#endif
 
 struct akvcam_format
 {
