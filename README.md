@@ -20,7 +20,7 @@ Visit the [wiki](https://github.com/webcamoid/akvcam/wiki) for a comprehensive c
 ## Status ##
 
 [![Build Status](https://travis-ci.org/webcamoid/akvcam.svg?branch=master)](https://travis-ci.org/webcamoid/akvcam)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/eaeeaacb491c498bbffbe2087bc2d4dd)](https://www.codacy.com/gh/webcamoid/akvcam?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=webcamoid/akvcam&amp;utm_campaign=Badge_Grade)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/eaeeaacb491c498bbffbe2087bc2d4dd)](https://www.codacy.com/gh/webcamoid/akvcam/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=webcamoid/akvcam&amp;utm_campaign=Badge_Grade)
 
 ## Reporting Bugs ##
 

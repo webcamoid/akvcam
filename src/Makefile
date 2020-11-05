@@ -1,8 +1,15 @@
+MODULE_NAME = akvcam
+MODULE_VERSION = 1.1.0
 KERNEL_ROOT ?= $(shell realpath /lib/modules/$(shell uname -r))
 KERNEL_DIR ?= $(KERNEL_ROOT)/build
-KERNEL_EXTRA ?= $(KERNEL_ROOT)/extra
-UNINSTALL = rm -vf
+COPY = cp -f
+MKDIR = mkdir -p
+RMDIR = rm -rvf
 PWD := $(shell pwd)
+DKMS := dkms
+DESTDIR :=
+PREFIX := $(DESTDIR)/usr/src
+INSTALLDIR = $(PREFIX)/$(MODULE_NAME)-$(MODULE_VERSION)
 
 HAVE_SPARSE := $(shell which sparse 2>/dev/null)
 SPARSE_MODE ?= 2
@@ -13,7 +20,7 @@ SPARSE_VAR = C=$(SPARSE_MODE)
 endif
 endif
 
-obj-m += akvcam.o
+obj-m += $(MODULE_NAME).o
 akvcam-objs := \
 	module.o \
 	attributes.o \
@@ -44,9 +51,18 @@ all:
 clean:
 	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) clean
 
-install:
-	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) modules_install
+install: uninstall
+	$(MKDIR) $(INSTALLDIR)
+	$(COPY) Makefile $(INSTALLDIR)
+	$(COPY) dkms.conf $(INSTALLDIR)
+	$(COPY) *.h $(INSTALLDIR)
+	$(COPY) *.c $(INSTALLDIR)
+ifdef USE_DKMS
+	$(DKMS) install $(MODULE_NAME)/$(MODULE_VERSION)
+endif
 
 uninstall:
-	$(UNINSTALL) "$(DESTDIR)$(KERNEL_EXTRA)/akvcam.ko"
-	$(UNINSTALL) "$(DESTDIR)$(KERNEL_EXTRA)/akvcam.ko.xz"
+ifdef USE_DKMS
+	$(DKMS) remove $(MODULE_NAME)/$(MODULE_VERSION) --all
+endif
+	$(RMDIR) $(INSTALLDIR)
