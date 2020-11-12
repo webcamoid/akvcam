@@ -1,5 +1,5 @@
 MODULE_NAME = akvcam
-MODULE_VERSION = 1.1.0
+MODULE_VERSION = 1.1.1
 KERNEL_ROOT ?= $(shell realpath /lib/modules/$(shell uname -r))
 KERNEL_DIR ?= $(KERNEL_ROOT)/build
 COPY = cp -f
@@ -63,6 +63,6 @@ endif
 
 uninstall:
 ifdef USE_DKMS
-	$(DKMS) remove $(MODULE_NAME)/$(MODULE_VERSION) --all
+	- $(DKMS) remove $(MODULE_NAME)/$(MODULE_VERSION) --all
 endif
 	$(RMDIR) $(INSTALLDIR)

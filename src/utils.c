@@ -36,6 +36,13 @@ typedef struct
     char  str[32];
 } akvcam_utils_ioctl_strings, *akvcam_utils_ioctl_strings_t;
 
+typedef struct
+{
+    int error;
+    char  str[32];
+    char  description[AKVCAM_MAX_STRING_SIZE];
+} akvcam_utils_error_strings, *akvcam_utils_error_strings_t;
+
 uint64_t akvcam_id(void)
 {
     return akvcam_utils_private.id++;
@@ -56,7 +63,7 @@ int akvcam_set_last_error(int error)
 const char *akvcam_string_from_ioctl(uint cmd)
 {
     size_t i;
-    static char unknown[1024];
+    static char ioctlstr[AKVCAM_MAX_STRING_SIZE];
     static akvcam_utils_ioctl_strings ioctl_strings[] = {
         {UVCIOC_CTRL_MAP           , "UVCIOC_CTRL_MAP"           },
         {UVCIOC_CTRL_QUERY         , "UVCIOC_CTRL_QUERY"         },
@@ -154,9 +161,87 @@ const char *akvcam_string_from_ioctl(uint cmd)
         if (ioctl_strings[i].cmd == cmd)
             return ioctl_strings[i].str;
 
-    snprintf(unknown, 1024, "VIDIOC_UNKNOWN(%u)", cmd);
+    snprintf(ioctlstr, AKVCAM_MAX_STRING_SIZE, "VIDIOC_UNKNOWN(%u)", cmd);
 
-    return unknown;
+    return ioctlstr;
+}
+
+const char *akvcam_string_from_error(int error)
+{
+    size_t i;
+    static char errorstr[AKVCAM_MAX_STRING_SIZE];
+    static akvcam_utils_error_strings error_strings[] = {
+        {EPERM	, "EPERM"  , "Operation not permitted"            },
+        {ENOENT	, "ENOENT" , "No such file or directory"          },
+        {ESRCH	, "ESRCH"  , "No such process"                    },
+        {EINTR	, "EINTR"  , "Interrupted system call"            },
+        {EIO	, "EIO"    , "I/O error"                          },
+        {ENXIO	, "ENXIO"  , "No such device or address"          },
+        {E2BIG	, "E2BIG"  , "Argument list too long"             },
+        {ENOEXEC, "ENOEXEC", "Exec format error"                  },
+        {EBADF	, "EBADF"  , "Bad file number"                    },
+        {ECHILD	, "ECHILD" , "No child processes"                 },
+        {EAGAIN	, "EAGAIN" , "Try again"                          },
+        {ENOMEM	, "ENOMEM" , "Out of memory"                      },
+        {EACCES	, "EACCES" , "Permission denied"                  },
+        {EFAULT	, "EFAULT" , "Bad address"                        },
+        {ENOTBLK, "ENOTBLK", "Block device required"              },
+        {EBUSY	, "EBUSY"  , "Device or resource busy"            },
+        {EEXIST	, "EEXIST" , "File exists"                        },
+        {EXDEV	, "EXDEV"  , "Cross-device link"                  },
+        {ENODEV	, "ENODEV" , "No such device"                     },
+        {ENOTDIR, "ENOTDIR", "Not a directory"                    },
+        {EISDIR	, "EISDIR" , "Is a directory"                     },
+        {EINVAL	, "EINVAL" , "Invalid argument"                   },
+        {ENFILE	, "ENFILE" , "File table overflow"                },
+        {EMFILE	, "EMFILE" , "Too many open files"                },
+        {ENOTTY	, "ENOTTY" , "Not a typewriter"                   },
+        {ETXTBSY, "ETXTBSY", "Text file busy"                     },
+        {EFBIG	, "EFBIG"  , "File too large"                     },
+        {ENOSPC	, "ENOSPC" , "No space left on device"            },
+        {ESPIPE	, "ESPIPE" , "Illegal seek"                       },
+        {EROFS	, "EROFS"  , "Read-only file system "             },
+        {EMLINK	, "EMLINK" , "Too many links"                     },
+        {EPIPE	, "EPIPE"  , "Broken pipe"                        },
+        {EDOM	, "EDOM"   , "Math argument out of domain of func"},
+        {ERANGE	, "ERANGE" , "Math result not representable"      },
+        {0      , ""       , ""                                   },
+    };
+
+    memset(errorstr, 0, AKVCAM_MAX_STRING_SIZE);
+
+    if (error >= 0)
+        return errorstr;
+
+    for (i = 0; error_strings[i].error; i++)
+        if (error_strings[i].error == -error) {
+            snprintf(errorstr,
+                     AKVCAM_MAX_STRING_SIZE,
+                     "%s (%s)",
+                     error_strings[i].description,
+                     error_strings[i].str);
+
+            return errorstr;
+        }
+
+    snprintf(errorstr, AKVCAM_MAX_STRING_SIZE, "Unknown error (%d)", error);
+
+    return errorstr;
+}
+
+const char *akvcam_string_from_ioctl_error(uint cmd, int error)
+{
+    const char *cmdstr = akvcam_string_from_ioctl(cmd);
+    const char *errorstr = akvcam_string_from_error(error);
+    static char ioctl_error_str[AKVCAM_MAX_STRING_SIZE];
+
+    snprintf(ioctl_error_str,
+             AKVCAM_MAX_STRING_SIZE,
+             "%s: %s",
+             cmdstr,
+             errorstr);
+
+    return ioctl_error_str;
 }
 
 size_t akvcam_line_size(const char *buffer, size_t size, bool *found)

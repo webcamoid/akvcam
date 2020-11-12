@@ -94,6 +94,8 @@ uint64_t akvcam_id(void);
 int akvcam_get_last_error(void);
 int akvcam_set_last_error(int error);
 const char *akvcam_string_from_ioctl(uint cmd);
+const char *akvcam_string_from_error(int error);
+const char *akvcam_string_from_ioctl_error(uint cmd, int error);
 size_t akvcam_line_size(const char *buffer, size_t size, bool *found);
 char *akvcam_strdup(const char *str, AKVCAM_MEMORY_TYPE type);
 char *akvcam_strip_str(const char *str, AKVCAM_MEMORY_TYPE type);

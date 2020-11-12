@@ -29,6 +29,7 @@
 akvcam_node_t akvcam_node_new(akvcam_device_t device);
 void akvcam_node_delete(akvcam_node_t *self);
 
+int64_t akvcam_node_id(const akvcam_node_t self);
 akvcam_device_t akvcam_node_device_nr(const akvcam_node_t self);
 akvcam_device_t akvcam_node_device(const akvcam_node_t self);
 akvcam_events_t akvcam_node_events_nr(const akvcam_node_t self);

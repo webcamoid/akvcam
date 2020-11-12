@@ -20,7 +20,7 @@
 #include <linux/kthread.h>
 #include <linux/random.h>
 #include <linux/slab.h>
-#include <linux/spinlock.h>
+#include <linux/mutex.h>
 #include <media/v4l2-device.h>
 
 #include "device.h"
@@ -33,6 +33,7 @@
 #include "frame.h"
 #include "global_deleter.h"
 #include "list.h"
+#include "log.h"
 #include "node.h"
 #include "object.h"
 #include "settings.h"
@@ -61,11 +62,12 @@ struct akvcam_device
     struct v4l2_device v4l2_dev;
     struct video_device *vdev;
     struct task_struct *thread;
-    spinlock_t slock;
+    struct mutex mtx;
     AKVCAM_DEVICE_TYPE type;
     AKVCAM_RW_MODE rw_mode;
     enum v4l2_priority priority;
     int32_t videonr;
+    int64_t broadcasting_node;
     bool multiplanar;
     bool is_registered;
     bool streaming;
@@ -111,8 +113,9 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->priority_node = NULL;
     self->rw_mode = rw_mode;
     self->videonr = -1;
+    self->broadcasting_node = -1;
     self->priority = V4L2_PRIORITY_DEFAULT;
-    spin_lock_init(&self->slock);
+    mutex_init(&self->mtx);
 
     memset(&self->v4l2_dev, 0, sizeof(struct v4l2_device));
     snprintf(self->v4l2_dev.name,
@@ -162,6 +165,11 @@ void akvcam_device_delete(akvcam_device_t *self)
 
     if (akvcam_object_unref((*self)->self) > 0)
         return;
+
+    if (!mutex_lock_interruptible(&((*self)->mtx))) {
+        akvcam_frame_delete(&((*self)->current_frame));
+        mutex_unlock(&((*self)->mtx));
+    }
 
     akvcam_buffers_delete(&((*self)->buffers));
     akvcam_device_unregister(*self);
@@ -222,6 +230,17 @@ int32_t akvcam_device_num(const akvcam_device_t self)
 void akvcam_device_set_num(const akvcam_device_t self, int32_t num)
 {
     self->videonr = num;
+}
+
+int64_t akvcam_device_broadcasting_node(const akvcam_device_t self)
+{
+    return self->broadcasting_node;
+}
+
+void akvcam_device_set_broadcasting_node(const akvcam_device_t self,
+                                         int64_t broadcasting_node)
+{
+    self->broadcasting_node = broadcasting_node;
 }
 
 bool akvcam_device_is_registered(const akvcam_device_t self)
@@ -348,6 +367,11 @@ bool akvcam_device_streaming_rw(const akvcam_device_t self)
 
 void akvcam_device_set_streaming(akvcam_device_t self, bool streaming)
 {
+    uint64_t broadcasting_node;
+
+    akpr_function()
+    akpr_debug("Streaming: %d\n", streaming)
+
     if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
         if (!self->streaming && streaming) {
             akvcam_buffers_reset_sequence(self->buffers);
@@ -361,24 +385,36 @@ void akvcam_device_set_streaming(akvcam_device_t self, bool streaming)
             self->thread = NULL;
         }
     } else if (!self->streaming && streaming) {
+        broadcasting_node = self->broadcasting_node;
         akvcam_device_set_streaming_rw(self, false);
+        self->broadcasting_node = broadcasting_node;
         akvcam_buffers_reset_sequence(self->buffers);
     }
 
     self->streaming = streaming;
+
+    if (!streaming)
+        self->broadcasting_node = -1;
 }
 
 void akvcam_device_set_streaming_rw(akvcam_device_t self, bool streaming)
 {
+    akpr_function()
+    akpr_debug("Streaming: %d\n", streaming)
+
     if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
         if (self->streaming_rw != streaming) {
-            spin_lock(&self->slock);
-            akvcam_frame_delete(&self->current_frame);
-            spin_unlock(&self->slock);
+            if (!mutex_lock_interruptible(&self->mtx)) {
+                akvcam_frame_delete(&self->current_frame);
+                mutex_unlock(&self->mtx);
+            }
         }
     }
 
     self->streaming_rw = streaming;
+
+    if (!streaming)
+        self->broadcasting_node = -1;
 }
 
 size_t akvcam_device_sizeof(void)
@@ -456,11 +492,12 @@ void akvcam_device_frame_written(akvcam_device_t self,
         if (!it)
             break;
 
-        spin_lock(&capture_device->slock);
-        akvcam_frame_delete(&capture_device->current_frame);
-        capture_device->current_frame = frame;
-        akvcam_object_ref(AKVCAM_TO_OBJECT(frame));
-        spin_unlock(&capture_device->slock);
+        if (!mutex_lock_interruptible(&capture_device->mtx)) {
+            akvcam_frame_delete(&capture_device->current_frame);
+            capture_device->current_frame = frame;
+            akvcam_object_ref(AKVCAM_TO_OBJECT(frame));
+            mutex_unlock(&capture_device->mtx);
+        }
     }
 }
 
@@ -471,17 +508,18 @@ bool akvcam_device_prepare_frame(akvcam_device_t self)
     akvcam_frame_t default_frame = akvcam_default_frame();
     bool result;
 
-    output_device = akvcam_list_front(self->connected_devices);
-    spin_lock(&self->slock);
+    if (!mutex_lock_interruptible(&self->mtx)) {
+        output_device = akvcam_list_front(self->connected_devices);
 
-    if (output_device
-        && (output_device->streaming || output_device->streaming_rw)
-        && self->current_frame) {
-        frame = akvcam_frame_new(NULL, NULL, 0);
-        akvcam_frame_copy(frame, self->current_frame);
+        if (output_device
+            && (output_device->streaming || output_device->streaming_rw)
+            && self->current_frame) {
+            frame = akvcam_frame_new(NULL, NULL, 0);
+            akvcam_frame_copy(frame, self->current_frame);
+        }
+
+        mutex_unlock(&self->mtx);
     }
-
-    spin_unlock(&self->slock);
 
     if (!frame) {
         if (default_frame && akvcam_frame_size(default_frame) > 0) {

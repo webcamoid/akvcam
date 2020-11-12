@@ -72,6 +72,7 @@ int akvcam_driver_init(const char *name, const char *description)
     if (akvcam_driver_global)
         return -EINVAL;
 
+    akpr_debug("Initializing driver\n")
     akvcam_driver_global = kzalloc(sizeof(akvcam_driver), GFP_KERNEL);
     akvcam_driver_global->self =
             akvcam_object_new("driver",
@@ -79,6 +80,7 @@ int akvcam_driver_init(const char *name, const char *description)
                               (akvcam_deleter_t) akvcam_driver_delete);
     snprintf(akvcam_driver_global->name, AKVCAM_MAX_STRING_SIZE, "%s", name);
     snprintf(akvcam_driver_global->description, AKVCAM_MAX_STRING_SIZE, "%s", description);
+    akpr_debug("Reading settings\n")
     settings = akvcam_settings_new();
 
     if (akvcam_settings_load(settings, akvcam_settings_file())) {
@@ -88,6 +90,7 @@ int akvcam_driver_init(const char *name, const char *description)
         akvcam_list_delete(&available_formats);
         akvcam_driver_connect_devices(settings, akvcam_driver_global->devices);
     } else {
+        akpr_err("Error reading settings\n")
         akvcam_driver_global->devices = akvcam_list_new();
     }
 

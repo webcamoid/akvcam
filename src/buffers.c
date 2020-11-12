@@ -20,7 +20,7 @@
 #include <linux/mm.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
-#include <linux/spinlock.h>
+#include <linux/mutex.h>
 #include <linux/uaccess.h>
 #include <linux/videodev2.h>
 #include <linux/vmalloc.h>
@@ -32,6 +32,7 @@
 #include "format.h"
 #include "frame.h"
 #include "list.h"
+#include "log.h"
 #include "node.h"
 #include "object.h"
 #include "rbuffer.h"
@@ -44,7 +45,7 @@ struct akvcam_buffers
     akvcam_device_t device;
     akvcam_buffers_list_t buffers;
     akvcam_rbuffer_tt(char) rw_buffers;
-    spinlock_t slock;
+    struct mutex mtx;
     akvcam_frame_ready_callback frame_ready;
     akvcam_frame_written_callback frame_written;
     akvcam_node_t main_node;
@@ -85,7 +86,7 @@ akvcam_buffers_t akvcam_buffers_new(akvcam_device_t device)
                                    (akvcam_deleter_t) akvcam_buffers_delete);
     self->buffers = akvcam_list_new();
     self->rw_buffers = akvcam_rbuffer_new();
-    spin_lock_init(&self->slock);
+    mutex_init(&self->mtx);
     self->device = device;
     self->rw_mode = akvcam_device_rw_mode(device);
     self->rw_buffer_size = AKVCAM_BUFFERS_MIN;
@@ -138,9 +139,11 @@ int akvcam_buffers_allocate(akvcam_buffers_t self,
     if (self->main_node && self->main_node != node)
         return -EBUSY;
 
-    spin_lock(&self->slock);
+    if (mutex_lock_interruptible(&self->mtx))
+        return -EINTR;
+
     akvcam_list_clear(self->buffers);
-    spin_unlock(&self->slock);
+    mutex_unlock(&self->mtx);
 
     if (params->count < 1) {
         self->main_node = NULL;
@@ -174,13 +177,15 @@ int akvcam_buffers_allocate(akvcam_buffers_t self,
                 v4l2_buff->m.offset = akvcam_buffer_offset(buffer);
             }
 
-            spin_lock(&self->slock);
-            akvcam_list_push_back(self->buffers,
-                                  buffer,
-                                  akvcam_buffer_sizeof(),
-                                  (akvcam_deleter_t) akvcam_buffer_delete,
-                                  true);
-            spin_unlock(&self->slock);
+            if (!mutex_lock_interruptible(&self->mtx)) {
+                akvcam_list_push_back(self->buffers,
+                                      buffer,
+                                      akvcam_buffer_sizeof(),
+                                      (akvcam_deleter_t) akvcam_buffer_delete,
+                                      true);
+                mutex_unlock(&self->mtx);
+            }
+
             akvcam_buffer_delete(&buffer);
         }
     }
@@ -192,9 +197,12 @@ void akvcam_buffers_deallocate(akvcam_buffers_t self, akvcam_node_t node)
 {
     if (node && node == self->main_node) {
         self->main_node = NULL;
-        spin_lock(&self->slock);
-        akvcam_list_clear(self->buffers);
-        spin_unlock(&self->slock);
+
+        if (!mutex_lock_interruptible(&self->mtx)) {
+            akvcam_list_clear(self->buffers);
+            mutex_unlock(&self->mtx);
+        }
+
         akvcam_buffers_resize_rw(self, self->rw_buffer_size);
     }
 }
@@ -237,18 +245,20 @@ int akvcam_buffers_create(akvcam_buffers_t self,
         if (!self->main_node)
             buffers->index = 0;
 
-        self->main_node = node;
         buffer_length = akvcam_format_size(format);
         buffer_size = (__u32) PAGE_ALIGN(buffer_length);
 
-        spin_lock(&self->slock);
+        if (mutex_lock_interruptible(&self->mtx))
+            return -EINTR;
+
         last_buffer = akvcam_list_back(self->buffers);
         v4l2_buff = akvcam_buffer_get(last_buffer);
 
         if (last_buffer)
             offset = v4l2_buff->m.offset + PAGE_ALIGN(v4l2_buff->length);
 
-        spin_unlock(&self->slock);
+        mutex_unlock(&self->mtx);
+        self->main_node = node;
         multiplanar = akvcam_device_multiplanar(self->device);
 
         for (i = 0; i < buffers->count; i++) {
@@ -273,13 +283,15 @@ int akvcam_buffers_create(akvcam_buffers_t self,
                 v4l2_buff->m.offset = akvcam_buffer_offset(buffer);
             }
 
-            spin_lock(&self->slock);
-            akvcam_list_push_back(self->buffers,
-                                  buffer,
-                                  akvcam_buffer_sizeof(),
-                                  (akvcam_deleter_t) akvcam_buffer_delete,
-                                  true);
-            spin_unlock(&self->slock);
+            if (!mutex_lock_interruptible(&self->mtx)) {
+                akvcam_list_push_back(self->buffers,
+                                      buffer,
+                                      akvcam_buffer_sizeof(),
+                                      (akvcam_deleter_t) akvcam_buffer_delete,
+                                      true);
+                mutex_unlock(&self->mtx);
+            }
+
             akvcam_buffer_delete(&buffer);
         }
     }
@@ -297,7 +309,9 @@ bool akvcam_buffers_fill(const akvcam_buffers_t self,
     if (!self->main_node)
         return false;
 
-    spin_lock(&self->slock);
+    if (mutex_lock_interruptible(&self->mtx))
+        return false;
+
     akbuffer = akvcam_list_at(self->buffers, buffer->index);
 
     if (akbuffer) {
@@ -316,7 +330,7 @@ bool akvcam_buffers_fill(const akvcam_buffers_t self,
         }
     }
 
-    spin_unlock(&self->slock);
+    mutex_unlock(&self->mtx);
 
     return ok;
 }
@@ -328,7 +342,9 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
     int result = -EINVAL;
     bool multiplanar;
 
-    spin_lock(&self->slock);
+    if (mutex_lock_interruptible(&self->mtx))
+        return -EINTR;
+
     akbuffer = akvcam_list_at(self->buffers, buffer->index);
     v4l2_buff = akvcam_buffer_get(akbuffer);
 
@@ -376,7 +392,7 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
     result = 0;
 
 akvcam_buffers_queue_failed:
-    spin_unlock(&self->slock);
+    mutex_unlock(&self->mtx);
 
     if (!result
         && akvcam_device_type(self->device) == AKVCAM_DEVICE_TYPE_OUTPUT
@@ -432,7 +448,9 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
         }
     }
 
-    spin_lock(&self->slock);
+    if (mutex_lock_interruptible(&self->mtx))
+        return -EINTR;
+
     it = akvcam_list_find(self->buffers,
                           &flags,
                           0,
@@ -494,7 +512,7 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
     result = 0;
 
 akvcam_buffers_dequeue_failed:
-    spin_unlock(&self->slock);
+    mutex_unlock(&self->mtx);
 
     return result;
 }
@@ -504,9 +522,11 @@ void *akvcam_buffers_buffers_data(const akvcam_buffers_t self,
 {
     akvcam_buffer_t akbuffer;
 
-    spin_lock(&self->slock);
+    if (mutex_lock_interruptible(&self->mtx))
+        return NULL;
+
     akbuffer = akvcam_list_at(self->buffers, buffer->index);
-    spin_unlock(&self->slock);
+    mutex_unlock(&self->mtx);
 
     return akvcam_buffer_data(akbuffer);
 }
@@ -530,7 +550,9 @@ void *akvcam_buffers_data(const akvcam_buffers_t self, __u32 offset)
     akvcam_buffer_t buffer;
     akvcam_list_element_t it;
 
-    spin_lock(&self->slock);
+    if (mutex_lock_interruptible(&self->mtx))
+        return NULL;
+
     it = akvcam_list_find(self->buffers,
                           &offset,
                           0,
@@ -539,7 +561,7 @@ void *akvcam_buffers_data(const akvcam_buffers_t self, __u32 offset)
 
     buffer = akvcam_list_element_data(it);
     data = akvcam_buffer_data(buffer);
-    spin_unlock(&self->slock);
+    mutex_unlock(&self->mtx);
 
     return data;
 }
@@ -551,11 +573,12 @@ bool akvcam_buffers_allocated(const akvcam_buffers_t self)
 
 size_t akvcam_buffers_size_rw(const akvcam_buffers_t self)
 {
-    size_t size;
+    size_t size = 0;
 
-    spin_lock(&self->slock);
-    size = akvcam_rbuffer_n_elements(self->rw_buffers);
-    spin_unlock(&self->slock);
+    if (!mutex_lock_interruptible(&self->mtx)) {
+        size = akvcam_rbuffer_n_elements(self->rw_buffers);
+        mutex_unlock(&self->mtx);
+    }
 
     return size;
 }
@@ -573,7 +596,9 @@ bool akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size)
     if (size < 1)
         size = 1;
 
-    spin_lock(&self->slock);
+    if (mutex_lock_interruptible(&self->mtx))
+        return false;
+
     akvcam_rbuffer_clear(self->rw_buffers);
     format = akvcam_device_format_nr(self->device);
     akvcam_rbuffer_resize(self->rw_buffers,
@@ -581,7 +606,7 @@ bool akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size)
                           akvcam_format_size(format),
                           AKVCAM_MEMORY_TYPE_VMALLOC);
     self->rw_buffer_size = size;
-    spin_unlock(&self->slock);
+    mutex_unlock(&self->mtx);
 
     return true;
 }
@@ -616,12 +641,13 @@ ssize_t akvcam_buffers_read_rw(akvcam_buffers_t self,
         msleep_interruptible(tsleep);
     }
 
-    spin_lock(&self->slock);
+    if (mutex_lock_interruptible(&self->mtx))
+        return 0;
 
     if (!akvcam_rbuffer_dequeue_bytes(self->rw_buffers, data, &size, false))
         size = 0;
 
-    spin_unlock(&self->slock);
+    mutex_unlock(&self->mtx);
 
     return (ssize_t) size;
 }
@@ -642,9 +668,11 @@ ssize_t akvcam_buffers_write_rw(akvcam_buffers_t self,
     if (!(self->rw_mode & AKVCAM_RW_MODE_READWRITE))
         return 0;
 
-    spin_lock(&self->slock);
+    if (mutex_lock_interruptible(&self->mtx))
+        return 0;
+
     akvcam_rbuffer_queue_bytes(self->rw_buffers, data, size);
-    spin_unlock(&self->slock);
+    mutex_unlock(&self->mtx);
 
     format = akvcam_device_format_nr(self->device);
     format_size = akvcam_format_size(format);
@@ -705,7 +733,8 @@ bool akvcam_buffers_write_frame(akvcam_buffers_t self,
     akvcam_frame_t adjusted_frame =
             akvcam_buffers_frame_apply_adjusts(self, frame);
 
-    spin_lock(&self->slock);
+    if (mutex_lock_interruptible(&self->mtx))
+        return false;
 
     if (self->main_node) {
         it = akvcam_list_find(self->buffers,
@@ -738,7 +767,7 @@ bool akvcam_buffers_write_frame(akvcam_buffers_t self,
         ok = true;
     }
 
-    spin_unlock(&self->slock);
+    mutex_unlock(&self->mtx);
     akvcam_frame_delete(&adjusted_frame);
 
     if (ok)
@@ -768,6 +797,8 @@ void akvcam_buffers_process_frame(const akvcam_buffers_t self,
     struct v4l2_buffer *v4l2_buff;
     akvcam_frame_t frame;
     akvcam_format_t format;
+
+    akpr_function()
 
     if (self->frame_written.callback) {
         akbuffer = akvcam_list_at(self->buffers, buffer->index);
@@ -804,13 +835,15 @@ bool akvcam_buffers_frame_available(const akvcam_buffers_t self)
     akvcam_list_element_t it;
     __u32 flags = V4L2_BUF_FLAG_DONE;
 
-    spin_lock(&self->slock);
+    if (mutex_lock_interruptible(&self->mtx))
+        return false;
+
     it = akvcam_list_find(self->buffers,
                           &flags,
                           0,
                           (akvcam_are_equals_t)
                           akvcam_buffers_is_ready);
-    spin_unlock(&self->slock);
+    mutex_unlock(&self->mtx);
 
     return it != NULL;
 }

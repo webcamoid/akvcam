@@ -41,6 +41,9 @@ bool akvcam_device_register(akvcam_device_t self);
 void akvcam_device_unregister(akvcam_device_t self);
 int32_t akvcam_device_num(const akvcam_device_t self);
 void akvcam_device_set_num(const akvcam_device_t self, int32_t num);
+int64_t akvcam_device_broadcasting_node(const akvcam_device_t self);
+void akvcam_device_set_broadcasting_node(const akvcam_device_t self,
+                                         int64_t broadcasting_node);
 bool akvcam_device_is_registered(const akvcam_device_t self);
 const char *akvcam_device_description(const akvcam_device_t self);
 AKVCAM_DEVICE_TYPE akvcam_device_type(const akvcam_device_t self);

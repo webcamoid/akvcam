@@ -37,6 +37,7 @@ struct akvcam_node
     akvcam_device_t device;
     akvcam_events_t events;
     akvcam_ioctl_t ioctls;
+    int64_t id;
     bool non_blocking;
 };
 
@@ -44,6 +45,7 @@ static struct v4l2_file_operations akvcam_fops;
 
 akvcam_node_t akvcam_node_new(akvcam_device_t device)
 {
+    static int64_t node_id = 0;
     akvcam_node_t self = kzalloc(sizeof(struct akvcam_node), GFP_KERNEL);
     self->self = akvcam_object_new("node",
                                    self,
@@ -51,6 +53,7 @@ akvcam_node_t akvcam_node_new(akvcam_device_t device)
     self->device = device;
     self->events = akvcam_events_new();
     self->ioctls = akvcam_ioctl_new();
+    self->id = node_id++;
 
     return self;
 }
@@ -80,6 +83,11 @@ void akvcam_node_delete(akvcam_node_t *self)
     akvcam_object_free(&((*self)->self));
     kfree(*self);
     *self = NULL;
+}
+
+int64_t akvcam_node_id(const akvcam_node_t self)
+{
+    return self->id;
 }
 
 akvcam_device_t akvcam_node_device_nr(const akvcam_node_t self)
@@ -137,6 +145,7 @@ static int akvcam_node_open(struct file *filp)
     if (!device)
         return -ENOTTY;
 
+    akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device))
     filp->private_data = akvcam_node_new(device);
     akvcam_node_set_non_blocking(filp->private_data,
                                  filp->f_flags & O_NONBLOCK);
@@ -146,7 +155,6 @@ static int akvcam_node_open(struct file *filp)
                           akvcam_node_sizeof(),
                           (akvcam_deleter_t) akvcam_node_delete,
                           true);
-    akvcam_node_delete((akvcam_node_t *) &filp->private_data);
 
     return 0;
 }
@@ -163,6 +171,7 @@ static ssize_t akvcam_node_read(struct file *filp,
 
     akpr_function();
     device = akvcam_device_from_file_nr(filp);
+    akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device))
 
     if (akvcam_device_type(device) != AKVCAM_DEVICE_TYPE_CAPTURE
         || !(akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE))
@@ -197,6 +206,7 @@ static ssize_t akvcam_node_write(struct file *filp,
                                  const char __user *data,
                                  size_t size, loff_t *offset)
 {
+    akvcam_node_t node;
     akvcam_device_t device;
     akvcam_buffers_t buffers;
     ssize_t bytes_written = 0;
@@ -204,6 +214,7 @@ static ssize_t akvcam_node_write(struct file *filp,
 
     akpr_function();
     device = akvcam_device_from_file_nr(filp);
+    akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device))
 
     if (akvcam_device_type(device) != AKVCAM_DEVICE_TYPE_OUTPUT
         || !(akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE))
@@ -220,6 +231,12 @@ static ssize_t akvcam_node_write(struct file *filp,
     if (offset)
         *offset = 0;
 
+    node = filp->private_data;
+
+    if (!node)
+        return -ENOTTY;
+
+    akvcam_device_set_broadcasting_node(device, akvcam_node_id(node));
     akvcam_device_set_streaming_rw(device, true);
     vdata = vmalloc(size);
     copy_from_user(vdata, data, size);
@@ -284,6 +301,7 @@ static int akvcam_node_release(struct file *filp)
     if (!device)
         return -ENOTTY;
 
+    akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device))
     node = filp->private_data;
 
     if (!node)
@@ -295,8 +313,11 @@ static int akvcam_node_release(struct file *filp)
     if (!it)
         return -ENOTTY;
 
-    akvcam_device_set_streaming(device, false);
-    akvcam_device_set_streaming_rw(device, false);
+    if (akvcam_node_id(node) == akvcam_device_broadcasting_node(device)) {
+        akvcam_device_set_streaming(device, false);
+        akvcam_device_set_streaming_rw(device, false);
+    }
+
     akvcam_list_erase(nodes, it);
 
     return 0;
