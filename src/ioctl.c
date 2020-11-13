@@ -59,46 +59,46 @@ struct akvcam_ioctl
     size_t n_ioctls;
 };
 
-int akvcam_ioctls_querycap(akvcam_node_t node, struct v4l2_capability *arg);
+int akvcam_ioctl_querycap(akvcam_node_t node, struct v4l2_capability *arg);
 #ifdef VIDIOC_QUERY_EXT_CTRL
-int akvcam_ioctls_query_ext_ctrl(akvcam_node_t node,
-                                 struct v4l2_query_ext_ctrl *control);
+int akvcam_ioctl_query_ext_ctrl(akvcam_node_t node,
+                                struct v4l2_query_ext_ctrl *control);
 #endif
-int akvcam_ioctls_g_ext_ctrls(akvcam_node_t node,
-                              struct v4l2_ext_controls *controls);
-int akvcam_ioctls_s_ext_ctrls(akvcam_node_t node,
-                              struct v4l2_ext_controls *controls);
-int akvcam_ioctls_try_ext_ctrls(akvcam_node_t node,
-                                struct v4l2_ext_controls *controls);
-int akvcam_ioctls_queryctrl(akvcam_node_t node, struct v4l2_queryctrl *control);
-int akvcam_ioctls_querymenu(akvcam_node_t node, struct v4l2_querymenu *menu);
-int akvcam_ioctls_g_ctrl(akvcam_node_t node, struct v4l2_control *control);
-int akvcam_ioctls_s_ctrl(akvcam_node_t node, struct v4l2_control *control);
-int akvcam_ioctls_enuminput(akvcam_node_t node, struct v4l2_input *input);
-int akvcam_ioctls_g_input(akvcam_node_t node, int *input);
-int akvcam_ioctls_s_input(akvcam_node_t node, int *input);
-int akvcam_ioctls_enumoutput(akvcam_node_t node, struct v4l2_output *output);
-int akvcam_ioctls_g_output(akvcam_node_t node, int *output);
-int akvcam_ioctls_s_output(akvcam_node_t node, int *output);
-int akvcam_ioctls_enum_fmt(akvcam_node_t node, struct v4l2_fmtdesc *format);
-int akvcam_ioctls_g_fmt(akvcam_node_t node, struct v4l2_format *format);
-int akvcam_ioctls_s_fmt(akvcam_node_t node, struct v4l2_format *format);
-int akvcam_ioctls_try_fmt(akvcam_node_t node, struct v4l2_format *format);
-int akvcam_ioctls_g_parm(akvcam_node_t node, struct v4l2_streamparm *param);
-int akvcam_ioctls_s_parm(akvcam_node_t node, struct v4l2_streamparm *param);
-int akvcam_ioctls_enum_framesizes(akvcam_node_t node,
-                                  struct v4l2_frmsizeenum *frame_sizes);
-int akvcam_ioctls_enum_frameintervals(akvcam_node_t node,
-                                      struct v4l2_frmivalenum *frame_intervals);
-int akvcam_ioctls_g_priority(akvcam_node_t node, enum v4l2_priority *priority);
-int akvcam_ioctls_s_priority(akvcam_node_t node, enum v4l2_priority *priority);
-int akvcam_ioctls_subscribe_event(akvcam_node_t node,
-                                  struct v4l2_event_subscription *event);
-int akvcam_ioctls_unsubscribe_event(akvcam_node_t node,
-                                    struct v4l2_event_subscription *event);
-int akvcam_ioctls_dqevent(akvcam_node_t node, struct v4l2_event *event);
-int akvcam_ioctls_reqbufs(akvcam_node_t node, struct v4l2_requestbuffers *request);
-int akvcam_ioctls_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer);
+int akvcam_ioctl_g_ext_ctrls(akvcam_node_t node,
+                             struct v4l2_ext_controls *controls);
+int akvcam_ioctl_s_ext_ctrls(akvcam_node_t node,
+                             struct v4l2_ext_controls *controls);
+int akvcam_ioctl_try_ext_ctrls(akvcam_node_t node,
+                               struct v4l2_ext_controls *controls);
+int akvcam_ioctl_queryctrl(akvcam_node_t node, struct v4l2_queryctrl *control);
+int akvcam_ioctl_querymenu(akvcam_node_t node, struct v4l2_querymenu *menu);
+int akvcam_ioctl_g_ctrl(akvcam_node_t node, struct v4l2_control *control);
+int akvcam_ioctl_s_ctrl(akvcam_node_t node, struct v4l2_control *control);
+int akvcam_ioctl_enuminput(akvcam_node_t node, struct v4l2_input *input);
+int akvcam_ioctl_g_input(akvcam_node_t node, int *input);
+int akvcam_ioctl_s_input(akvcam_node_t node, int *input);
+int akvcam_ioctl_enumoutput(akvcam_node_t node, struct v4l2_output *output);
+int akvcam_ioctl_g_output(akvcam_node_t node, int *output);
+int akvcam_ioctl_s_output(akvcam_node_t node, int *output);
+int akvcam_ioctl_enum_fmt(akvcam_node_t node, struct v4l2_fmtdesc *format);
+int akvcam_ioctl_g_fmt(akvcam_node_t node, struct v4l2_format *format);
+int akvcam_ioctl_s_fmt(akvcam_node_t node, struct v4l2_format *format);
+int akvcam_ioctl_try_fmt(akvcam_node_t node, struct v4l2_format *format);
+int akvcam_ioctl_g_parm(akvcam_node_t node, struct v4l2_streamparm *param);
+int akvcam_ioctl_s_parm(akvcam_node_t node, struct v4l2_streamparm *param);
+int akvcam_ioctl_enum_framesizes(akvcam_node_t node,
+                                 struct v4l2_frmsizeenum *frame_sizes);
+int akvcam_ioctl_enum_frameintervals(akvcam_node_t node,
+                                     struct v4l2_frmivalenum *frame_intervals);
+int akvcam_ioctl_g_priority(akvcam_node_t node, enum v4l2_priority *priority);
+int akvcam_ioctl_s_priority(akvcam_node_t node, enum v4l2_priority *priority);
+int akvcam_ioctl_subscribe_event(akvcam_node_t node,
+                                 struct v4l2_event_subscription *event);
+int akvcam_ioctl_unsubscribe_event(akvcam_node_t node,
+                                   struct v4l2_event_subscription *event);
+int akvcam_ioctl_dqevent(akvcam_node_t node, struct v4l2_event *event);
+int akvcam_ioctl_reqbufs(akvcam_node_t node, struct v4l2_requestbuffers *request);
+int akvcam_ioctl_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer);
 int akvcam_ioctl_create_bufs(akvcam_node_t node, struct v4l2_create_buffers *buffers);
 int akvcam_ioctl_qbuf(akvcam_node_t node, struct v4l2_buffer *buffer);
 int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer);
@@ -106,43 +106,43 @@ int akvcam_ioctl_streamon(akvcam_node_t node, const int *type);
 int akvcam_ioctl_streamoff(akvcam_node_t node, const int *type);
 
 static akvcam_ioctl_handler akvcam_ioctls_private[] = {
-    AKVCAM_HANDLER(VIDIOC_QUERYCAP           , akvcam_ioctls_querycap           , struct v4l2_capability        ),
+    AKVCAM_HANDLER(VIDIOC_QUERYCAP           , akvcam_ioctl_querycap           , struct v4l2_capability        ),
 #ifdef VIDIOC_QUERY_EXT_CTRL
-    AKVCAM_HANDLER(VIDIOC_QUERY_EXT_CTRL     , akvcam_ioctls_query_ext_ctrl     , struct v4l2_query_ext_ctrl    ),
+    AKVCAM_HANDLER(VIDIOC_QUERY_EXT_CTRL     , akvcam_ioctl_query_ext_ctrl     , struct v4l2_query_ext_ctrl    ),
 #endif
-    AKVCAM_HANDLER(VIDIOC_G_EXT_CTRLS        , akvcam_ioctls_g_ext_ctrls        , struct v4l2_ext_controls      ),
-    AKVCAM_HANDLER(VIDIOC_S_EXT_CTRLS        , akvcam_ioctls_s_ext_ctrls        , struct v4l2_ext_controls      ),
-    AKVCAM_HANDLER(VIDIOC_TRY_EXT_CTRLS      , akvcam_ioctls_try_ext_ctrls      , struct v4l2_ext_controls      ),
-    AKVCAM_HANDLER(VIDIOC_QUERYCTRL          , akvcam_ioctls_queryctrl          , struct v4l2_queryctrl         ),
-    AKVCAM_HANDLER(VIDIOC_QUERYMENU          , akvcam_ioctls_querymenu          , struct v4l2_querymenu         ),
-    AKVCAM_HANDLER(VIDIOC_G_CTRL             , akvcam_ioctls_g_ctrl             , struct v4l2_control           ),
-    AKVCAM_HANDLER(VIDIOC_S_CTRL             , akvcam_ioctls_s_ctrl             , struct v4l2_control           ),
-    AKVCAM_HANDLER(VIDIOC_ENUMINPUT          , akvcam_ioctls_enuminput          , struct v4l2_input             ),
-    AKVCAM_HANDLER(VIDIOC_G_INPUT            , akvcam_ioctls_g_input            , int                           ),
-    AKVCAM_HANDLER(VIDIOC_S_INPUT            , akvcam_ioctls_s_input            , int                           ),
-    AKVCAM_HANDLER(VIDIOC_ENUMOUTPUT         , akvcam_ioctls_enumoutput         , struct v4l2_output            ),
-    AKVCAM_HANDLER(VIDIOC_G_OUTPUT           , akvcam_ioctls_g_output           , int                           ),
-    AKVCAM_HANDLER(VIDIOC_S_OUTPUT           , akvcam_ioctls_s_output           , int                           ),
-    AKVCAM_HANDLER(VIDIOC_ENUM_FMT           , akvcam_ioctls_enum_fmt           , struct v4l2_fmtdesc           ),
-    AKVCAM_HANDLER(VIDIOC_G_FMT              , akvcam_ioctls_g_fmt              , struct v4l2_format            ),
-    AKVCAM_HANDLER(VIDIOC_S_FMT              , akvcam_ioctls_s_fmt              , struct v4l2_format            ),
-    AKVCAM_HANDLER(VIDIOC_TRY_FMT            , akvcam_ioctls_try_fmt            , struct v4l2_format            ),
-    AKVCAM_HANDLER(VIDIOC_G_PARM             , akvcam_ioctls_g_parm             , struct v4l2_streamparm        ),
-    AKVCAM_HANDLER(VIDIOC_S_PARM             , akvcam_ioctls_s_parm             , struct v4l2_streamparm        ),
-    AKVCAM_HANDLER(VIDIOC_ENUM_FRAMESIZES    , akvcam_ioctls_enum_framesizes    , struct v4l2_frmsizeenum       ),
-    AKVCAM_HANDLER(VIDIOC_ENUM_FRAMEINTERVALS, akvcam_ioctls_enum_frameintervals, struct v4l2_frmivalenum       ),
-    AKVCAM_HANDLER(VIDIOC_G_PRIORITY         , akvcam_ioctls_g_priority         , enum v4l2_priority            ),
-    AKVCAM_HANDLER(VIDIOC_S_PRIORITY         , akvcam_ioctls_s_priority         , enum v4l2_priority            ),
-    AKVCAM_HANDLER(VIDIOC_SUBSCRIBE_EVENT    , akvcam_ioctls_subscribe_event    , struct v4l2_event_subscription),
-    AKVCAM_HANDLER(VIDIOC_UNSUBSCRIBE_EVENT  , akvcam_ioctls_unsubscribe_event  , struct v4l2_event_subscription),
-    AKVCAM_HANDLER(VIDIOC_DQEVENT            , akvcam_ioctls_dqevent            , struct v4l2_event             ),
-    AKVCAM_HANDLER(VIDIOC_REQBUFS            , akvcam_ioctls_reqbufs            , struct v4l2_requestbuffers    ),
-    AKVCAM_HANDLER(VIDIOC_QUERYBUF           , akvcam_ioctls_querybuf           , struct v4l2_buffer            ),
-    AKVCAM_HANDLER(VIDIOC_CREATE_BUFS        , akvcam_ioctl_create_bufs         , struct v4l2_create_buffers    ),
-    AKVCAM_HANDLER(VIDIOC_QBUF               , akvcam_ioctl_qbuf                , struct v4l2_buffer            ),
-    AKVCAM_HANDLER(VIDIOC_DQBUF              , akvcam_ioctl_dqbuf               , struct v4l2_buffer            ),
-    AKVCAM_HANDLER(VIDIOC_STREAMON           , akvcam_ioctl_streamon            , const int                     ),
-    AKVCAM_HANDLER(VIDIOC_STREAMOFF          , akvcam_ioctl_streamoff           , const int                     ),
+    AKVCAM_HANDLER(VIDIOC_G_EXT_CTRLS        , akvcam_ioctl_g_ext_ctrls        , struct v4l2_ext_controls      ),
+    AKVCAM_HANDLER(VIDIOC_S_EXT_CTRLS        , akvcam_ioctl_s_ext_ctrls        , struct v4l2_ext_controls      ),
+    AKVCAM_HANDLER(VIDIOC_TRY_EXT_CTRLS      , akvcam_ioctl_try_ext_ctrls      , struct v4l2_ext_controls      ),
+    AKVCAM_HANDLER(VIDIOC_QUERYCTRL          , akvcam_ioctl_queryctrl          , struct v4l2_queryctrl         ),
+    AKVCAM_HANDLER(VIDIOC_QUERYMENU          , akvcam_ioctl_querymenu          , struct v4l2_querymenu         ),
+    AKVCAM_HANDLER(VIDIOC_G_CTRL             , akvcam_ioctl_g_ctrl             , struct v4l2_control           ),
+    AKVCAM_HANDLER(VIDIOC_S_CTRL             , akvcam_ioctl_s_ctrl             , struct v4l2_control           ),
+    AKVCAM_HANDLER(VIDIOC_ENUMINPUT          , akvcam_ioctl_enuminput          , struct v4l2_input             ),
+    AKVCAM_HANDLER(VIDIOC_G_INPUT            , akvcam_ioctl_g_input            , int                           ),
+    AKVCAM_HANDLER(VIDIOC_S_INPUT            , akvcam_ioctl_s_input            , int                           ),
+    AKVCAM_HANDLER(VIDIOC_ENUMOUTPUT         , akvcam_ioctl_enumoutput         , struct v4l2_output            ),
+    AKVCAM_HANDLER(VIDIOC_G_OUTPUT           , akvcam_ioctl_g_output           , int                           ),
+    AKVCAM_HANDLER(VIDIOC_S_OUTPUT           , akvcam_ioctl_s_output           , int                           ),
+    AKVCAM_HANDLER(VIDIOC_ENUM_FMT           , akvcam_ioctl_enum_fmt           , struct v4l2_fmtdesc           ),
+    AKVCAM_HANDLER(VIDIOC_G_FMT              , akvcam_ioctl_g_fmt              , struct v4l2_format            ),
+    AKVCAM_HANDLER(VIDIOC_S_FMT              , akvcam_ioctl_s_fmt              , struct v4l2_format            ),
+    AKVCAM_HANDLER(VIDIOC_TRY_FMT            , akvcam_ioctl_try_fmt            , struct v4l2_format            ),
+    AKVCAM_HANDLER(VIDIOC_G_PARM             , akvcam_ioctl_g_parm             , struct v4l2_streamparm        ),
+    AKVCAM_HANDLER(VIDIOC_S_PARM             , akvcam_ioctl_s_parm             , struct v4l2_streamparm        ),
+    AKVCAM_HANDLER(VIDIOC_ENUM_FRAMESIZES    , akvcam_ioctl_enum_framesizes    , struct v4l2_frmsizeenum       ),
+    AKVCAM_HANDLER(VIDIOC_ENUM_FRAMEINTERVALS, akvcam_ioctl_enum_frameintervals, struct v4l2_frmivalenum       ),
+    AKVCAM_HANDLER(VIDIOC_G_PRIORITY         , akvcam_ioctl_g_priority         , enum v4l2_priority            ),
+    AKVCAM_HANDLER(VIDIOC_S_PRIORITY         , akvcam_ioctl_s_priority         , enum v4l2_priority            ),
+    AKVCAM_HANDLER(VIDIOC_SUBSCRIBE_EVENT    , akvcam_ioctl_subscribe_event    , struct v4l2_event_subscription),
+    AKVCAM_HANDLER(VIDIOC_UNSUBSCRIBE_EVENT  , akvcam_ioctl_unsubscribe_event  , struct v4l2_event_subscription),
+    AKVCAM_HANDLER(VIDIOC_DQEVENT            , akvcam_ioctl_dqevent            , struct v4l2_event             ),
+    AKVCAM_HANDLER(VIDIOC_REQBUFS            , akvcam_ioctl_reqbufs            , struct v4l2_requestbuffers    ),
+    AKVCAM_HANDLER(VIDIOC_QUERYBUF           , akvcam_ioctl_querybuf           , struct v4l2_buffer            ),
+    AKVCAM_HANDLER(VIDIOC_CREATE_BUFS        , akvcam_ioctl_create_bufs        , struct v4l2_create_buffers    ),
+    AKVCAM_HANDLER(VIDIOC_QBUF               , akvcam_ioctl_qbuf               , struct v4l2_buffer            ),
+    AKVCAM_HANDLER(VIDIOC_DQBUF              , akvcam_ioctl_dqbuf              , struct v4l2_buffer            ),
+    AKVCAM_HANDLER(VIDIOC_STREAMON           , akvcam_ioctl_streamon           , const int                     ),
+    AKVCAM_HANDLER(VIDIOC_STREAMOFF          , akvcam_ioctl_streamoff          , const int                     ),
 
     AKVCAM_HANDLER_IGNORE(VIDIOC_CROPCAP),
     AKVCAM_HANDLER_IGNORE(VIDIOC_DBG_G_REGISTER),
@@ -235,7 +235,7 @@ int akvcam_ioctl_do(akvcam_ioctl_t self,
                 size = akvcam_ioctls_private[i].data_size;
                 data = kzalloc(size, GFP_KERNEL);
 
-                if (copy_from_user(data, arg, size) == 0) {
+                if (!copy_from_user(data, arg, size)) {
                     result = akvcam_ioctls_private[i].proc(node, data);
 
                     if (copy_to_user(arg, data, size) != 0)
@@ -263,14 +263,14 @@ int akvcam_ioctl_do(akvcam_ioctl_t self,
 }
 
 
-int akvcam_ioctls_querycap(akvcam_node_t node,
-                           struct v4l2_capability *capability)
+int akvcam_ioctl_querycap(akvcam_node_t node,
+                          struct v4l2_capability *capability)
 {
     __u32 caps = 0;
     akvcam_device_t device;
 
     akpr_function()
-    device = akvcam_node_device_nr(node);    
+    device = akvcam_node_device_nr(node);
     akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device))
 
     memset(capability, 0, sizeof(struct v4l2_capability));
@@ -289,8 +289,8 @@ int akvcam_ioctls_querycap(akvcam_node_t node,
 }
 
 #ifdef VIDIOC_QUERY_EXT_CTRL
-int akvcam_ioctls_query_ext_ctrl(akvcam_node_t node,
-                                 struct v4l2_query_ext_ctrl *control)
+int akvcam_ioctl_query_ext_ctrl(akvcam_node_t node,
+                                struct v4l2_query_ext_ctrl *control)
 {
     akvcam_device_t device;
     akvcam_controls_t controls;
@@ -308,8 +308,8 @@ int akvcam_ioctls_query_ext_ctrl(akvcam_node_t node,
 }
 #endif
 
-int akvcam_ioctls_g_ext_ctrls(akvcam_node_t node,
-                              struct v4l2_ext_controls *controls)
+int akvcam_ioctl_g_ext_ctrls(akvcam_node_t node,
+                             struct v4l2_ext_controls *controls)
 {
     akvcam_device_t device;
     akvcam_controls_t controls_;
@@ -326,8 +326,8 @@ int akvcam_ioctls_g_ext_ctrls(akvcam_node_t node,
     return akvcam_controls_get_ext(controls_, controls, 0);
 }
 
-int akvcam_ioctls_s_ext_ctrls(akvcam_node_t node,
-                              struct v4l2_ext_controls *controls)
+int akvcam_ioctl_s_ext_ctrls(akvcam_node_t node,
+                             struct v4l2_ext_controls *controls)
 {
     akvcam_device_t device;
     akvcam_controls_t controls_;
@@ -344,8 +344,8 @@ int akvcam_ioctls_s_ext_ctrls(akvcam_node_t node,
     return akvcam_controls_set_ext(controls_, controls, 0);
 }
 
-int akvcam_ioctls_try_ext_ctrls(akvcam_node_t node,
-                                struct v4l2_ext_controls *controls)
+int akvcam_ioctl_try_ext_ctrls(akvcam_node_t node,
+                               struct v4l2_ext_controls *controls)
 {
     akvcam_device_t device;
     akvcam_controls_t controls_;
@@ -362,7 +362,7 @@ int akvcam_ioctls_try_ext_ctrls(akvcam_node_t node,
     return akvcam_controls_try_ext(controls_, controls, 0);
 }
 
-int akvcam_ioctls_queryctrl(akvcam_node_t node, struct v4l2_queryctrl *control)
+int akvcam_ioctl_queryctrl(akvcam_node_t node, struct v4l2_queryctrl *control)
 {
     akvcam_device_t device;
     akvcam_controls_t controls;
@@ -379,7 +379,7 @@ int akvcam_ioctls_queryctrl(akvcam_node_t node, struct v4l2_queryctrl *control)
     return akvcam_controls_fill(controls, control);
 }
 
-int akvcam_ioctls_querymenu(akvcam_node_t node, struct v4l2_querymenu *menu)
+int akvcam_ioctl_querymenu(akvcam_node_t node, struct v4l2_querymenu *menu)
 {
     akvcam_device_t device;
     akvcam_controls_t controls;
@@ -396,7 +396,7 @@ int akvcam_ioctls_querymenu(akvcam_node_t node, struct v4l2_querymenu *menu)
     return akvcam_controls_fill_menu(controls, menu);
 }
 
-int akvcam_ioctls_g_ctrl(akvcam_node_t node, struct v4l2_control *control)
+int akvcam_ioctl_g_ctrl(akvcam_node_t node, struct v4l2_control *control)
 {
     akvcam_device_t device;
     akvcam_controls_t controls_;
@@ -413,7 +413,7 @@ int akvcam_ioctls_g_ctrl(akvcam_node_t node, struct v4l2_control *control)
     return akvcam_controls_get(controls_, control);
 }
 
-int akvcam_ioctls_s_ctrl(akvcam_node_t node, struct v4l2_control *control)
+int akvcam_ioctl_s_ctrl(akvcam_node_t node, struct v4l2_control *control)
 {
     akvcam_device_t device;
     akvcam_controls_t controls_;
@@ -430,7 +430,7 @@ int akvcam_ioctls_s_ctrl(akvcam_node_t node, struct v4l2_control *control)
     return akvcam_controls_set(controls_, control);
 }
 
-int akvcam_ioctls_enuminput(akvcam_node_t node, struct v4l2_input *input)
+int akvcam_ioctl_enuminput(akvcam_node_t node, struct v4l2_input *input)
 {
     akvcam_device_t device;
 
@@ -451,7 +451,7 @@ int akvcam_ioctls_enuminput(akvcam_node_t node, struct v4l2_input *input)
     return 0;
 }
 
-int akvcam_ioctls_g_input(akvcam_node_t node, int *input)
+int akvcam_ioctl_g_input(akvcam_node_t node, int *input)
 {
     akvcam_device_t device;
 
@@ -467,7 +467,7 @@ int akvcam_ioctls_g_input(akvcam_node_t node, int *input)
     return 0;
 }
 
-int akvcam_ioctls_s_input(akvcam_node_t node, int *input)
+int akvcam_ioctl_s_input(akvcam_node_t node, int *input)
 {
     akvcam_device_t device;
 
@@ -481,7 +481,7 @@ int akvcam_ioctls_s_input(akvcam_node_t node, int *input)
     return *input == 0? 0: -EINVAL;
 }
 
-int akvcam_ioctls_enumoutput(akvcam_node_t node, struct v4l2_output *output)
+int akvcam_ioctl_enumoutput(akvcam_node_t node, struct v4l2_output *output)
 {
     akvcam_device_t device;
 
@@ -502,7 +502,7 @@ int akvcam_ioctls_enumoutput(akvcam_node_t node, struct v4l2_output *output)
     return 0;
 }
 
-int akvcam_ioctls_g_output(akvcam_node_t node, int *output)
+int akvcam_ioctl_g_output(akvcam_node_t node, int *output)
 {
     akvcam_device_t device;
 
@@ -521,7 +521,7 @@ int akvcam_ioctls_g_output(akvcam_node_t node, int *output)
     return 0;
 }
 
-int akvcam_ioctls_s_output(akvcam_node_t node, int *output)
+int akvcam_ioctl_s_output(akvcam_node_t node, int *output)
 {
     akvcam_device_t device;
 
@@ -538,7 +538,7 @@ int akvcam_ioctls_s_output(akvcam_node_t node, int *output)
     return *output == 0? 0: -EINVAL;
 }
 
-int akvcam_ioctls_enum_fmt(akvcam_node_t node, struct v4l2_fmtdesc *format)
+int akvcam_ioctl_enum_fmt(akvcam_node_t node, struct v4l2_fmtdesc *format)
 {
     akvcam_device_t device;
     akvcam_formats_list_t formats;
@@ -570,7 +570,7 @@ int akvcam_ioctls_enum_fmt(akvcam_node_t node, struct v4l2_fmtdesc *format)
     return fourcc? 0: -EINVAL;
 }
 
-int akvcam_ioctls_g_fmt(akvcam_node_t node, struct v4l2_format *format)
+int akvcam_ioctl_g_fmt(akvcam_node_t node, struct v4l2_format *format)
 {
     akvcam_device_t device;
     akvcam_format_t current_format;
@@ -616,7 +616,7 @@ int akvcam_ioctls_g_fmt(akvcam_node_t node, struct v4l2_format *format)
     return 0;
 }
 
-int akvcam_ioctls_s_fmt(akvcam_node_t node, struct v4l2_format *format)
+int akvcam_ioctl_s_fmt(akvcam_node_t node, struct v4l2_format *format)
 {
     akvcam_device_t device;
     akvcam_format_t current_format;
@@ -626,7 +626,7 @@ int akvcam_ioctls_s_fmt(akvcam_node_t node, struct v4l2_format *format)
     akpr_function()
     device = akvcam_node_device_nr(node);
     akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device))
-    result = akvcam_ioctls_try_fmt(node, format);
+    result = akvcam_ioctl_try_fmt(node, format);
 
     if (result == 0) {
         current_format = akvcam_device_format_nr(device);
@@ -642,7 +642,7 @@ int akvcam_ioctls_s_fmt(akvcam_node_t node, struct v4l2_format *format)
     return result;
 }
 
-int akvcam_ioctls_try_fmt(akvcam_node_t node, struct v4l2_format *format)
+int akvcam_ioctl_try_fmt(akvcam_node_t node, struct v4l2_format *format)
 {
     akvcam_device_t device;
     akvcam_format_t nearest_format;
@@ -699,7 +699,7 @@ int akvcam_ioctls_try_fmt(akvcam_node_t node, struct v4l2_format *format)
     return 0;
 }
 
-int akvcam_ioctls_g_parm(akvcam_node_t node, struct v4l2_streamparm *param)
+int akvcam_ioctl_g_parm(akvcam_node_t node, struct v4l2_streamparm *param)
 {
     akvcam_device_t device;
     akvcam_format_t format;
@@ -741,7 +741,7 @@ int akvcam_ioctls_g_parm(akvcam_node_t node, struct v4l2_streamparm *param)
     return 0;
 }
 
-int akvcam_ioctls_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
+int akvcam_ioctl_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
 {
     akvcam_device_t device;
     akvcam_formats_list_t formats;
@@ -819,8 +819,8 @@ int akvcam_ioctls_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
     return 0;
 }
 
-int akvcam_ioctls_enum_framesizes(akvcam_node_t node,
-                                  struct v4l2_frmsizeenum *frame_sizes)
+int akvcam_ioctl_enum_framesizes(akvcam_node_t node,
+                                 struct v4l2_frmsizeenum *frame_sizes)
 {
     akvcam_device_t device;
     akvcam_formats_list_t formats;
@@ -847,8 +847,8 @@ int akvcam_ioctls_enum_framesizes(akvcam_node_t node,
     return resolution? 0: -EINVAL;
 }
 
-int akvcam_ioctls_enum_frameintervals(akvcam_node_t node,
-                                      struct v4l2_frmivalenum *frame_intervals)
+int akvcam_ioctl_enum_frameintervals(akvcam_node_t node,
+                                     struct v4l2_frmivalenum *frame_intervals)
 {
     akvcam_device_t device;
     akvcam_formats_list_t formats;
@@ -877,7 +877,7 @@ int akvcam_ioctls_enum_frameintervals(akvcam_node_t node,
     return frame_rate? 0: -EINVAL;
 }
 
-int akvcam_ioctls_g_priority(akvcam_node_t node, enum v4l2_priority *priority)
+int akvcam_ioctl_g_priority(akvcam_node_t node, enum v4l2_priority *priority)
 {
     akvcam_device_t device;
 
@@ -889,7 +889,7 @@ int akvcam_ioctls_g_priority(akvcam_node_t node, enum v4l2_priority *priority)
     return 0;
 }
 
-int akvcam_ioctls_s_priority(akvcam_node_t node, enum v4l2_priority *priority)
+int akvcam_ioctl_s_priority(akvcam_node_t node, enum v4l2_priority *priority)
 {
     akvcam_device_t device;
     akvcam_node_t priority_node;
@@ -914,8 +914,8 @@ int akvcam_ioctls_s_priority(akvcam_node_t node, enum v4l2_priority *priority)
     return 0;
 }
 
-int akvcam_ioctls_subscribe_event(akvcam_node_t node,
-                                  struct v4l2_event_subscription *event)
+int akvcam_ioctl_subscribe_event(akvcam_node_t node,
+                                 struct v4l2_event_subscription *event)
 {
     akvcam_device_t device;
     akvcam_controls_t controls;
@@ -949,8 +949,8 @@ int akvcam_ioctls_subscribe_event(akvcam_node_t node,
     return 0;
 }
 
-int akvcam_ioctls_unsubscribe_event(akvcam_node_t node,
-                                    struct v4l2_event_subscription *event)
+int akvcam_ioctl_unsubscribe_event(akvcam_node_t node,
+                                   struct v4l2_event_subscription *event)
 {
     akvcam_device_t device;
     akvcam_events_t events;
@@ -975,7 +975,7 @@ int akvcam_ioctls_unsubscribe_event(akvcam_node_t node,
     return 0;
 }
 
-int akvcam_ioctls_dqevent(akvcam_node_t node, struct v4l2_event *event)
+int akvcam_ioctl_dqevent(akvcam_node_t node, struct v4l2_event *event)
 {
     akvcam_device_t device;
     akvcam_events_t events;
@@ -988,7 +988,8 @@ int akvcam_ioctls_dqevent(akvcam_node_t node, struct v4l2_event *event)
     return akvcam_events_dequeue(events, event)? 0: -EINVAL;
 }
 
-int akvcam_ioctls_reqbufs(akvcam_node_t node, struct v4l2_requestbuffers *request)
+int akvcam_ioctl_reqbufs(akvcam_node_t node,
+                         struct v4l2_requestbuffers *request)
 {
     akvcam_device_t device;
     akvcam_buffers_t buffers;
@@ -1001,7 +1002,7 @@ int akvcam_ioctls_reqbufs(akvcam_node_t node, struct v4l2_requestbuffers *reques
     return akvcam_buffers_allocate(buffers, node, request);
 }
 
-int akvcam_ioctls_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer)
+int akvcam_ioctl_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer)
 {
     akvcam_device_t device;
     akvcam_buffers_t buffers;
@@ -1009,6 +1010,7 @@ int akvcam_ioctls_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer)
     struct v4l2_plane *planes;
     size_t n_planes;
     size_t i;
+    int result = 0;
 
     akpr_function()
     device = akvcam_node_device_nr(node);
@@ -1026,10 +1028,16 @@ int akvcam_ioctls_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer)
 
     format = akvcam_device_format_nr(device);
     planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
+
+    if (copy_from_user(planes,
+                       (char __user *) buffer->m.planes,
+                       buffer->length * sizeof(struct v4l2_plane))) {
+        kfree(planes);
+
+        return -EIO;
+    }
+
     n_planes = akvcam_min(buffer->length, akvcam_format_planes(format));
-    copy_from_user(planes,
-                   (char __user *) buffer->m.planes,
-                   buffer->length * sizeof(struct v4l2_plane));
 
     for (i = 0; i < n_planes; i++) {
         if (akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_CAPTURE
@@ -1051,12 +1059,14 @@ int akvcam_ioctls_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer)
         memset(planes[i].reserved, 0, 11 * sizeof(__u32));
     }
 
-    copy_to_user((char __user *) buffer->m.planes,
-                 planes,
-                 buffer->length * sizeof(struct v4l2_plane));
+    if (copy_to_user((char __user *) buffer->m.planes,
+                     planes,
+                     buffer->length * sizeof(struct v4l2_plane)))
+        result = -EIO;
+
     kfree(planes);
 
-    return 0;
+    return result;
 }
 
 int akvcam_ioctl_create_bufs(akvcam_node_t node, struct v4l2_create_buffers *buffers)
@@ -1100,21 +1110,31 @@ int akvcam_ioctl_qbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
             if (akvcam_device_multiplanar(device)) {
                 format = akvcam_device_format_nr(device);
                 planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
-                n_planes = akvcam_min(buffer->length, akvcam_format_planes(format));
-                copy_from_user(planes,
-                               (char __user *) buffer->m.planes,
-                               buffer->length * sizeof(struct v4l2_plane));
 
-                for (i = 0; i < n_planes; i++)
-                    copy_from_user((char *) data + akvcam_format_offset(format, i),
-                                   (char __user *) planes[i].m.userptr,
-                                   planes[i].length);
+                if (!copy_from_user(planes,
+                                    (char __user *) buffer->m.planes,
+                                    buffer->length * sizeof(struct v4l2_plane))) {
+                    n_planes = akvcam_min(buffer->length,
+                                          akvcam_format_planes(format));
+
+                    for (i = 0; i < n_planes; i++)
+                        if (copy_from_user((char *) data + akvcam_format_offset(format, i),
+                                           (char __user *) planes[i].m.userptr,
+                                           planes[i].length)) {
+                            result = -EIO;
+
+                            break;
+                        }
+                } else {
+                    result = -EIO;
+                }
 
                 kfree(planes);
             } else {
-                copy_from_user(data,
-                               (char __user *) buffer->m.userptr,
-                               buffer->length);
+                if (copy_from_user(data,
+                                   (char __user *) buffer->m.userptr,
+                                   buffer->length))
+                    result = -EIO;
             }
 
             akvcam_buffers_process_frame(buffers, buffer);
@@ -1152,21 +1172,31 @@ int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
             if (akvcam_device_multiplanar(device)) {
                 format = akvcam_device_format_nr(device);
                 planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
-                n_planes = akvcam_min(buffer->length, akvcam_format_planes(format));
-                copy_from_user(planes,
-                               (char __user *) buffer->m.planes,
-                               buffer->length * sizeof(struct v4l2_plane));
 
-                for (i = 0; i < n_planes; i++)
-                    copy_to_user((char __user *) planes[i].m.userptr,
-                                 (char *) data + akvcam_format_offset(format, i),
-                                 planes[i].length);
+                if (!copy_from_user(planes,
+                                    (char __user *) buffer->m.planes,
+                                    buffer->length * sizeof(struct v4l2_plane))) {
+                    n_planes = akvcam_min(buffer->length,
+                                          akvcam_format_planes(format));
+
+                    for (i = 0; i < n_planes; i++)
+                        if (copy_to_user((char __user *) planes[i].m.userptr,
+                                         (char *) data + akvcam_format_offset(format, i),
+                                         planes[i].length)) {
+                            result = -EIO;
+
+                            break;
+                        }
+                } else {
+                   result = -EIO;
+                }
 
                 kfree(planes);
             } else {
-                copy_to_user((char __user *) buffer->m.userptr,
-                             data,
-                             buffer->length);
+                if (copy_to_user((char __user *) buffer->m.userptr,
+                                 data,
+                                 buffer->length))
+                    result = -EIO;
             }
         }
     } else if (result == 0
@@ -1175,20 +1205,26 @@ int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
                && akvcam_device_multiplanar(device)) {
         format = akvcam_device_format_nr(device);
         planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
-        n_planes = akvcam_min(buffer->length, akvcam_format_planes(format));
-        copy_from_user(planes,
+
+        if (!copy_from_user(planes,
                        (char __user *) buffer->m.planes,
-                       buffer->length * sizeof(struct v4l2_plane));
+                       buffer->length * sizeof(struct v4l2_plane))) {
+            n_planes = akvcam_min(buffer->length, akvcam_format_planes(format));
 
-        for (i = 0; i < n_planes; i++)
-            planes[i].m.mem_offset =
-                    buffer->index
-                    * (__u32) akvcam_format_size(format)
-                    + (__u32) akvcam_format_offset(format, i);
+            for (i = 0; i < n_planes; i++)
+                planes[i].m.mem_offset =
+                        buffer->index
+                        * (__u32) akvcam_format_size(format)
+                        + (__u32) akvcam_format_offset(format, i);
 
-        copy_to_user((char __user *) buffer->m.planes,
-                     planes,
-                     buffer->length * sizeof(struct v4l2_plane));
+            if (copy_to_user((char __user *) buffer->m.planes,
+                             planes,
+                             buffer->length * sizeof(struct v4l2_plane)))
+                result = -EIO;
+        } else {
+            result = -EIO;
+        }
+
         kfree(planes);
     }
 

@@ -194,9 +194,12 @@ static ssize_t akvcam_node_read(struct file *filp,
                                             filp->private_data,
                                             vdata,
                                             size);
-        copy_to_user(data, vdata, size);
+        if (!copy_to_user(data, vdata, size))
+            akvcam_buffers_notify_frame(buffers);
+        else
+            bytes_read = -EIO;
+
         vfree(vdata);
-        akvcam_buffers_notify_frame(buffers);
     }
 
     return bytes_read;
@@ -239,11 +242,17 @@ static ssize_t akvcam_node_write(struct file *filp,
     akvcam_device_set_broadcasting_node(device, akvcam_node_id(node));
     akvcam_device_set_streaming_rw(device, true);
     vdata = vmalloc(size);
-    copy_from_user(vdata, data, size);
-    bytes_written = akvcam_buffers_write_rw(buffers,
-                                            filp->private_data,
-                                            vdata,
-                                            size);
+
+    if (!copy_from_user(vdata, data, size)) {
+        bytes_written = akvcam_buffers_write_rw(buffers,
+                                                filp->private_data,
+                                                vdata,
+                                                size);
+    } else {
+        akvcam_device_set_streaming_rw(device, false);
+        bytes_written = -EIO;
+    }
+
     vfree(vdata);
 
     return bytes_written;
