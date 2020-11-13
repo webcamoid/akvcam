@@ -155,6 +155,7 @@ static int akvcam_node_open(struct file *filp)
                           akvcam_node_sizeof(),
                           (akvcam_deleter_t) akvcam_node_delete,
                           true);
+    akvcam_node_delete((akvcam_node_t *) &filp->private_data);
 
     return 0;
 }
