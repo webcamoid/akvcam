@@ -53,7 +53,8 @@ ${EXEC} apt-get -qq -y install \
     kmod \
     sparse \
     wget \
-    libxkbcommon-x11-0
+    libxkbcommon-x11-0 \
+    xvfb
 
 if [ ! -z "${USE_QEMU}" ]; then
     ${EXEC} apt-get -qq -y install \
