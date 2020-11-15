@@ -18,3 +18,5 @@ modules.order
 *.tmp
 *.o.d
 *.ur-safe
+__pycache__
+packages_auto

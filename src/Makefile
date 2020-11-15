@@ -9,7 +9,7 @@ PWD := $(shell pwd)
 DKMS := dkms
 DESTDIR :=
 PREFIX := $(DESTDIR)/usr/src
-INSTALLDIR = $(PREFIX)/$(MODULE_NAME)-$(MODULE_VERSION)
+INSTALLDIR := $(PREFIX)/$(MODULE_NAME)-$(MODULE_VERSION)
 
 HAVE_SPARSE := $(shell which sparse 2>/dev/null)
 SPARSE_MODE ?= 2
