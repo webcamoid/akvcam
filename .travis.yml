@@ -9,9 +9,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.4.238
-      - KERNEL_VERSION=4.4.238-0404238
-      - KERNEL_VERSION_C=202010010635
+      - REPOSITORY=v4.4.243
+      - KERNEL_VERSION=4.4.243-0404243
+      - KERNEL_VERSION_C=202011102158
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -20,9 +20,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.9.238
-      - KERNEL_VERSION=4.9.238-0409238
-      - KERNEL_VERSION_C=202010011931
+      - REPOSITORY=v4.9.243
+      - KERNEL_VERSION=4.9.238-0409243
+      - KERNEL_VERSION_C=202011102221
       - export USE_QEMU=1
   - os: linux
     sudo: required
@@ -31,9 +31,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.14.200
-      - KERNEL_VERSION=4.14.200-0414200
-      - KERNEL_VERSION_C=202010011243
+      - REPOSITORY=v4.14.206
+      - KERNEL_VERSION=4.14.206-0414206
+      - KERNEL_VERSION_C=202011102209
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
       - export USE_QEMU=1
@@ -44,9 +44,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=focal
-      - REPOSITORY=v4.19.149
-      - KERNEL_VERSION=4.19.149-0419149
-      - KERNEL_VERSION_C=202010011241
+      - REPOSITORY=v4.19.157
+      - KERNEL_VERSION=4.19.157-0419157
+      - KERNEL_VERSION_C=202011102159
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
   - os: linux
@@ -56,9 +56,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=focal
-      - REPOSITORY=v5.4.69
-      - KERNEL_VERSION=5.4.69-050469
-      - KERNEL_VERSION_C=202010010842
+      - REPOSITORY=v5.4.77
+      - KERNEL_VERSION=5.4.77-050477
+      - KERNEL_VERSION_C=202011101641
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
   - os: linux
@@ -68,9 +68,22 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=groovy
-      - REPOSITORY=v5.8.13
-      - KERNEL_VERSION=5.8.13-050813
-      - KERNEL_VERSION_C=202010011235
+      - REPOSITORY=v5.8.18
+      - KERNEL_VERSION=5.8.18-050818
+      - KERNEL_VERSION_C=202011011237
+      - UNSIGNED_IMG=1
+      - NEED_MODULES=1
+
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=groovy
+      - REPOSITORY=v5.9.8
+      - KERNEL_VERSION=5.9.8-050908
+      - KERNEL_VERSION_C=202011101634
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
 
@@ -89,9 +102,9 @@ script:
   - chmod +x ports/ci/travis/build.sh
   - ports/ci/travis/build.sh
 
-#after_success:
-#  - chmod +x ports/ci/travis/deploy.sh
-#  - ports/ci/travis/deploy.sh
+after_success:
+  - chmod +x ports/ci/travis/deploy.sh
+  - ports/ci/travis/deploy.sh
 
 branches:
   only:

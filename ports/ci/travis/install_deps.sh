@@ -17,6 +17,14 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+#qtIinstallerVerbose=-v
+
+if [ ! -z "${USE_WGET}" ]; then
+    export DOWNLOAD_CMD="wget -nv -c"
+else
+    export DOWNLOAD_CMD="curl --retry 10 -sS -kLOC -"
+fi
+
 cat << EOF > configure_tzdata.sh
 #!/bin/sh
 
@@ -34,20 +42,21 @@ chmod +x configure_tzdata.sh
 
 ${EXEC} bash configure_tzdata.sh
 
-${EXEC} apt-get -y update
-${EXEC} apt-get -y upgrade
+${EXEC} apt-get -qq -y update
+${EXEC} apt-get -qq -y upgrade
 
 # Install dev tools
-${EXEC} apt-get -y install \
+${EXEC} apt-get -qq -y install \
     g++ \
     make \
     libelf-dev \
     kmod \
     sparse \
-    wget
+    wget \
+    libxkbcommon-x11-0
 
 if [ ! -z "${USE_QEMU}" ]; then
-    ${EXEC} apt-get -y install \
+    ${EXEC} apt-get -qq -y install \
         debootstrap \
         initramfs-tools \
         qemu-system-x86 \
@@ -72,7 +81,6 @@ if [ ! -z "${USE_QEMU}" ]; then
     fi
 fi
 
-
 for package in ${image} ${headers} ${headers_generic} ${modules}; do
     ${EXEC} wget -c "${url}/${SYSTEM_ARCH}/${package}"
     ${EXEC} dpkg -i "${package}"
@@ -80,4 +88,25 @@ done
 
 if [ ! -z "${USE_QEMU}" ]; then
     ${EXEC} update-initramfs -c -k ${KERNEL_VERSION}-generic
+fi
+
+
+# Install Qt Installer Framework
+
+mkdir -p .local/bin
+qtIFW=QtInstallerFramework-linux-x64.run
+${DOWNLOAD_CMD} http://download.qt.io/official_releases/qt-installer-framework/${QTIFWVER}/${qtIFW} || true
+
+if [ -e ${qtIFW} ]; then
+    chmod +x ${qtIFW}
+
+    QT_QPA_PLATFORM=minimal \
+    ./QtInstallerFramework-linux-x64.run \
+        ${qtIinstallerVerbose} \
+        --script "$PWD/ports/ci/travis/qtifw_non_interactive_install.qs" \
+        --no-force-installations
+
+    cd .local
+    cp -rvf ~/Qt/QtIFW-${QTIFWVER/-*/}/* .
+    cd ..
 fi
