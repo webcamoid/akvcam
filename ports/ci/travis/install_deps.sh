@@ -25,10 +25,6 @@ else
     export DOWNLOAD_CMD="curl --retry 10 -sS -kLOC -"
 fi
 
-# Install base system dependencies.
-apt-get update -qq -y
-apt-get install -qq -y curl wget libxkbcommon-x11-0
-
 cat << EOF > configure_tzdata.sh
 #!/bin/sh
 

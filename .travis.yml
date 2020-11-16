@@ -1,8 +1,14 @@
 language: cpp
 
+addons:
+  apt:
+    update: true
+
 env:
   global:
     - QTIFWVER=4.0.0
+    # BT_KEY
+    - secure: "jpAdFkDOmltToCv20sTD0mfavylXQo3g/rFD62bK2jTBX0xZ+PCFGP0MGdxl15RckD4FbP6M64tQLiHFP/qS93gItbQTZF4o+rA2bmLyycvshSdMYi1j8qCO1yJ7ZAMi59Ni/F6L1o8QP48vwJlx6veTY5SRg9adnBJsdnluOhTZBnI2sMJ07dnrq6byWKcQvvQCoErKWAbnauao7VzKb+L4oKmXimqkNbMld7NX0MBP29OARYlhFXItVsJuZ1J6lCUn+upVvMP4QsMO9wZxhbu0DiVLYOWUAA8coYocQxbnNH8+3bX7UJqZ3ARDwrXMQUcW3oaVa9S9XlWfDFdhr0B/hHwjHoC0cxVfH+Ik1U661fjtK4pp34mpt+99T6sFlDB4Xr1yh9LAOj1UAdywG93anlL5DaSCv1XKEJNJg+v9PAL8mltCfJmzaxsfWQt+MUUejLbrmd7sk8qXJIlO5GA20ONsAzYQpcEsxKryzmyB6H5PqtnozvpzqPoXIopTJZ6fR/lTQ/8LvmEM0+2bbpqY7vnBSjsAq1IRHuG0VfYaxr1dV/rGQ7Bybsu1fLHNMr6bujKQOlJJ5xJakejKIklu3NB9WTEjO/vJupBrzROCHKes/L0hktKypLmpKXihKJWLfMHU57dW8ZX9mLHfypBg8c57uGVhTG5rC43jZHs="
 
 matrix:
   include:
@@ -92,6 +98,7 @@ matrix:
       - NEED_MODULES=1
 
 before_install:
+  - sudo apt-get install -qq -y curl wget libxkbcommon-x11-0
   - docker pull ubuntu:${SYSTEM_VERSION}
   - docker ps -a
   - docker run --privileged -it -d -v ${PWD}:/sources -w /sources --name ubuntu ubuntu:${SYSTEM_VERSION} /bin/sh
@@ -109,6 +116,8 @@ script:
 after_success:
   - chmod +x ports/ci/travis/deploy.sh
   - ports/ci/travis/deploy.sh
+  - chmod +x ports/ci/travis/upload.sh
+  - ports/ci/travis/upload.sh
 
 branches:
   only:
