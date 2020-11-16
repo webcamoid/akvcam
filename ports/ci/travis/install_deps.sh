@@ -33,7 +33,9 @@ export DEBIAN_FRONTEND=noninteractive
 export TZ=UTC
 
 apt-get update
-apt-get install -y tzdata
+apt-get install -y \
+    tzdata \
+    libxkbcommon-x11-0
 
 ln -fs /usr/share/zoneinfo/UTC /etc/localtime
 dpkg-reconfigure --frontend noninteractive tzdata
