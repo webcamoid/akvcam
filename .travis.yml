@@ -1,5 +1,9 @@
 language: cpp
 
+env:
+  global:
+    - QTIFWVER=4.0.0
+
 matrix:
   include:
   - os: linux
