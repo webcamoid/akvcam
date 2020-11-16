@@ -22,7 +22,22 @@ matrix:
       - REPOSITORY=v4.4.243
       - KERNEL_VERSION=4.4.243-0404243
       - KERNEL_VERSION_C=202011102158
-      - export USE_QEMU=1
+      - UNSIGNED_IMG=1
+      - USE_QEMU=1
+      - DAILY_BUILD=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=xenial
+      - REPOSITORY=v4.4.243
+      - KERNEL_VERSION=4.4.243-0404243
+      - KERNEL_VERSION_C=202011102158
+      - UNSIGNED_IMG=1
+      - USE_QEMU=1
+      - RELEASE_BUILD=1
   - os: linux
     sudo: required
     services:
@@ -31,9 +46,9 @@ matrix:
     env:
       - SYSTEM_VERSION=bionic
       - REPOSITORY=v4.9.243
-      - KERNEL_VERSION=4.9.238-0409243
+      - KERNEL_VERSION=4.9.243-0409243
       - KERNEL_VERSION_C=202011102221
-      - export USE_QEMU=1
+      - USE_QEMU=1
   - os: linux
     sudo: required
     services:
@@ -46,7 +61,7 @@ matrix:
       - KERNEL_VERSION_C=202011102209
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
-      - export USE_QEMU=1
+      - USE_QEMU=1
   - os: linux
     sudo: required
     services:
