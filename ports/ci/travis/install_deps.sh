@@ -25,6 +25,10 @@ else
     export DOWNLOAD_CMD="curl --retry 10 -sS -kLOC -"
 fi
 
+# Install base system dependencies.
+apt-get update -qq -y
+apt-get install -qq -y curl wget libxkbcommon-x11-0
+
 cat << EOF > configure_tzdata.sh
 #!/bin/sh
 
@@ -32,10 +36,8 @@ export LC_ALL=C
 export DEBIAN_FRONTEND=noninteractive
 export TZ=UTC
 
-apt-get update
-apt-get install -y \
-    tzdata \
-    libxkbcommon-x11-0
+apt-get update -qq -y
+apt-get install -qq -y tzdata
 
 ln -fs /usr/share/zoneinfo/UTC /etc/localtime
 dpkg-reconfigure --frontend noninteractive tzdata
@@ -86,7 +88,7 @@ if [ ! -z "${USE_QEMU}" ]; then
 fi
 
 for package in ${image} ${headers} ${headers_generic} ${modules}; do
-    ${EXEC} wget -c "${url}/${SYSTEM_ARCH}/${package}"
+    ${DOWNLOAD_CMD} "${url}/${SYSTEM_ARCH}/${package}"
     ${EXEC} dpkg -i "${package}"
 done
 
@@ -103,7 +105,6 @@ ${DOWNLOAD_CMD} http://download.qt.io/official_releases/qt-installer-framework/$
 
 if [ -e ${qtIFW} ]; then
     chmod +x ${qtIFW}
-
     QT_QPA_PLATFORM=minimal \
     ./QtInstallerFramework-linux-x64.run \
         ${qtIinstallerVerbose} \
