@@ -21,12 +21,17 @@ if [ ! -z "${DAILY_BUILD}" ]; then
     export DAILY_BUILD=1
 fi
 
+cd ports/deploy
+git clone https://github.com/webcamoid/DeployTools.git
+cd ../..
+
 DEPLOYSCRIPT=deployscript.sh
 
 cat << EOF > ${DEPLOYSCRIPT}
 #!/bin/sh
 
 export PATH="\$PWD/.local/bin:\$PATH"
+export PYTHONPATH="\$PWD/ports/deploy/DeployTools"
 xvfb-run --auto-servernum python3 ports/deploy/deploy.py
 EOF
 

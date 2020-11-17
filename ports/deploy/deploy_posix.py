@@ -1,23 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Webcamoid, webcam capture application.
-# Copyright (C) 2017  Gonzalo Exequiel Pedone
+# akvcam, virtual camera for Linux.
+# Copyright (C) 2020  Gonzalo Exequiel Pedone
 #
-# Webcamoid is free software: you can redistribute it and/or modify
+# This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
+# the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-# Webcamoid is distributed in the hope that it will be useful,
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with Webcamoid. If not, see <http://www.gnu.org/licenses/>.
-#
-# Web-Site: http://webcamoid.github.io/
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import configparser
 import math
@@ -28,14 +27,15 @@ import sys
 import tarfile
 import threading
 
-import deploy_base
-import tools.binary_elf
-import tools.qt5
+from WebcamoidDeployTools import DTDeployBase
+from WebcamoidDeployTools import DTQt5
 
 
-class Deploy(deploy_base.DeployBase, tools.qt5.DeployToolsQt):
+class Deploy(DTDeployBase.DeployBase, DTQt5.Qt5Tools):
     def __init__(self):
         super().__init__()
+        rootDir = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../..'))
+        self.setRootDir(rootDir)
         self.installDir = os.path.join(self.buildDir, 'ports/deploy/temp_priv')
         self.pkgsDir = os.path.join(self.buildDir, 'ports/deploy/packages_auto', sys.platform)
         self.detectQtIFW()
