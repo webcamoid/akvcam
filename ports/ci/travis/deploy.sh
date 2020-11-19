@@ -17,10 +17,6 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-if [ ! -z "${DAILY_BUILD}" ]; then
-    export DAILY_BUILD=1
-fi
-
 cd ports/deploy
 git clone https://github.com/webcamoid/DeployTools.git
 cd ../..
@@ -32,6 +28,15 @@ cat << EOF > ${DEPLOYSCRIPT}
 
 export PATH="\$PWD/.local/bin:\$PATH"
 export PYTHONPATH="\$PWD/ports/deploy/DeployTools"
+EOF
+
+if [ ! -z "${DAILY_BUILD}" ]; then
+    cat << EOF >> ${DEPLOYSCRIPT}
+export DAILY_BUILD=1
+EOF
+fi
+
+cat << EOF > ${DEPLOYSCRIPT}
 xvfb-run --auto-servernum python3 ports/deploy/deploy.py
 EOF
 
