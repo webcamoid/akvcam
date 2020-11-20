@@ -36,7 +36,7 @@ export DAILY_BUILD=1
 EOF
 fi
 
-cat << EOF > ${DEPLOYSCRIPT}
+cat << EOF >> ${DEPLOYSCRIPT}
 xvfb-run --auto-servernum python3 ports/deploy/deploy.py
 EOF
 
