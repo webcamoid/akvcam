@@ -226,6 +226,9 @@ void akvcam_list_erase(akvcam_list_t self, const akvcam_list_element_t element)
 {
     akvcam_list_element_t it;
 
+    if (!self)
+        return;
+
     for (it = self->head; it != NULL; it = it->next)
         if (it == element) {
             if (it->data) {
