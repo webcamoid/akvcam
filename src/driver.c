@@ -69,6 +69,8 @@ int akvcam_driver_init(const char *name, const char *description)
     akvcam_settings_t settings;
     akvcam_matrix_t available_formats;
 
+    akpr_function()
+
     if (akvcam_driver_global)
         return -EINVAL;
 
@@ -103,6 +105,8 @@ int akvcam_driver_init(const char *name, const char *description)
 
 void akvcam_driver_uninit(void)
 {
+    akpr_function()
+
     if (!akvcam_driver_global)
         return;
 
