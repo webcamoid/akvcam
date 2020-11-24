@@ -63,6 +63,8 @@ struct akvcam_device
     struct video_device *vdev;
     struct task_struct *thread;
     struct mutex mtx;
+    struct mutex nodes_mutex;
+    struct mutex formats_mutex;
     AKVCAM_DEVICE_TYPE type;
     AKVCAM_RW_MODE rw_mode;
     enum v4l2_priority priority;
@@ -116,6 +118,8 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->broadcasting_node = -1;
     self->priority = V4L2_PRIORITY_DEFAULT;
     mutex_init(&self->mtx);
+    mutex_init(&self->nodes_mutex);
+    mutex_init(&self->formats_mutex);
 
     memset(&self->v4l2_dev, 0, sizeof(struct v4l2_device));
     snprintf(self->v4l2_dev.name,
@@ -174,12 +178,22 @@ void akvcam_device_delete(akvcam_device_t *self)
     akvcam_buffers_delete(&((*self)->buffers));
     akvcam_device_unregister(*self);
     video_device_release((*self)->vdev);
-    akvcam_list_delete(&((*self)->nodes));
+
+    if (!mutex_lock_interruptible(&((*self)->nodes_mutex))) {
+        akvcam_list_delete(&((*self)->nodes));
+        mutex_unlock(&((*self)->nodes_mutex));
+    }
+
     akvcam_list_delete(&((*self)->connected_devices));
     akvcam_attributes_delete(&((*self)->attributes));
     akvcam_controls_delete(&((*self)->controls));
     akvcam_format_delete(&((*self)->format));
-    akvcam_list_delete(&((*self)->formats));
+
+    if (!mutex_lock_interruptible(&((*self)->formats_mutex))) {
+        akvcam_list_delete(&((*self)->formats));
+        mutex_unlock(&((*self)->formats_mutex));
+    }
+
     kfree((*self)->description);
     akvcam_object_free(&((*self)->self));
     kfree(*self);
@@ -289,6 +303,11 @@ akvcam_formats_list_t akvcam_device_formats(const akvcam_device_t self)
     return self->formats;
 }
 
+struct mutex *akvcam_device_formats_mutex(const akvcam_device_t self)
+{
+    return &self->formats_mutex;
+}
+
 akvcam_format_t akvcam_device_format_nr(const akvcam_device_t self)
 {
     return self->format;
@@ -323,6 +342,11 @@ akvcam_nodes_list_t akvcam_device_nodes(const akvcam_device_t self)
     akvcam_object_ref(AKVCAM_TO_OBJECT(self->nodes));
 
     return self->nodes;
+}
+
+struct mutex *akvcam_device_nodes_mutex(const akvcam_device_t self)
+{
+    return &self->nodes_mutex;
 }
 
 akvcam_buffers_t akvcam_device_buffers_nr(const akvcam_device_t self)
@@ -369,8 +393,8 @@ void akvcam_device_set_streaming(akvcam_device_t self, bool streaming)
 {
     uint64_t broadcasting_node;
 
-    akpr_function()
-    akpr_debug("Streaming: %d\n", streaming)
+    akpr_function();
+    akpr_debug("Streaming: %d\n", streaming);
 
     if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
         if (!self->streaming && streaming) {
@@ -399,8 +423,8 @@ void akvcam_device_set_streaming(akvcam_device_t self, bool streaming)
 
 void akvcam_device_set_streaming_rw(akvcam_device_t self, bool streaming)
 {
-    akpr_function()
-    akpr_debug("Streaming: %d\n", streaming)
+    akpr_function();
+    akpr_debug("Streaming: %d\n", streaming);
 
     if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
         if (self->streaming_rw != streaming) {
@@ -440,9 +464,13 @@ static bool akvcam_device_are_equals(const akvcam_device_t device,
 akvcam_device_t akvcam_device_from_file_nr(struct file *filp)
 {
     akvcam_list_element_t it;
+    int32_t device_num;
 
-    if (filp->private_data)
-        return akvcam_node_device_nr(filp->private_data);
+    if (filp->private_data) {
+        device_num = akvcam_node_device_num(filp->private_data);
+
+        return akvcam_driver_device_from_num_nr(device_num);
+    }
 
     it = akvcam_list_find(akvcam_driver_devices_nr(),
                           filp,
@@ -469,6 +497,7 @@ void akvcam_device_event_received(akvcam_device_t self,
 {
     akvcam_node_t node;
     akvcam_list_element_t element = NULL;
+    struct mutex *mtx;
 
     for (;;) {
         node = akvcam_list_next(self->nodes, &element);
@@ -476,7 +505,12 @@ void akvcam_device_event_received(akvcam_device_t self,
         if (!element)
             break;
 
-        akvcam_events_enqueue(akvcam_node_events_nr(node), event);
+        mtx = akvcam_node_events_mutex(node);
+
+        if (!mutex_lock_interruptible(mtx)) {
+            akvcam_events_enqueue(akvcam_node_events_nr(node), event);
+            mutex_unlock(mtx);
+        }
     }
 }
 

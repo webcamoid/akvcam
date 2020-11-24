@@ -358,6 +358,9 @@ akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_t fo
     akvcam_format_t format = NULL;
     __u32 fourcc;
 
+    if (!formats)
+        return supported_formats;
+
     for (;;) {
         format = akvcam_list_next(formats, &element);
 

@@ -212,7 +212,7 @@ int akvcam_buffers_create(akvcam_buffers_t self,
                           struct v4l2_create_buffers *buffers)
 {
     size_t i;
-    akvcam_format_t format;
+    akvcam_format_t format = NULL;
     akvcam_buffer_t buffer;
     akvcam_buffer_t last_buffer;
     struct v4l2_buffer *v4l2_buff;
@@ -222,6 +222,7 @@ int akvcam_buffers_create(akvcam_buffers_t self,
     __u32 offset = 0;
     enum v4l2_buf_type buf_type = akvcam_device_v4l2_type(self->device);
     bool multiplanar;
+    struct mutex *mtx;
 
     buffers->index = (__u32) akvcam_list_size(self->buffers);
     memset(buffers->reserved, 0, 8 * sizeof(__u32));
@@ -232,14 +233,22 @@ int akvcam_buffers_create(akvcam_buffers_t self,
     if (buffers->format.type != buf_type)
         return -EINVAL;
 
-    formats = akvcam_device_formats_nr(self->device);
-    format = akvcam_format_from_v4l2_nr(formats, &buffers->format);
+    mtx = akvcam_device_formats_mutex(self->device);
+
+    if (!mutex_lock_interruptible(mtx)) {
+        formats = akvcam_device_formats_nr(self->device);
+        format = akvcam_format_from_v4l2(formats, &buffers->format);
+        mutex_unlock(mtx);
+    }
 
     if (!format)
         return -EINVAL;
 
-    if (self->main_node && self->main_node != node)
+    if (self->main_node && self->main_node != node) {
+        akvcam_format_delete(&format);
+
         return -EBUSY;
+    }
 
     if (buffers->count > 0) {
         if (!self->main_node)
@@ -248,8 +257,11 @@ int akvcam_buffers_create(akvcam_buffers_t self,
         buffer_length = akvcam_format_size(format);
         buffer_size = (__u32) PAGE_ALIGN(buffer_length);
 
-        if (mutex_lock_interruptible(&self->mtx))
+        if (mutex_lock_interruptible(&self->mtx)) {
+            akvcam_format_delete(&format);
+
             return -EINTR;
+        }
 
         last_buffer = akvcam_list_back(self->buffers);
         v4l2_buff = akvcam_buffer_get(last_buffer);
@@ -295,6 +307,8 @@ int akvcam_buffers_create(akvcam_buffers_t self,
             akvcam_buffer_delete(&buffer);
         }
     }
+
+    akvcam_format_delete(&format);
 
     return 0;
 }
@@ -798,7 +812,7 @@ void akvcam_buffers_process_frame(const akvcam_buffers_t self,
     akvcam_frame_t frame;
     akvcam_format_t format;
 
-    akpr_function()
+    akpr_function();
 
     if (self->frame_written.callback) {
         akbuffer = akvcam_list_at(self->buffers, buffer->index);

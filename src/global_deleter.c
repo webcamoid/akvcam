@@ -16,8 +16,13 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/kern_levels.h>
+#include <linux/printk.h>
+#include <linux/string.h>
+
 #include "global_deleter.h"
 #include "list.h"
+#include "log.h"
 #include "object.h"
 
 typedef struct
@@ -34,6 +39,8 @@ void akvcam_global_deleter_add(void *user_data, akvcam_deleter_t deleter)
 {
     akvcam_deleters_callback callback = {user_data, deleter};
 
+    akpr_function();
+
     if (!akvcam_global_deleter)
         akvcam_global_deleter = akvcam_list_new();
 
@@ -48,6 +55,8 @@ void akvcam_global_deleter_run(void)
 {
     akvcam_list_element_t it = NULL;
     akvcam_deleters_callback_t callback;
+
+    akpr_function();
 
     if (!akvcam_global_deleter)
         return;

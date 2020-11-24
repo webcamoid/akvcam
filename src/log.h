@@ -25,28 +25,36 @@
 #define akpr_log_format "[akvcam] %s(%d): "
 
 #define akpr_err(fmt, ...) \
-    if (akvcam_log_level() >= LOGLEVEL_ERR) { \
-        printk(KERN_ERR akpr_log_format fmt, \
-               akpr_file_name, __LINE__, ##__VA_ARGS__); \
-    }
+    do { \
+        if (akvcam_log_level() >= LOGLEVEL_ERR) { \
+            printk(KERN_ERR akpr_log_format fmt, \
+                   akpr_file_name, __LINE__, ##__VA_ARGS__); \
+    } \
+} while (false)
 
 #define akpr_warning(fmt, ...) \
-    if (akvcam_log_level() >= LOGLEVEL_WARNING) { \
-        printk(KERN_WARNING akpr_log_format fmt, \
-               akpr_file_name, __LINE__, ##__VA_ARGS__); \
-    }
+    do { \
+        if (akvcam_log_level() >= LOGLEVEL_WARNING) { \
+            printk(KERN_WARNING akpr_log_format fmt, \
+                   akpr_file_name, __LINE__, ##__VA_ARGS__); \
+        } \
+    } while (false)
 
 #define akpr_info(fmt, ...) \
-    if (akvcam_log_level() >= LOGLEVEL_INFO) { \
-        printk(KERN_INFO akpr_log_format fmt, \
-               akpr_file_name, __LINE__, ##__VA_ARGS__); \
-    }
+    do { \
+        if (akvcam_log_level() >= LOGLEVEL_INFO) { \
+            printk(KERN_INFO akpr_log_format fmt, \
+                   akpr_file_name, __LINE__, ##__VA_ARGS__); \
+        } \
+    } while (false)
 
 #define akpr_debug(fmt, ...) \
-    if (akvcam_log_level() >= LOGLEVEL_DEBUG) { \
-        printk(KERN_DEBUG akpr_log_format fmt, \
-               akpr_file_name, __LINE__, ##__VA_ARGS__); \
-    }
+    do { \
+        if (akvcam_log_level() >= LOGLEVEL_DEBUG) { \
+            printk(KERN_DEBUG akpr_log_format fmt, \
+                   akpr_file_name, __LINE__, ##__VA_ARGS__); \
+        } \
+    } while (false)
 
 #define akpr_function() \
     akpr_debug("%s()\n", __FUNCTION__)

@@ -96,6 +96,10 @@ void akvcam_events_unsubscribe(akvcam_events_t self,
                                const struct v4l2_event_subscription *subscription)
 {
     akvcam_list_element_t it;
+
+    if (!self)
+        return;
+
     it = akvcam_list_find(self->subscriptions,
                           subscription,
                           sizeof(struct v4l2_event_subscription),
@@ -110,6 +114,9 @@ void akvcam_events_unsubscribe(akvcam_events_t self,
 
 void akvcam_events_unsubscribe_all(akvcam_events_t self)
 {
+    if (!self)
+        return;
+
     akvcam_list_clear(self->subscriptions);
     akvcam_rbuffer_clear(self->events);
     self->sequence = 0;
@@ -119,6 +126,9 @@ __poll_t akvcam_events_poll(akvcam_events_t self,
                             struct file *filp,
                             struct poll_table_struct *wait)
 {
+    if (!self)
+        return 0;
+
     if (akvcam_rbuffer_data_size(self->events) > 0)
         return AK_EPOLLIN | AK_EPOLLPRI | AK_EPOLLRDNORM;
 
@@ -140,6 +150,9 @@ bool akvcam_events_enqueue(akvcam_events_t self,
                            const struct v4l2_event *event)
 {
     struct v4l2_event *qevent;
+
+    if (!self)
+        return false;
 
     if (event->type != V4L2_EVENT_FRAME_SYNC) {
         // Check if someone is subscribed to this event.
@@ -164,6 +177,9 @@ bool akvcam_events_enqueue(akvcam_events_t self,
 
 bool akvcam_events_dequeue(akvcam_events_t self, struct v4l2_event *event)
 {
+    if (!self)
+        return false;
+
     if (akvcam_rbuffer_data_size(self->events) < 1)
         return false;
 
@@ -182,9 +198,12 @@ void akvcam_events_remove_unsub(akvcam_events_t self,
                                 const struct v4l2_event_subscription *sub)
 {
     struct v4l2_event event;
-    akvcam_rbuffer_tt(struct v4l2_event) subscribed_events =
-            akvcam_rbuffer_new();
+    akvcam_rbuffer_tt(struct v4l2_event) subscribed_events;
 
+    if (!self)
+        return;
+
+    subscribed_events = akvcam_rbuffer_new();
     akvcam_rbuffer_resize(subscribed_events,
                           akvcam_rbuffer_n_elements(self->events),
                           akvcam_rbuffer_element_size(self->events),

@@ -378,8 +378,14 @@ bool akvcam_list_contains(const akvcam_list_t self,
 void *akvcam_list_next(const akvcam_list_t self,
                        akvcam_list_element_t *element)
 {
-    if (!self || !element)
+    if (!element)
         return NULL;
+
+    if (!self) {
+        *element = NULL;
+
+        return NULL;
+    }
 
     if (*element) {
         *element = (*element)->next;

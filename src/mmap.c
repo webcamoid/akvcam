@@ -22,23 +22,23 @@
 #include "mmap.h"
 #include "buffers.h"
 #include "device.h"
+#include "driver.h"
 #include "node.h"
 
 int akvcam_mmap_map_data(struct vm_area_struct *vma, char *data);
 
 int akvcam_mmap_do(struct file *filp, struct vm_area_struct *vma)
 {
-    akvcam_node_t node;
     akvcam_device_t device;
     akvcam_buffers_t buffers;
+    int32_t device_num;
     void *data;
     int result;
 
     vma->vm_ops = NULL;
     vma->vm_private_data = filp->private_data;
-
-    node = (akvcam_node_t) filp->private_data;
-    device = akvcam_node_device_nr(node);
+    device_num = akvcam_node_device_num(filp->private_data);
+    device = akvcam_driver_device_from_num(device_num);
     buffers = akvcam_device_buffers_nr(device);
     data = akvcam_buffers_data(buffers, (__u32) (vma->vm_pgoff << PAGE_SHIFT));
     result = akvcam_mmap_map_data(vma, data);

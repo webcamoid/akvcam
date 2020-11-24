@@ -32,5 +32,8 @@ const char *akvcam_driver_description(void);
 uint akvcam_driver_version(void);
 akvcam_devices_list_t akvcam_driver_devices_nr(void);
 akvcam_devices_list_t akvcam_driver_devices(void);
+struct mutex *akvcam_driver_devices_mutex(void);
+akvcam_device_t akvcam_driver_device_from_num_nr(int32_t num);
+akvcam_device_t akvcam_driver_device_from_num(int32_t num);
 
 #endif // AKVCAM_DRIVER_H
