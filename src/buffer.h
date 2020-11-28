@@ -27,15 +27,13 @@ struct v4l2_buffer;
 
 // public
 akvcam_buffer_t akvcam_buffer_new(size_t size);
-void akvcam_buffer_delete(akvcam_buffer_t *self);
+void akvcam_buffer_delete(akvcam_buffer_t self);
+akvcam_buffer_t akvcam_buffer_ref(akvcam_buffer_t self);
 
 struct v4l2_buffer *akvcam_buffer_get(akvcam_buffer_t self);
 void *akvcam_buffer_data(akvcam_buffer_t self);
 size_t akvcam_buffer_size(akvcam_buffer_t self);
 __u32 akvcam_buffer_offset(akvcam_buffer_t self);
 void akvcam_buffer_set_offset(akvcam_buffer_t self, __u32 offset);
-
-// public static
-size_t akvcam_buffer_sizeof(void);
 
 #endif // AKVCAM_BUFFER_H

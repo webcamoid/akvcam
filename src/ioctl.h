@@ -27,7 +27,8 @@ struct akvcam_ioctl;
 typedef struct akvcam_ioctl *akvcam_ioctl_t;
 
 akvcam_ioctl_t akvcam_ioctl_new(void);
-void akvcam_ioctl_delete(akvcam_ioctl_t *self);
+void akvcam_ioctl_delete(akvcam_ioctl_t self);
+akvcam_ioctl_t akvcam_ioctl_ref(akvcam_ioctl_t self);
 
 int akvcam_ioctl_do(akvcam_ioctl_t self,
                     akvcam_node_t node,

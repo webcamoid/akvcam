@@ -33,7 +33,8 @@ typedef enum
 
 // public
 akvcam_file_t akvcam_file_new(const char *file_name);
-void akvcam_file_delete(akvcam_file_t *self);
+void akvcam_file_delete(akvcam_file_t self);
+akvcam_file_t akvcam_file_ref(akvcam_file_t self);
 
 const char *akvcam_file_file_name(akvcam_file_t self);
 void akvcam_file_set_file_name(akvcam_file_t self, const char *file_name);

@@ -86,9 +86,9 @@ struct __kernel_timespec;
 struct __kernel_v4l2_timeval;
 #endif
 
-typedef bool (*akvcam_are_equals_t)(const void *element_data,
-                                    const void *data,
-                                    size_t size);
+typedef bool (*akvcam_are_equals_t)(const void *element_data, const void *data);
+typedef void *(*akvcam_copy_t)(void *data);
+typedef void (*akvcam_delete_t)(void *data);
 
 uint64_t akvcam_id(void);
 int akvcam_get_last_error(void);

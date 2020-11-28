@@ -27,7 +27,8 @@
 
 // public
 akvcam_node_t akvcam_node_new(int32_t device_num);
-void akvcam_node_delete(akvcam_node_t *self);
+void akvcam_node_delete(akvcam_node_t self);
+akvcam_node_t akvcam_node_ref(akvcam_node_t self);
 
 int64_t akvcam_node_id(const akvcam_node_t self);
 int32_t akvcam_node_device_num(const akvcam_node_t self);
@@ -38,7 +39,6 @@ bool akvcam_node_non_blocking(const akvcam_node_t self);
 void akvcam_node_set_non_blocking(akvcam_node_t self, bool non_blocking);
 
 // public static
-size_t akvcam_node_sizeof(void);
 struct v4l2_file_operations *akvcam_node_fops(void);
 
 #endif // AKVCAM_NODE_H

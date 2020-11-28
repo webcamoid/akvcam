@@ -16,6 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/kref.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/videodev2.h>
@@ -25,7 +26,6 @@
 #include "list.h"
 #include "log.h"
 #include "map.h"
-#include "object.h"
 #include "rbuffer.h"
 #include "utils.h"
 
@@ -41,7 +41,7 @@ typedef struct
 
 struct akvcam_settings
 {
-    akvcam_object_t self;
+    struct kref ref;
     akvcam_map_tt(akvcam_string_map_t) configs;
     char *current_group;
     char *current_array;
@@ -57,32 +57,38 @@ bool akvcam_settings_parse(const char *line, akvcam_settings_element_t element);
 char *akvcam_settings_parse_string(char *str, bool move);
 void akvcam_settings_element_free(akvcam_settings_element_t element);
 akvcam_string_map_t akvcam_settings_group_configs(const akvcam_settings_t self);
+char *akvcam_settings_string_copy(char *str);
 
 akvcam_settings_t akvcam_settings_new(void)
 {
     akvcam_settings_t self = kzalloc(sizeof(struct akvcam_settings), GFP_KERNEL);
-    self->self = akvcam_object_new("setting",
-                                   self,
-                                   (akvcam_deleter_t) akvcam_settings_delete);
+    kref_init(&self->ref);
     self->configs = akvcam_map_new();
 
     return self;
 }
 
-void akvcam_settings_delete(akvcam_settings_t *self)
+void akvcam_settings_free(struct kref *ref)
 {
-    if (!self || !*self)
-        return;
+    akvcam_settings_t self = container_of(ref, struct akvcam_settings, ref);
+    akvcam_settings_end_array(self);
+    akvcam_settings_end_group(self);
+    akvcam_map_delete(self->configs);
+    kfree(self);
+}
 
-    if (akvcam_object_unref((*self)->self) > 0)
-        return;
+void akvcam_settings_delete(akvcam_settings_t self)
+{
+    if (self)
+        kref_put(&self->ref, akvcam_settings_free);
+}
 
-    akvcam_settings_end_array(*self);
-    akvcam_settings_end_group(*self);
-    akvcam_map_delete(&((*self)->configs));
-    akvcam_object_free(&((*self)->self));
-    kfree(*self);
-    *self = NULL;
+akvcam_settings_t akvcam_settings_ref(akvcam_settings_t self)
+{
+    if (self)
+        kref_get(&self->ref);
+
+    return self;
 }
 
 bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
@@ -135,10 +141,9 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
                     akvcam_map_set_value(self->configs,
                                          current_group,
                                          tmp_map,
-                                         akvcam_map_sizeof(),
-                                         (akvcam_deleter_t) akvcam_map_delete,
-                                         true);
-                    akvcam_map_delete(&tmp_map);
+                                         (akvcam_copy_t) akvcam_map_ref,
+                                         (akvcam_delete_t) akvcam_map_delete);
+                    akvcam_map_delete(tmp_map);
                 }
             } else if (element.key
                        && element.value
@@ -151,19 +156,17 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
                     akvcam_map_set_value(self->configs,
                                          current_group,
                                          tmp_map,
-                                         akvcam_map_sizeof(),
-                                         (akvcam_deleter_t) akvcam_map_delete,
-                                         true);
-                    akvcam_map_delete(&tmp_map);
+                                         (akvcam_copy_t) akvcam_map_ref,
+                                         (akvcam_delete_t) akvcam_map_delete);
+                    akvcam_map_delete(tmp_map);
                 }
 
                 group_configs = akvcam_map_value(self->configs, current_group);
                 akvcam_map_set_value(group_configs,
                                      element.key,
                                      element.value,
-                                     strlen(element.value) + 1,
-                                     NULL,
-                                     false);
+                                     (akvcam_copy_t) akvcam_settings_string_copy,
+                                     (akvcam_delete_t) kfree);
             }
 
             akvcam_settings_element_free(&element);
@@ -172,7 +175,7 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
         vfree(line);
     }
 
-    akvcam_file_delete(&config_file);
+    akvcam_file_delete(config_file);
 
     if (current_group)
         vfree(current_group);
@@ -180,7 +183,7 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
     return true;
 
 akvcam_settings_load_failed:
-    akvcam_file_delete(&config_file);
+    akvcam_file_delete(config_file);
     akvcam_settings_clear(self);
 
     if (current_group)
@@ -262,7 +265,10 @@ akvcam_string_list_t akvcam_settings_groups(const akvcam_settings_t self)
 
     while (akvcam_map_next(self->configs, &element)) {
         group = akvcam_map_element_key(element);
-        akvcam_list_push_back(groups, group, strlen(group) + 1, NULL, false);
+        akvcam_list_push_back(groups,
+                              group,
+                              (akvcam_copy_t) akvcam_settings_string_copy,
+                              (akvcam_delete_t) kfree);
     }
 
     return groups;
@@ -280,7 +286,10 @@ akvcam_string_list_t akvcam_settings_keys(const akvcam_settings_t self)
 
     while (akvcam_map_next(group_configs, &element)) {
         key = akvcam_map_element_key(element);
-        akvcam_list_push_back(keys, key, strlen(key) + 1, NULL, false);
+        akvcam_list_push_back(keys,
+                              key,
+                              (akvcam_copy_t) akvcam_settings_string_copy,
+                              (akvcam_delete_t) kfree);
     }
 
     return keys;
@@ -443,9 +452,8 @@ akvcam_string_list_t akvcam_settings_to_list(const char *value,
                                             AKVCAM_MEMORY_TYPE_KMALLOC);
         akvcam_list_push_back(result,
                               stripped_element,
-                              strlen(stripped_element) + 1,
-                              NULL,
-                              false);
+                              (akvcam_copy_t) akvcam_settings_string_copy,
+                              (akvcam_delete_t) kfree);
         kfree(stripped_element);
     }
 
@@ -483,7 +491,7 @@ struct v4l2_fract akvcam_settings_to_frac(const char *value)
         break;
     }
 
-    akvcam_list_delete(&frac_list);
+    akvcam_list_delete(frac_list);
 
     return frac;
 }
@@ -657,4 +665,9 @@ akvcam_string_map_t akvcam_settings_group_configs(const akvcam_settings_t self)
         group_configs = akvcam_map_value(self->configs, "General");
 
     return group_configs;
+}
+
+char *akvcam_settings_string_copy(char *str)
+{
+    return kstrdup(str, GFP_KERNEL);
 }

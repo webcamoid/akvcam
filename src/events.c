@@ -16,21 +16,21 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <linux/slab.h>
+#include <linux/kref.h>
 #include <linux/poll.h>
 #include <linux/sched.h>
+#include <linux/slab.h>
 #include <linux/videodev2.h>
 
 #include "events.h"
 #include "list.h"
-#include "object.h"
 #include "rbuffer.h"
 
 #define AKVCAM_EVENTS_QUEUE_MAX 32
 
 struct akvcam_events
 {
-    akvcam_object_t self;
+    struct kref ref;
     akvcam_list_tt(struct v4l2_event_subscription) subscriptions;
     akvcam_rbuffer_tt(struct v4l2_event) events;
     wait_queue_head_t event_signaled;
@@ -43,9 +43,7 @@ void akvcam_events_remove_unsub(akvcam_events_t self,
 akvcam_events_t akvcam_events_new(void)
 {
     akvcam_events_t self = kzalloc(sizeof(struct akvcam_events), GFP_KERNEL);
-    self->self = akvcam_object_new("events",
-                                   self,
-                                   (akvcam_deleter_t) akvcam_events_delete);
+    kref_init(&self->ref);
     self->subscriptions = akvcam_list_new();
     init_waitqueue_head(&self->event_signaled);
     self->events = akvcam_rbuffer_new();
@@ -58,19 +56,39 @@ akvcam_events_t akvcam_events_new(void)
     return self;
 }
 
-void akvcam_events_delete(akvcam_events_t *self)
+void akvcam_events_free(struct kref *ref)
 {
-    if (!self || !*self)
-        return;
+    akvcam_events_t self = container_of(ref, struct akvcam_events, ref);
+    akvcam_rbuffer_delete(self->events);
+    akvcam_list_delete(self->subscriptions);
+    kfree(self);
+}
 
-    if (akvcam_object_unref((*self)->self) > 0)
-        return;
+void akvcam_events_delete(akvcam_events_t self)
+{
+    if (self)
+        kref_put(&self->ref, akvcam_events_free);
+}
 
-    akvcam_rbuffer_delete(&((*self)->events));
-    akvcam_list_delete(&((*self)->subscriptions));
-    akvcam_object_free(&((*self)->self));
-    kfree(*self);
-    *self = NULL;
+akvcam_events_t akvcam_events_ref(akvcam_events_t self)
+{
+    if (self)
+        kref_get(&self->ref);
+
+    return self;
+}
+
+bool akvcam_events_subscriptions_are_equals(const struct v4l2_event_subscription *subscription1,
+                                            const struct v4l2_event_subscription *subscription2)
+{
+    return !memcmp(subscription1,
+                   subscription2,
+                   sizeof(struct v4l2_event_subscription));
+}
+
+struct v4l2_event_subscription *akvcam_events_subscription_copy(struct v4l2_event_subscription *subscription)
+{
+    return kmemdup(subscription, sizeof(struct v4l2_event_subscription), GFP_KERNEL);
 }
 
 void akvcam_events_subscribe(akvcam_events_t self,
@@ -79,17 +97,15 @@ void akvcam_events_subscribe(akvcam_events_t self,
     akvcam_list_element_t it;
     it = akvcam_list_find(self->subscriptions,
                           subscription,
-                          sizeof(struct v4l2_event_subscription),
-                          NULL);
+                          (akvcam_are_equals_t) akvcam_events_subscriptions_are_equals);
 
     if (it)
         return;
 
     akvcam_list_push_back(self->subscriptions,
                           subscription,
-                          sizeof(struct v4l2_event_subscription),
-                          NULL,
-                          false);
+                          (akvcam_copy_t) akvcam_events_subscription_copy,
+                          (akvcam_delete_t) kfree);
 }
 
 void akvcam_events_unsubscribe(akvcam_events_t self,
@@ -102,8 +118,7 @@ void akvcam_events_unsubscribe(akvcam_events_t self,
 
     it = akvcam_list_find(self->subscriptions,
                           subscription,
-                          sizeof(struct v4l2_event_subscription),
-                          NULL);
+                          (akvcam_are_equals_t) akvcam_events_subscriptions_are_equals);
 
     if (!it)
         return;
@@ -138,11 +153,8 @@ __poll_t akvcam_events_poll(akvcam_events_t self,
 }
 
 static bool akvcam_events_check(const struct v4l2_event_subscription *sub,
-                                const struct v4l2_event *event,
-                                size_t size)
+                                const struct v4l2_event *event)
 {
-    UNUSED(size);
-
     return sub->type == event->type && sub->id == event->id;
 }
 
@@ -158,7 +170,6 @@ bool akvcam_events_enqueue(akvcam_events_t self,
         // Check if someone is subscribed to this event.
         if (!akvcam_list_find(self->subscriptions,
                               event,
-                              0,
                               (akvcam_are_equals_t) akvcam_events_check)) {
             return false;
         }
@@ -217,5 +228,5 @@ void akvcam_events_remove_unsub(akvcam_events_t self,
     }
 
     akvcam_rbuffer_copy(self->events, subscribed_events);
-    akvcam_rbuffer_delete(&subscribed_events);
+    akvcam_rbuffer_delete(subscribed_events);
 }

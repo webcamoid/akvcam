@@ -24,7 +24,6 @@
 #include "controls.h"
 #include "device.h"
 #include "list.h"
-#include "object.h"
 #include "utils.h"
 
 static const struct attribute_group *akvcam_attributes_capture_groups[2];
@@ -56,40 +55,44 @@ __u32 akvcam_attributes_controls_id_by_name(const char *name);
 
 struct akvcam_attributes
 {
-    akvcam_object_t self;
-    akvcam_device_t device;
+    struct kref ref;
+    AKVCAM_DEVICE_TYPE device_type;
 };
 
-akvcam_attributes_t akvcam_attributes_new(akvcam_device_t device)
+akvcam_attributes_t akvcam_attributes_new(AKVCAM_DEVICE_TYPE device_type)
 {
     akvcam_attributes_t self = kzalloc(sizeof(struct akvcam_attributes), GFP_KERNEL);
-    self->self = akvcam_object_new("attributes",
-                                   self,
-                                   (akvcam_deleter_t) akvcam_attributes_delete);
-    self->device = device;
+    kref_init(&self->ref);
+    self->device_type = device_type;
 
     return self;
 }
 
-void akvcam_attributes_delete(akvcam_attributes_t *self)
+void akvcam_attributes_free(struct kref *ref)
 {
-    if (!self || !*self)
-        return;
+    akvcam_attributes_t self = container_of(ref, struct akvcam_attributes, ref);
+    kfree(self);
+}
 
-    if (akvcam_object_unref((*self)->self) > 0)
-        return;
+void akvcam_attributes_delete(akvcam_attributes_t self)
+{
+    if (self)
+        kref_put(&self->ref, akvcam_attributes_free);
+}
 
-    akvcam_object_free(&((*self)->self));
-    kfree(*self);
-    *self = NULL;
+akvcam_attributes_t akvcam_attributes_ref(akvcam_attributes_t self)
+{
+    if (self)
+        kref_get(&self->ref);
+
+    return self;
 }
 
 void akvcam_attributes_set(akvcam_attributes_t self, struct device *dev)
 {
-    dev->groups =
-            akvcam_device_type(self->device) == AKVCAM_DEVICE_TYPE_OUTPUT?
-                akvcam_attributes_output_groups:
-                akvcam_attributes_capture_groups;
+    dev->groups = self->device_type == AKVCAM_DEVICE_TYPE_OUTPUT?
+                    akvcam_attributes_output_groups:
+                    akvcam_attributes_capture_groups;
 }
 
 size_t akvcam_attributes_controls_count(void)

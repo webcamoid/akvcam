@@ -16,19 +16,19 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/kref.h>
 #include <linux/slab.h>
 #include <linux/version.h>
 #include <linux/videodev2.h>
 
 #include "format.h"
 #include "list.h"
-#include "object.h"
 
 #define DEFAULT_COLORSPACE V4L2_COLORSPACE_RAW
 
 struct akvcam_format
 {
-    akvcam_object_t self;
+    struct kref ref;
     __u32 fourcc;
     size_t width;
     size_t height;
@@ -76,9 +76,7 @@ akvcam_format_t akvcam_format_new(__u32 fourcc,
                                   const struct v4l2_fract *frame_rate)
 {
     akvcam_format_t self = kzalloc(sizeof(struct akvcam_format), GFP_KERNEL);
-    self->self = akvcam_object_new("format",
-                                   self,
-                                   (akvcam_deleter_t) akvcam_format_delete);
+    kref_init(&self->ref);
     self->fourcc = fourcc;
     self->width = width;
     self->height = height;
@@ -91,21 +89,31 @@ akvcam_format_t akvcam_format_new(__u32 fourcc,
     return self;
 }
 
-void akvcam_format_delete(akvcam_format_t *self)
+void akvcam_format_free(struct kref *ref)
 {
-    if (!self || !*self)
-        return;
+    akvcam_format_t self = container_of(ref, struct akvcam_format, ref);
+    kfree(self);
+}
 
-    if (akvcam_object_unref((*self)->self) > 0)
-        return;
+void akvcam_format_delete(akvcam_format_t self)
+{
+    if (self)
+        kref_put(&self->ref, akvcam_format_free);
+}
 
-    akvcam_object_free(&((*self)->self));
-    kfree(*self);
-    *self = NULL;
+akvcam_format_t akvcam_format_ref(akvcam_format_t self)
+{
+    if (self)
+        kref_get(&self->ref);
+
+    return self;
 }
 
 void akvcam_format_copy(akvcam_format_t self, const akvcam_format_t other)
 {
+    if (!self)
+        return;
+
     if (other) {
         self->fourcc = other->fourcc;
         self->width = other->width;
@@ -260,11 +268,6 @@ const char *akvcam_format_to_string(const akvcam_format_t self)
     return self->str;
 }
 
-size_t akvcam_format_sizeof(void)
-{
-    return sizeof(struct akvcam_format);
-}
-
 void akvcam_format_round_nearest(int width, int height,
                                  int *owidth, int *oheight,
                                  int align)
@@ -342,12 +345,17 @@ akvcam_format_t akvcam_format_nearest_nr(akvcam_formats_list_t formats,
 akvcam_format_t akvcam_format_nearest(akvcam_formats_list_t formats,
                                       const akvcam_format_t format)
 {
-    akvcam_format_t nearest_format = akvcam_format_nearest_nr(formats, format);
+    return akvcam_format_ref(akvcam_format_nearest_nr(formats, format));
+}
 
-    if (nearest_format)
-        akvcam_object_ref(AKVCAM_TO_OBJECT(nearest_format));
+bool akvcam_format_fourcc_are_equal(__u32 *fourcc1, __u32 *fourcc2)
+{
+    return *fourcc1 == *fourcc2;
+}
 
-    return nearest_format;
+__u32 *akvcam_format_fourcc_copy(__u32 *fourcc)
+{
+    return kmemdup(fourcc, sizeof(__u32), GFP_KERNEL);
 }
 
 akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_t formats)
@@ -368,17 +376,31 @@ akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_t fo
             break;
 
         fourcc = akvcam_format_fourcc(format);
-        it = akvcam_list_find(supported_formats, &fourcc, sizeof(__u32), NULL);
+        it = akvcam_list_find(supported_formats,
+                              &fourcc,
+                              (akvcam_are_equals_t) akvcam_format_fourcc_are_equal);
 
         if (!it)
             akvcam_list_push_back(supported_formats,
                                   &fourcc,
-                                  sizeof(__u32),
-                                  NULL,
-                                  false);
+                                  (akvcam_copy_t) akvcam_format_fourcc_copy,
+                                  (akvcam_delete_t) kfree);
     }
 
     return supported_formats;
+}
+
+bool akvcam_format_resolutions_are_equal(struct v4l2_frmsize_discrete *resolution1,
+                                         struct v4l2_frmsize_discrete *resolution2)
+{
+    return !memcmp(resolution1,
+                   resolution2,
+                   sizeof(struct v4l2_frmsize_discrete));
+}
+
+struct v4l2_frmsize_discrete *akvcam_format_resolution_copy(struct v4l2_frmsize_discrete *resolution)
+{
+    return kmemdup(resolution, sizeof(struct v4l2_frmsize_discrete), GFP_KERNEL);
 }
 
 akvcam_resolutions_list_t akvcam_format_resolutions(akvcam_formats_list_t formats,
@@ -403,18 +425,27 @@ akvcam_resolutions_list_t akvcam_format_resolutions(akvcam_formats_list_t format
         resolution.height = (__u32) akvcam_format_height(format);
         it = akvcam_list_find(supported_resolutions,
                               &resolution,
-                              sizeof(struct v4l2_frmsize_discrete),
-                              NULL);
+                              (akvcam_are_equals_t) akvcam_format_resolutions_are_equal);
 
         if (!it)
             akvcam_list_push_back(supported_resolutions,
                                   &resolution,
-                                  sizeof(struct v4l2_frmsize_discrete),
-                                  NULL,
-                                  false);
+                                  (akvcam_copy_t) akvcam_format_resolution_copy,
+                                  (akvcam_delete_t) kfree);
     }
 
     return supported_resolutions;
+}
+
+bool akvcam_format_frame_rates_are_equal(struct v4l2_fract *fps1,
+                                         struct v4l2_fract *fps2)
+{
+    return !memcmp(fps1, fps2, sizeof(struct v4l2_fract));
+}
+
+struct v4l2_fract *akvcam_format_frame_rate_copy(struct v4l2_fract *fps)
+{
+    return kmemdup(fps, sizeof(struct v4l2_fract), GFP_KERNEL);
 }
 
 akvcam_fps_list_t akvcam_format_frame_rates(akvcam_formats_list_t formats,
@@ -443,15 +474,13 @@ akvcam_fps_list_t akvcam_format_frame_rates(akvcam_formats_list_t formats,
         frame_rate.denominator = akvcam_format_frame_rate(format)->denominator;
         it = akvcam_list_find(supported_frame_rates,
                               &frame_rate,
-                              sizeof(struct v4l2_fract),
-                              NULL);
+                              (akvcam_are_equals_t) akvcam_format_frame_rates_are_equal);
 
         if (!it)
             akvcam_list_push_back(supported_frame_rates,
                                   &frame_rate,
-                                  sizeof(struct v4l2_fract),
-                                  NULL,
-                                  false);
+                                  (akvcam_copy_t) akvcam_format_frame_rate_copy,
+                                  (akvcam_delete_t) kfree);
     }
 
     return supported_frame_rates;
@@ -518,14 +547,7 @@ akvcam_format_t akvcam_format_from_v4l2_nr(akvcam_formats_list_t formats,
 akvcam_format_t akvcam_format_from_v4l2(akvcam_formats_list_t formats,
                                         const struct v4l2_format *format)
 {
-    akvcam_format_t akformat = akvcam_format_from_v4l2_nr(formats, format);
-
-    if (!akformat)
-        return NULL;
-
-    akvcam_object_ref(AKVCAM_TO_OBJECT(akformat));
-
-    return akformat;
+    return akvcam_format_ref(akvcam_format_from_v4l2_nr(formats, format));
 }
 
 bool akvcam_format_have_multiplanar(const akvcam_formats_list_t formats)

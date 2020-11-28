@@ -48,8 +48,6 @@ lupdate_only {
         src/mmap.h \
         src/node.h \
         src/node_types.h \
-        src/object.h \
-        src/object_types.h \
         src/rbuffer.h \
         src/settings.h \
         src/utils.h
@@ -73,7 +71,6 @@ lupdate_only {
         src/map.c \
         src/mmap.c \
         src/node.c \
-        src/object.c \
         src/rbuffer.c \
         src/settings.c \
         src/utils.c

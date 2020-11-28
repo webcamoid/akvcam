@@ -29,7 +29,8 @@ struct akvcam_rbuffer;
 typedef struct akvcam_rbuffer *akvcam_rbuffer_t;
 
 akvcam_rbuffer_t akvcam_rbuffer_new(void);
-void akvcam_rbuffer_delete(akvcam_rbuffer_t *self);
+void akvcam_rbuffer_delete(akvcam_rbuffer_t self);
+akvcam_rbuffer_t akvcam_rbuffer_ref(akvcam_rbuffer_t self);
 
 void akvcam_rbuffer_copy(akvcam_rbuffer_t self, const akvcam_rbuffer_t other);
 void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
@@ -59,7 +60,6 @@ void *akvcam_rbuffer_ptr_front(const akvcam_rbuffer_t self);
 void *akvcam_rbuffer_ptr_back(const akvcam_rbuffer_t self);
 void *akvcam_rbuffer_find(const akvcam_rbuffer_t self,
                           const void *data,
-                          size_t size,
                           const akvcam_are_equals_t equals,
                           ssize_t *offset);
 

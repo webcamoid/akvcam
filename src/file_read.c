@@ -16,13 +16,13 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/kref.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 
 #include "file_read.h"
-#include "object.h"
 #include "rbuffer.h"
 #include "utils.h"
 
@@ -30,7 +30,7 @@
 
 struct akvcam_file
 {
-    akvcam_object_t self;
+    struct kref ref;
     char *file_name;
     struct file *filp;
     akvcam_rbuffer_tt(char *) buffer;
@@ -43,32 +43,37 @@ struct akvcam_file
 akvcam_file_t akvcam_file_new(const char *file_name)
 {
     akvcam_file_t self = kzalloc(sizeof(struct akvcam_file), GFP_KERNEL);
-    self->self = akvcam_object_new("file",
-                                   self,
-                                   (akvcam_deleter_t) akvcam_file_delete);
+    kref_init(&self->ref);
     self->file_name = akvcam_strdup(file_name, AKVCAM_MEMORY_TYPE_KMALLOC);
     self->buffer = akvcam_rbuffer_new();
 
     return self;
 }
 
-void akvcam_file_delete(akvcam_file_t *self)
+void akvcam_file_free(struct kref *ref)
 {
-    if (!self || !*self)
-        return;
+    akvcam_file_t self = container_of(ref, struct akvcam_file, ref);
+    akvcam_file_close(self);
 
-    if (akvcam_object_unref((*self)->self) > 0)
-        return;
+    if (self->file_name)
+        kfree(self->file_name);
 
-    akvcam_file_close(*self);
+    akvcam_rbuffer_delete(self->buffer);
+    kfree(self);
+}
 
-    if ((*self)->file_name)
-        kfree((*self)->file_name);
+void akvcam_file_delete(akvcam_file_t self)
+{
+    if (self)
+        kref_put(&self->ref, akvcam_file_free);
+}
 
-    akvcam_rbuffer_delete(&((*self)->buffer));
-    akvcam_object_free(&((*self)->self));
-    kfree(*self);
-    *self = NULL;
+akvcam_file_t akvcam_file_ref(akvcam_file_t self)
+{
+    if (self)
+        kref_get(&self->ref);
+
+    return self;
 }
 
 const char *akvcam_file_file_name(akvcam_file_t self)
@@ -254,11 +259,8 @@ size_t akvcam_file_read(akvcam_file_t self, void *data, size_t size)
 }
 
 static bool akvcam_file_find_new_line(const char *element,
-                                      const char *new_line,
-                                      size_t size)
+                                      const char *new_line)
 {
-    UNUSED(size);
-
     return strncmp(element, new_line, 1) == 0;
 }
 
@@ -277,7 +279,6 @@ char *akvcam_file_read_line(akvcam_file_t self)
         new_line = 0;
         akvcam_rbuffer_find(self->buffer,
                             "\n",
-                            1,
                             (akvcam_are_equals_t) akvcam_file_find_new_line,
                             &new_line);
 

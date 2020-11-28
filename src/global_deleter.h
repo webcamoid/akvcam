@@ -19,9 +19,9 @@
 #ifndef AKVCAM_GLOBAL_DELETER_H
 #define AKVCAM_GLOBAL_DELETER_H
 
-#include "object_types.h"
+#include "utils.h"
 
-void akvcam_global_deleter_add(void *user_data, akvcam_deleter_t deleter);
+void akvcam_global_deleter_add(void *user_data, akvcam_delete_t deleter);
 void akvcam_global_deleter_run(void);
 
 #endif // AKVCAM_GLOBAL_DELETER_H

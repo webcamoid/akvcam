@@ -28,7 +28,8 @@
 akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
                                 const void *data,
                                 size_t size);
-void akvcam_frame_delete(akvcam_frame_t *self);
+void akvcam_frame_delete(akvcam_frame_t self);
+akvcam_frame_t akvcam_frame_ref(akvcam_frame_t self);
 
 void akvcam_frame_copy(akvcam_frame_t self, const akvcam_frame_t other);
 akvcam_format_t akvcam_frame_format_nr(const akvcam_frame_t self);

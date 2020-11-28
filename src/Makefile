@@ -40,7 +40,6 @@ akvcam-objs := \
 	map.o \
 	mmap.o \
 	node.o \
-	object.o \
 	rbuffer.o \
 	settings.o \
 	utils.o

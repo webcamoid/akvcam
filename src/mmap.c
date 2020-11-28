@@ -38,8 +38,16 @@ int akvcam_mmap_do(struct file *filp, struct vm_area_struct *vma)
     vma->vm_ops = NULL;
     vma->vm_private_data = filp->private_data;
     device_num = akvcam_node_device_num(filp->private_data);
-    device = akvcam_driver_device_from_num(device_num);
+    device = akvcam_driver_device_from_num_nr(device_num);
+
+    if (!device)
+        return -EIO;
+
     buffers = akvcam_device_buffers_nr(device);
+
+    if (!buffers)
+        return -EIO;
+
     data = akvcam_buffers_data(buffers, (__u32) (vma->vm_pgoff << PAGE_SHIFT));
     result = akvcam_mmap_map_data(vma, data);
 

@@ -16,17 +16,17 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/kref.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 
 #include "rbuffer.h"
-#include "object.h"
 #include "utils.h"
 
 struct akvcam_rbuffer
 {
-    akvcam_object_t self;
+    struct kref ref;
     char *data;
     size_t size;
     size_t data_size;
@@ -36,40 +36,46 @@ struct akvcam_rbuffer
     AKVCAM_MEMORY_TYPE memory_type;
 };
 
-void *akvcam_rbuffer_alloc(AKVCAM_MEMORY_TYPE memory_type, size_t size);
-void akvcam_rbuffer_free(AKVCAM_MEMORY_TYPE memory_type, void *data);
+void *akvcam_rbuffer_alloc_data(AKVCAM_MEMORY_TYPE memory_type, size_t size);
+void akvcam_rbuffer_free_data(AKVCAM_MEMORY_TYPE memory_type, void *data);
 
 akvcam_rbuffer_t akvcam_rbuffer_new(void)
 {
     akvcam_rbuffer_t self = kzalloc(sizeof(struct akvcam_rbuffer), GFP_KERNEL);
-    self->self = akvcam_object_new("rbuffer",
-                                   self,
-                                   (akvcam_deleter_t) akvcam_rbuffer_delete);
+    kref_init(&self->ref);
     self->memory_type = AKVCAM_MEMORY_TYPE_KMALLOC;
 
     return self;
 }
 
-void akvcam_rbuffer_delete(akvcam_rbuffer_t *self)
+void akvcam_rbuffer_free(struct kref *ref)
 {
-    if (!self || !*self)
-        return;
+    akvcam_rbuffer_t self = container_of(ref, struct akvcam_rbuffer, ref);
 
-    if (akvcam_object_unref((*self)->self) > 0)
-        return;
+    if (self->data)
+        akvcam_rbuffer_free_data(self->memory_type, self->data);
 
-    if ((*self)->data)
-        akvcam_rbuffer_free((*self)->memory_type, (*self)->data);
+    kfree(self);
+}
 
-    akvcam_object_free(&((*self)->self));
-    kfree(*self);
-    *self = NULL;
+void akvcam_rbuffer_delete(akvcam_rbuffer_t self)
+{
+    if (self)
+        kref_put(&self->ref, akvcam_rbuffer_free);
+}
+
+akvcam_rbuffer_t akvcam_rbuffer_ref(akvcam_rbuffer_t self)
+{
+    if (self)
+        kref_get(&self->ref);
+
+    return self;
 }
 
 void akvcam_rbuffer_copy(akvcam_rbuffer_t self, const akvcam_rbuffer_t other)
 {
     if (self->data)
-        akvcam_rbuffer_free(self->memory_type, self->data);
+        akvcam_rbuffer_free_data(self->memory_type, self->data);
 
     self->data = kzalloc(other->size, GFP_KERNEL);
     memcpy(self->data, other->data, other->size);
@@ -95,7 +101,7 @@ void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
 
     if (new_size < 1) {
         if (self->data) {
-            akvcam_rbuffer_free(self->memory_type, self->data);
+            akvcam_rbuffer_free_data(self->memory_type, self->data);
             self->data = NULL;
         }
 
@@ -108,7 +114,7 @@ void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
         return;
     }
 
-    new_data = akvcam_rbuffer_alloc(memory_type, new_size);
+    new_data = akvcam_rbuffer_alloc_data(memory_type, new_size);
 
     if (self->data) {
         left_size = akvcam_min(self->size - self->read, data_size);
@@ -119,7 +125,7 @@ void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
         if (data_size > left_size)
             memcpy(new_data + left_size, self->data, data_size - left_size);
 
-        akvcam_rbuffer_free(self->memory_type, self->data);
+        akvcam_rbuffer_free_data(self->memory_type, self->data);
     }
 
     self->data = new_data;
@@ -294,7 +300,6 @@ void *akvcam_rbuffer_ptr_back(const akvcam_rbuffer_t self)
 
 void *akvcam_rbuffer_find(const akvcam_rbuffer_t self,
                           const void *data,
-                          size_t size,
                           const akvcam_are_equals_t equals,
                           ssize_t *offset)
 {
@@ -308,10 +313,7 @@ void *akvcam_rbuffer_find(const akvcam_rbuffer_t self,
         ioffset = (self->read + i) % self->size;
 
         if (equals) {
-            if (equals(self->data + ioffset, data, size))
-                return self->data + ioffset;
-        } else if (size) {
-            if (memcmp(self->data + ioffset, data, size) == 0)
+            if (equals(self->data + ioffset, data))
                 return self->data + ioffset;
         } else {
             if (self->data + ioffset == data)
@@ -328,7 +330,7 @@ void *akvcam_rbuffer_find(const akvcam_rbuffer_t self,
     return NULL;
 }
 
-void *akvcam_rbuffer_alloc(AKVCAM_MEMORY_TYPE memory_type, size_t size)
+void *akvcam_rbuffer_alloc_data(AKVCAM_MEMORY_TYPE memory_type, size_t size)
 {
     if (memory_type == AKVCAM_MEMORY_TYPE_KMALLOC)
         return kzalloc(size, GFP_KERNEL);
@@ -336,7 +338,7 @@ void *akvcam_rbuffer_alloc(AKVCAM_MEMORY_TYPE memory_type, size_t size)
     return vzalloc(size);
 }
 
-void akvcam_rbuffer_free(AKVCAM_MEMORY_TYPE memory_type, void *data)
+void akvcam_rbuffer_free_data(AKVCAM_MEMORY_TYPE memory_type, void *data)
 {
     if (memory_type == AKVCAM_MEMORY_TYPE_KMALLOC)
         kfree(data);

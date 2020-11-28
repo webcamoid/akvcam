@@ -29,7 +29,8 @@ struct v4l2_fract;
 
 // public
 akvcam_settings_t akvcam_settings_new(void);
-void akvcam_settings_delete(akvcam_settings_t *self);
+void akvcam_settings_delete(akvcam_settings_t self);
+akvcam_settings_t akvcam_settings_ref(akvcam_settings_t self);
 
 bool akvcam_settings_load(akvcam_settings_t self, const char *file_name);
 void akvcam_settings_begin_group(akvcam_settings_t self, const char *prefix);

@@ -16,26 +16,28 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <linux/kern_levels.h>
-#include <linux/printk.h>
-#include <linux/string.h>
+#include <linux/slab.h>
 
 #include "global_deleter.h"
 #include "list.h"
 #include "log.h"
-#include "object.h"
 
 typedef struct
 {
     void *user_data;
-    akvcam_deleter_t deleter;
+    akvcam_delete_t deleter;
 } akvcam_deleters_callback, *akvcam_deleters_callback_t;
 
 typedef akvcam_list_tt(akvcam_deleters_callback_t) akvcam_deleters_list_t;
 
 static akvcam_deleters_list_t akvcam_global_deleter = NULL;
 
-void akvcam_global_deleter_add(void *user_data, akvcam_deleter_t deleter)
+akvcam_deleters_callback_t akvcam_global_callback_copy(akvcam_deleters_callback_t callback)
+{
+    return kmemdup(callback, sizeof(akvcam_deleters_callback), GFP_KERNEL);
+}
+
+void akvcam_global_deleter_add(void *user_data, akvcam_delete_t deleter)
 {
     akvcam_deleters_callback callback = {user_data, deleter};
 
@@ -46,9 +48,8 @@ void akvcam_global_deleter_add(void *user_data, akvcam_deleter_t deleter)
 
     akvcam_list_push_back(akvcam_global_deleter,
                          &callback,
-                         sizeof(akvcam_deleters_callback),
-                         NULL,
-                         false);
+                         (akvcam_copy_t) akvcam_global_callback_copy,
+                         (akvcam_delete_t) kfree);
 }
 
 void akvcam_global_deleter_run(void)
@@ -70,5 +71,5 @@ void akvcam_global_deleter_run(void)
         callback->deleter(&callback->user_data);
     }
 
-    akvcam_list_delete(&akvcam_global_deleter);
+    akvcam_list_delete(akvcam_global_deleter);
 }

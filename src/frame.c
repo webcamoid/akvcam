@@ -16,6 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/kref.h>
 #include <linux/slab.h>
 #include <linux/videodev2.h>
 #include <linux/vmalloc.h>
@@ -25,7 +26,6 @@
 #include "format.h"
 #include "global_deleter.h"
 #include "log.h"
-#include "object.h"
 #include "utils.h"
 
 // FIXME: This is endianness dependent.
@@ -242,7 +242,7 @@ akvcam_video_convert_funtion_t akvcam_convert_func(__u32 from, __u32 to);
 
 struct akvcam_frame
 {
-    akvcam_object_t self;
+    struct kref ref;
     akvcam_format_t format;
     void *data;
     size_t size;
@@ -251,16 +251,13 @@ struct akvcam_frame
 bool akvcam_frame_adjust_format_supported(__u32 fourcc);
 const uint8_t *akvcam_contrast_table(void);
 const uint8_t *akvcam_gamma_table(void);
-void akvcam_lookup_table_delete(uint8_t **data);
 
 akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
                                 const void *data,
                                 size_t size)
 {
     akvcam_frame_t self = kzalloc(sizeof(struct akvcam_frame), GFP_KERNEL);
-    self->self = akvcam_object_new("frame",
-                                   self,
-                                   (akvcam_deleter_t) akvcam_frame_delete);
+    kref_init(&self->ref);
     self->format = akvcam_format_new(0, 0, 0, NULL);
     akvcam_format_copy(self->format, format);
 
@@ -279,21 +276,29 @@ akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
     return self;
 }
 
-void akvcam_frame_delete(akvcam_frame_t *self)
+void akvcam_frame_free(struct kref *ref)
 {
-    if (!self || !*self)
-        return;
+    akvcam_frame_t self = container_of(ref, struct akvcam_frame, ref);
 
-    if (akvcam_object_unref((*self)->self) > 0)
-        return;
+    if (self->data)
+        vfree(self->data);
 
-    if ((*self)->data)
-        vfree((*self)->data);
+    akvcam_format_delete(self->format);
+    kfree(self);
+}
 
-    akvcam_format_delete(&((*self)->format));
-    akvcam_object_free(&((*self)->self));
-    kfree(*self);
-    *self = NULL;
+void akvcam_frame_delete(akvcam_frame_t self)
+{
+    if (self)
+        kref_put(&self->ref, akvcam_frame_free);
+}
+
+akvcam_frame_t akvcam_frame_ref(akvcam_frame_t self)
+{
+    if (self)
+        kref_get(&self->ref);
+
+    return self;
 }
 
 void akvcam_frame_copy(akvcam_frame_t self, const akvcam_frame_t other)
@@ -321,9 +326,7 @@ akvcam_format_t akvcam_frame_format_nr(const akvcam_frame_t self)
 
 akvcam_format_t akvcam_frame_format(const akvcam_frame_t self)
 {
-    akvcam_object_ref(AKVCAM_TO_OBJECT(self->format));
-
-    return self->format;
+    return akvcam_format_ref(self->format);
 }
 
 void *akvcam_frame_data(const akvcam_frame_t self)
@@ -472,13 +475,13 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
             goto akvcam_frame_load_failed;
     }
 
-    akvcam_file_delete(&bmp_file);
+    akvcam_file_delete(bmp_file);
 
     return true;
 
 akvcam_frame_load_failed:
     akvcam_frame_clear(self);
-    akvcam_file_delete(&bmp_file);
+    akvcam_file_delete(bmp_file);
 
     return false;
 }
@@ -699,7 +702,7 @@ bool akvcam_frame_scaled(akvcam_frame_t self,
     }
 
     akvcam_format_copy(self->format, format);
-    akvcam_format_delete(&format);
+    akvcam_format_delete(format);
 
     if (self->data)
         vfree(self->data);
@@ -761,8 +764,8 @@ bool akvcam_frame_convert(akvcam_frame_t self, __u32 fourcc)
     convert(frame, self);
     akvcam_frame_copy(self, frame);
 
-    akvcam_frame_delete(&frame);
-    akvcam_format_delete(&format);
+    akvcam_frame_delete(frame);
+    akvcam_format_delete(format);
 
     return true;
 }
@@ -1850,8 +1853,7 @@ const uint8_t *akvcam_contrast_table(void)
         }
     }
 
-    akvcam_global_deleter_add(contrast_table,
-                              (akvcam_deleter_t) akvcam_lookup_table_delete);
+    akvcam_global_deleter_add(contrast_table, (akvcam_delete_t) vfree);
 
     return contrast_table;
 }
@@ -1942,17 +1944,7 @@ const uint8_t *akvcam_gamma_table(void)
         }
     }
 
-    akvcam_global_deleter_add(gamma_table,
-                              (akvcam_deleter_t) akvcam_lookup_table_delete);
+    akvcam_global_deleter_add(gamma_table, (akvcam_delete_t) vfree);
 
     return gamma_table;
-}
-
-void akvcam_lookup_table_delete(uint8_t **data)
-{
-    if (!data || !*data)
-        return;
-
-    vfree(*data);
-    *data = NULL;
 }

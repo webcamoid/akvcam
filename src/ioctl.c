@@ -16,10 +16,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/kref.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
-#include <linux/version.h>
 #include <linux/uvcvideo.h>
+#include <linux/version.h>
 
 #include "ioctl.h"
 #include "buffers.h"
@@ -31,7 +32,6 @@
 #include "list.h"
 #include "log.h"
 #include "node.h"
-#include "object.h"
 
 #define DEFAULT_COLORSPACE V4L2_COLORSPACE_RAW
 
@@ -55,7 +55,7 @@ typedef struct
 
 struct akvcam_ioctl
 {
-    akvcam_object_t self;
+    struct kref ref;
     size_t n_ioctls;
 };
 
@@ -192,9 +192,7 @@ akvcam_ioctl_t akvcam_ioctl_new(void)
 {
     size_t i;
     akvcam_ioctl_t self = kzalloc(sizeof(struct akvcam_ioctl), GFP_KERNEL);
-    self->self = akvcam_object_new("ioctl",
-                                   self,
-                                   (akvcam_deleter_t) akvcam_ioctl_delete);
+    kref_init(&self->ref);
 
     // Check the number of ioctls available.
     self->n_ioctls = 0;
@@ -205,17 +203,24 @@ akvcam_ioctl_t akvcam_ioctl_new(void)
     return self;
 }
 
-void akvcam_ioctl_delete(akvcam_ioctl_t *self)
+void akvcam_ioctl_free(struct kref *ref)
 {
-    if (!self || !*self)
-        return;
+    akvcam_ioctl_t self = container_of(ref, struct akvcam_ioctl, ref);
+    kfree(self);
+}
 
-    if (akvcam_object_unref((*self)->self) > 0)
-        return;
+void akvcam_ioctl_delete(akvcam_ioctl_t self)
+{
+    if (self)
+        kref_put(&self->ref, akvcam_ioctl_free);
+}
 
-    akvcam_object_free(&((*self)->self));
-    kfree(*self);
-    *self = NULL;
+akvcam_ioctl_t akvcam_ioctl_ref(akvcam_ioctl_t self)
+{
+    if (self)
+        kref_get(&self->ref);
+
+    return self;
 }
 
 int akvcam_ioctl_do(akvcam_ioctl_t self,
@@ -652,7 +657,7 @@ int akvcam_ioctl_enum_fmt(akvcam_node_t node, struct v4l2_fmtdesc *format)
         memset(format->reserved, 0, 4 * sizeof(__u32));
     }
 
-    akvcam_list_delete(&pixel_formats);
+    akvcam_list_delete(pixel_formats);
 
     return fourcc? 0: -EINVAL;
 }
@@ -777,7 +782,7 @@ int akvcam_ioctl_try_fmt(akvcam_node_t node, struct v4l2_format *format)
         mutex_unlock(mtx);
     }
 
-    akvcam_format_delete(&temp_format);
+    akvcam_format_delete(temp_format);
 
     if (!nearest_format)
         return -EINVAL;
@@ -809,7 +814,7 @@ int akvcam_ioctl_try_fmt(akvcam_node_t node, struct v4l2_format *format)
         }
     }
 
-    akvcam_format_delete(&nearest_format);
+    akvcam_format_delete(nearest_format);
 
     return 0;
 }
@@ -910,13 +915,13 @@ int akvcam_ioctl_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
     }
 
     if (!nearest_format) {
-        akvcam_format_delete(&format);
+        akvcam_format_delete(format);
 
         return -EINVAL;
     }
 
-    akvcam_format_delete(&format);
-    akvcam_format_copy(akvcam_device_format_nr(device), nearest_format);
+    akvcam_format_delete(format);
+    akvcam_device_set_format(device, nearest_format);
     memset(&param->parm, 0, 200);
 
     if (param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT
@@ -936,7 +941,7 @@ int akvcam_ioctl_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
         n_buffers = &param->parm.capture.readbuffers;
     }
 
-    akvcam_format_delete(&nearest_format);
+    akvcam_format_delete(nearest_format);
 
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE) {
         buffers = akvcam_device_buffers_nr(device);
@@ -988,7 +993,7 @@ int akvcam_ioctl_enum_framesizes(akvcam_node_t node,
         memset(frame_sizes->reserved, 0, 2 * sizeof(__u32));
     }
 
-    akvcam_list_delete(&resolutions);
+    akvcam_list_delete(resolutions);
 
     return resolution? 0: -EINVAL;
 }
@@ -1031,7 +1036,7 @@ int akvcam_ioctl_enum_frameintervals(akvcam_node_t node,
         memset(frame_intervals->reserved, 0, 2 * sizeof(__u32));
     }
 
-    akvcam_list_delete(&frame_rates);
+    akvcam_list_delete(frame_rates);
 
     return frame_rate? 0: -EINVAL;
 }
@@ -1218,6 +1223,7 @@ int akvcam_ioctl_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer)
     akvcam_device_t device;
     akvcam_buffers_t buffers;
     akvcam_format_t format;
+    akvcam_formats_list_t formats;
     struct v4l2_plane *planes;
     size_t n_planes;
     size_t i;
@@ -1237,7 +1243,9 @@ int akvcam_ioctl_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer)
     if (!akvcam_buffers_fill(buffers, buffer))
         return -EINVAL;
 
-    if (!akvcam_device_multiplanar(device))
+    formats = akvcam_device_formats_nr(device);
+
+    if (!akvcam_format_have_multiplanar(formats))
         return 0;
 
     if (buffer->length < 1)
@@ -1290,7 +1298,11 @@ int akvcam_ioctl_create_bufs(akvcam_node_t node, struct v4l2_create_buffers *buf
 {
     akvcam_device_t device;
     akvcam_buffers_t buffs;
+    akvcam_format_t format;
+    akvcam_formats_list_t formats;
+    struct mutex *mtx;
     int32_t device_num;
+    int result = -EIO;
 
     akpr_function();
     device_num = akvcam_node_device_num(node);
@@ -1301,8 +1313,18 @@ int akvcam_ioctl_create_bufs(akvcam_node_t node, struct v4l2_create_buffers *buf
         return -EIO;
 
     buffs = akvcam_device_buffers_nr(device);
+    mtx = akvcam_device_formats_mutex(device);
 
-    return akvcam_buffers_create(buffs, node, buffers);
+    if (!mutex_lock_interruptible(mtx)) {
+        formats = akvcam_device_formats_nr(device);
+        format = akvcam_format_from_v4l2(formats, &buffers->format);
+        mutex_unlock(mtx);
+
+        result = akvcam_buffers_create(buffs, node, buffers, format);
+        akvcam_format_delete(format);
+    }
+
+    return result;
 }
 
 int akvcam_ioctl_qbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
@@ -1310,6 +1332,7 @@ int akvcam_ioctl_qbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
     akvcam_device_t device;
     akvcam_buffers_t buffers;
     akvcam_format_t format;
+    akvcam_formats_list_t formats;
     struct v4l2_plane *planes;
     size_t n_planes;
     size_t i;
@@ -1336,7 +1359,9 @@ int akvcam_ioctl_qbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
         data = akvcam_buffers_buffers_data(buffers, buffer);
 
         if (data) {
-            if (akvcam_device_multiplanar(device)) {
+            formats = akvcam_device_formats_nr(device);
+
+            if (akvcam_format_have_multiplanar(formats)) {
                 format = akvcam_device_format_nr(device);
                 planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
 
@@ -1378,12 +1403,14 @@ int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
     akvcam_device_t device;
     akvcam_buffers_t buffers;
     akvcam_format_t format;
+    akvcam_formats_list_t formats;
     struct v4l2_plane *planes;
     size_t n_planes;
     size_t i;
     void *data;
     int result;
     int32_t device_num;
+    bool multiplanar;
 
     akpr_function();
     device_num = akvcam_node_device_num(node);
@@ -1395,6 +1422,8 @@ int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
 
     buffers = akvcam_device_buffers_nr(device);
     result = akvcam_buffers_dequeue(buffers, buffer);
+    formats = akvcam_device_formats_nr(device);
+    multiplanar = akvcam_format_have_multiplanar(formats);
 
     if (result == 0
         && buffer->m.userptr
@@ -1404,7 +1433,7 @@ int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
         data = akvcam_buffers_buffers_data(buffers, buffer);
 
         if (data) {
-            if (akvcam_device_multiplanar(device)) {
+            if (multiplanar) {
                 format = akvcam_device_format_nr(device);
                 planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
 
@@ -1437,7 +1466,7 @@ int akvcam_ioctl_dqbuf(akvcam_node_t node, struct v4l2_buffer *buffer)
     } else if (result == 0
                && buffer->memory == V4L2_MEMORY_MMAP
                && akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_CAPTURE
-               && akvcam_device_multiplanar(device)) {
+               && multiplanar) {
         format = akvcam_device_format_nr(device);
         planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
 

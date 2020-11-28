@@ -21,7 +21,7 @@
 
 #include <linux/types.h>
 
-#include "object_types.h"
+#include "utils.h"
 
 #define akvcam_map_tt(value_type) akvcam_map_t
 
@@ -34,7 +34,8 @@ typedef akvcam_map_tt(char *) akvcam_string_map_t;
 
 // public
 akvcam_map_t akvcam_map_new(void);
-void akvcam_map_delete(akvcam_map_t *self);
+void akvcam_map_delete(akvcam_map_t self);
+akvcam_map_t akvcam_map_ref(akvcam_map_t self);
 
 size_t akvcam_map_size(const akvcam_map_t self);
 bool akvcam_map_empty(const akvcam_map_t self);
@@ -42,9 +43,8 @@ void *akvcam_map_value(const akvcam_map_t self, const char *key);
 akvcam_map_element_t akvcam_map_set_value(akvcam_map_t self,
                                           const char *key,
                                           void *value,
-                                          size_t value_size,
-                                          const akvcam_deleter_t deleter,
-                                          bool is_object);
+                                          const akvcam_copy_t copier,
+                                          const akvcam_delete_t deleter);
 bool akvcam_map_contains(const akvcam_map_t self, const char *key);
 struct akvcam_list *akvcam_map_keys(const akvcam_map_t self);
 struct akvcam_list *akvcam_map_values(const akvcam_map_t self);
@@ -55,10 +55,7 @@ bool akvcam_map_next(const akvcam_map_t self,
                      akvcam_map_element_t *element);
 char *akvcam_map_element_key(const akvcam_map_element_t element);
 void *akvcam_map_element_value(const akvcam_map_element_t element);
-size_t akvcam_map_element_size(const akvcam_map_element_t element);
-akvcam_deleter_t akvcam_map_element_deleter(const akvcam_map_element_t element);
-
-// static
-size_t akvcam_map_sizeof(void);
+akvcam_copy_t akvcam_map_element_copier(const akvcam_map_element_t element);
+akvcam_delete_t akvcam_map_element_deleter(const akvcam_map_element_t element);
 
 #endif // AKVCAM_MAP_H

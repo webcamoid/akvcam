@@ -33,9 +33,9 @@ struct file;
 akvcam_device_t akvcam_device_new(const char *name,
                                   const char *description,
                                   AKVCAM_DEVICE_TYPE type,
-                                  AKVCAM_RW_MODE rw_mode,
-                                  bool multiplanar);
-void akvcam_device_delete(akvcam_device_t *self);
+                                  AKVCAM_RW_MODE rw_mode);
+void akvcam_device_delete(akvcam_device_t self);
+akvcam_device_t akvcam_device_ref(akvcam_device_t self);
 
 bool akvcam_device_register(akvcam_device_t self);
 void akvcam_device_unregister(akvcam_device_t self);
@@ -54,6 +54,8 @@ akvcam_formats_list_t akvcam_device_formats(const akvcam_device_t self);
 struct mutex *akvcam_device_formats_mutex(const akvcam_device_t self);
 akvcam_format_t akvcam_device_format_nr(const akvcam_device_t self);
 akvcam_format_t akvcam_device_format(const akvcam_device_t self);
+void akvcam_device_set_format(const akvcam_device_t self,
+                              akvcam_format_t format);
 akvcam_controls_t akvcam_device_controls_nr(const akvcam_device_t self);
 akvcam_controls_t akvcam_device_controls(const akvcam_device_t self);
 akvcam_nodes_list_t akvcam_device_nodes_nr(const akvcam_device_t self);
@@ -74,13 +76,11 @@ void akvcam_device_set_streaming_rw(akvcam_device_t self, bool streaming);
 bool akvcam_device_prepare_frame(akvcam_device_t self);
 akvcam_devices_list_t akvcam_device_connected_devices_nr(const akvcam_device_t self);
 akvcam_devices_list_t akvcam_device_connected_devices(const akvcam_device_t self);
-bool akvcam_device_multiplanar(const akvcam_device_t self);
-void akvcam_device_set_multiplanar(akvcam_device_t self, bool multiplanar);
 __u32 akvcam_device_caps(const akvcam_device_t self);
 
 // public static
-size_t akvcam_device_sizeof(void);
 akvcam_device_t akvcam_device_from_file_nr(struct file *filp);
 akvcam_device_t akvcam_device_from_file(struct file *filp);
+AKVCAM_DEVICE_TYPE akvcam_device_type_from_v4l2(enum v4l2_buf_type type);
 
 #endif //AKVCAM_ DEVICE_H

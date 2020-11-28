@@ -30,7 +30,8 @@ struct file;
 struct poll_table_struct;
 
 akvcam_events_t akvcam_events_new(void);
-void akvcam_events_delete(akvcam_events_t *self);
+void akvcam_events_delete(akvcam_events_t self);
+akvcam_events_t akvcam_events_ref(akvcam_events_t self);
 
 void akvcam_events_subscribe(akvcam_events_t self,
                              struct v4l2_event_subscription *subscription);

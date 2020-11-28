@@ -16,14 +16,13 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/kref.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 
 #include "controls.h"
-#include "device.h"
 #include "frame_types.h"
 #include "list.h"
-#include "object.h"
 
 #ifndef V4L2_CTRL_FLAG_NEXT_COMPOUND
 #define V4L2_CTRL_FLAG_NEXT_COMPOUND 0x40000000
@@ -61,8 +60,7 @@ typedef struct
 
 struct akvcam_controls
 {
-    akvcam_object_t self;
-    akvcam_device_t device;
+    struct kref ref;
     akvcam_control_value_t values;
     akvcam_controls_changed_callback controls_changed;
     akvcam_control_params_t control_params;
@@ -113,17 +111,14 @@ akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,
 akvcam_control_params_t akvcam_controls_params_by_id(const akvcam_controls_t self,
                                                      __u32 id);
 
-akvcam_controls_t akvcam_controls_new(akvcam_device_t device)
+akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE device_type)
 {
     size_t i;
     akvcam_controls_t self = kzalloc(sizeof(struct akvcam_controls), GFP_KERNEL);
-    self->self = akvcam_object_new("controls",
-                                   self,
-                                   (akvcam_deleter_t) akvcam_controls_delete);
-    self->device = device;
+    kref_init(&self->ref);
 
     // Initialize controls with default values.
-    if (akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_OUTPUT) {
+    if (device_type == AKVCAM_DEVICE_TYPE_OUTPUT) {
         self->n_controls = akvcam_controls_output_count();
         self->control_params = akvcam_controls_output;
     } else {
@@ -142,18 +137,25 @@ akvcam_controls_t akvcam_controls_new(akvcam_device_t device)
     return self;
 }
 
-void akvcam_controls_delete(akvcam_controls_t *self)
+void akvcam_controls_free(struct kref *ref)
 {
-    if (!self || !*self)
-        return;
+    akvcam_controls_t self = container_of(ref, struct akvcam_controls, ref);
+    kfree(self->values);
+    kfree(self);
+}
 
-    if (akvcam_object_unref((*self)->self) > 0)
-        return;
+void akvcam_controls_delete(akvcam_controls_t self)
+{
+    if (self)
+        kref_put(&self->ref, akvcam_controls_free);
+}
 
-    kfree((*self)->values);
-    akvcam_object_free(&((*self)->self));
-    kfree(*self);
-    *self = NULL;
+akvcam_controls_t akvcam_controls_ref(akvcam_controls_t self)
+{
+    if (self)
+        kref_get(&self->ref);
+
+    return self;
 }
 
 int akvcam_controls_fill(const akvcam_controls_t self,
