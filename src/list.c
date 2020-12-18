@@ -51,6 +51,15 @@ akvcam_list_t akvcam_list_new(void)
     return self;
 }
 
+akvcam_list_t akvcam_list_new_copy(akvcam_list_t other)
+{
+    akvcam_list_t self = kzalloc(sizeof(struct akvcam_list), GFP_KERNEL);
+    kref_init(&self->ref);
+    akvcam_list_append(self, other);
+
+    return self;
+}
+
 void akvcam_list_free(struct kref *ref)
 {
     akvcam_list_t self = container_of(ref, struct akvcam_list, ref);
@@ -302,7 +311,7 @@ ssize_t akvcam_list_index_of(const akvcam_list_t self,
     if (!equals)
         return -1;
 
-    for (i = -1;; i++) {
+    for (i = 0;; i++) {
         element_data = akvcam_list_next(self, &it);
 
         if (!it)
@@ -319,7 +328,7 @@ bool akvcam_list_contains(const akvcam_list_t self,
                           const void *data,
                           const akvcam_are_equals_t equals)
 {
-    return akvcam_list_index_of(self, data, equals) >= 0;
+    return akvcam_list_find(self, data, equals) != NULL;
 }
 
 void *akvcam_list_next(const akvcam_list_t self,
@@ -413,8 +422,7 @@ void akvcam_matrix_combine_p(akvcam_matrix_t matrix,
         if (!it)
             break;
 
-        combined_p1 = akvcam_list_new();
-        akvcam_list_copy(combined_p1, combined);
+        combined_p1 = akvcam_list_new_copy(combined);
         akvcam_list_push_back(combined_p1,
                               data,
                               it->copier,

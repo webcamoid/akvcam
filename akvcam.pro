@@ -45,7 +45,6 @@ lupdate_only {
         src/list_types.h \
         src/log.h \
         src/map.h \
-        src/mmap.h \
         src/node.h \
         src/node_types.h \
         src/rbuffer.h \
@@ -69,7 +68,6 @@ lupdate_only {
         src/list.c \
         src/log.c \
         src/map.c \
-        src/mmap.c \
         src/node.c \
         src/rbuffer.c \
         src/settings.c \

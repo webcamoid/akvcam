@@ -68,7 +68,7 @@ void akvcam_global_deleter_run(void)
         if (!it)
             break;
 
-        callback->deleter(&callback->user_data);
+        callback->deleter(callback->user_data);
     }
 
     akvcam_list_delete(akvcam_global_deleter);

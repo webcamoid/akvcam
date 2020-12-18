@@ -89,6 +89,18 @@ akvcam_format_t akvcam_format_new(__u32 fourcc,
     return self;
 }
 
+akvcam_format_t akvcam_format_new_copy(akvcam_format_t other)
+{
+    akvcam_format_t self = kzalloc(sizeof(struct akvcam_format), GFP_KERNEL);
+    kref_init(&self->ref);
+    self->fourcc = other->fourcc;
+    self->width = other->width;
+    self->height = other->height;
+    memcpy(&self->frame_rate, &other->frame_rate, sizeof(struct v4l2_fract));
+
+    return self;
+}
+
 void akvcam_format_free(struct kref *ref)
 {
     akvcam_format_t self = container_of(ref, struct akvcam_format, ref);
@@ -297,8 +309,8 @@ const char *akvcam_format_string_from_fourcc(__u32 fourcc)
     return vf? vf->str: NULL;
 }
 
-akvcam_format_t akvcam_format_nearest_nr(akvcam_formats_list_t formats,
-                                         const akvcam_format_t format)
+akvcam_format_t akvcam_format_nearest(akvcam_formats_list_t formats,
+                                      const akvcam_format_t format)
 {
     akvcam_list_element_t element = NULL;
     akvcam_format_t nearest_format = NULL;
@@ -339,13 +351,7 @@ akvcam_format_t akvcam_format_nearest_nr(akvcam_formats_list_t formats,
         }
     }
 
-    return nearest_format;
-}
-
-akvcam_format_t akvcam_format_nearest(akvcam_formats_list_t formats,
-                                      const akvcam_format_t format)
-{
-    return akvcam_format_ref(akvcam_format_nearest_nr(formats, format));
+    return akvcam_format_new_copy(nearest_format);
 }
 
 bool akvcam_format_fourcc_are_equal(__u32 *fourcc1, __u32 *fourcc2)
@@ -493,7 +499,6 @@ akvcam_format_t akvcam_format_from_v4l2_nr(akvcam_formats_list_t formats,
     akvcam_format_t akformat = NULL;
     size_t i;
     size_t bypl;
-    size_t plane_size;
     bool is_valid;
 
     for (;;) {
@@ -509,7 +514,6 @@ akvcam_format_t akvcam_format_from_v4l2_nr(akvcam_formats_list_t formats,
                 && format->fmt.pix.pixelformat == akvcam_format_fourcc(akformat)
                 && format->fmt.pix.field == V4L2_FIELD_NONE
                 && format->fmt.pix.bytesperline == (__u32) akvcam_format_bypl(akformat, 0)
-                && format->fmt.pix.sizeimage == (__u32) akvcam_format_size(akformat)
                 && format->fmt.pix.colorspace == DEFAULT_COLORSPACE) {
                 return akformat;
             }
@@ -525,10 +529,8 @@ akvcam_format_t akvcam_format_from_v4l2_nr(akvcam_formats_list_t formats,
 
                 for (i = 0; i < format->fmt.pix_mp.num_planes; i++) {
                     bypl = akvcam_format_bypl(akformat, i);
-                    plane_size = akvcam_format_plane_size(akformat, i);
 
-                    if (format->fmt.pix_mp.plane_fmt[i].bytesperline != bypl
-                        || format->fmt.pix_mp.plane_fmt[i].sizeimage != plane_size) {
+                    if (format->fmt.pix_mp.plane_fmt[i].bytesperline != bypl) {
                         is_valid = false;
 
                         break;

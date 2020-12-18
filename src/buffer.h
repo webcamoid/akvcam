@@ -24,16 +24,20 @@
 struct akvcam_buffer;
 typedef struct akvcam_buffer *akvcam_buffer_t;
 struct v4l2_buffer;
+struct vm_area_struct;
 
 // public
 akvcam_buffer_t akvcam_buffer_new(size_t size);
 void akvcam_buffer_delete(akvcam_buffer_t self);
 akvcam_buffer_t akvcam_buffer_ref(akvcam_buffer_t self);
 
-struct v4l2_buffer *akvcam_buffer_get(akvcam_buffer_t self);
-void *akvcam_buffer_data(akvcam_buffer_t self);
-size_t akvcam_buffer_size(akvcam_buffer_t self);
-__u32 akvcam_buffer_offset(akvcam_buffer_t self);
-void akvcam_buffer_set_offset(akvcam_buffer_t self, __u32 offset);
+bool akvcam_buffer_read(akvcam_buffer_t self, struct v4l2_buffer *v4l2_buff);
+bool akvcam_buffer_write(akvcam_buffer_t self,
+                         const struct v4l2_buffer *v4l2_buff);
+bool akvcam_buffer_read_data(akvcam_buffer_t self, void *data, size_t size);
+bool akvcam_buffer_write_data(akvcam_buffer_t self,
+                              const void *data,
+                              size_t size);
+int akvcam_buffer_map_data(akvcam_buffer_t self, struct vm_area_struct *vma);
 
 #endif // AKVCAM_BUFFER_H

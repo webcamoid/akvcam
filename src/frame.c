@@ -276,6 +276,23 @@ akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
     return self;
 }
 
+akvcam_frame_t akvcam_frame_new_copy(akvcam_frame_t other)
+{
+    akvcam_frame_t self = kzalloc(sizeof(struct akvcam_frame), GFP_KERNEL);
+    kref_init(&self->ref);
+    self->format = akvcam_format_new_copy(other->format);
+    self->size = other->size;
+
+    if (self->size > 0) {
+        self->data = vzalloc(self->size);
+
+        if (self->data)
+            memcpy(self->data, other->data, self->size);
+    }
+
+    return self;
+}
+
 void akvcam_frame_free(struct kref *ref)
 {
     akvcam_frame_t self = container_of(ref, struct akvcam_frame, ref);
@@ -319,14 +336,9 @@ void akvcam_frame_copy(akvcam_frame_t self, const akvcam_frame_t other)
     }
 }
 
-akvcam_format_t akvcam_frame_format_nr(const akvcam_frame_t self)
-{
-    return self->format;
-}
-
 akvcam_format_t akvcam_frame_format(const akvcam_frame_t self)
 {
-    return akvcam_format_ref(self->format);
+    return akvcam_format_new_copy(self->format);
 }
 
 void *akvcam_frame_data(const akvcam_frame_t self)
@@ -1079,9 +1091,8 @@ void akvcam_bgr24_to_rgb32(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_BGR24_t src_line;
     akvcam_RGB32_t dst_line;
 
@@ -1102,9 +1113,8 @@ void akvcam_bgr24_to_rgb24(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_BGR24_t src_line;
     akvcam_RGB24_t dst_line;
 
@@ -1124,9 +1134,8 @@ void akvcam_bgr24_to_rgb16(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_BGR24_t src_line;
     akvcam_RGB16_t dst_line;
 
@@ -1146,9 +1155,8 @@ void akvcam_bgr24_to_rgb15(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_BGR24_t src_line;
     akvcam_RGB15_t dst_line;
 
@@ -1169,9 +1177,8 @@ void akvcam_bgr24_to_bgr32(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_BGR24_t src_line;
     akvcam_BGR32_t dst_line;
 
@@ -1192,9 +1199,8 @@ void akvcam_bgr24_to_bgr16(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_BGR24_t src_line;
     akvcam_BGR16_t dst_line;
 
@@ -1215,9 +1221,8 @@ void akvcam_bgr24_to_uyvy(akvcam_frame_t dst, akvcam_frame_t src)
     size_t x;
     size_t y;
     size_t x_yuv;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_BGR24_t src_line;
     akvcam_UYVY_t dst_line;
     uint8_t r0;
@@ -1257,9 +1262,8 @@ void akvcam_bgr24_to_yuy2(akvcam_frame_t dst, akvcam_frame_t src)
     size_t x;
     size_t y;
     size_t x_yuv;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_BGR24_t src_line;
     akvcam_YUY2_t dst_line;
     uint8_t r0;
@@ -1298,9 +1302,8 @@ void akvcam_bgr24_to_nv12(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_BGR24_t src_line;
     uint8_t *dst_line_y;
     akvcam_VU_t dst_line_vu;
@@ -1332,9 +1335,8 @@ void akvcam_bgr24_to_nv21(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_BGR24_t src_line;
     uint8_t *dst_line_y;
     akvcam_UV_t dst_line_vu;
@@ -1366,9 +1368,8 @@ void akvcam_rgb24_to_rgb32(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_RGB24_t src_line;
     akvcam_RGB32_t dst_line;
 
@@ -1389,9 +1390,8 @@ void akvcam_rgb24_to_rgb16(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_RGB24_t src_line;
     akvcam_RGB16_t dst_line;
 
@@ -1411,9 +1411,8 @@ void akvcam_rgb24_to_rgb15(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_RGB24_t src_line;
     akvcam_RGB15_t dst_line;
 
@@ -1434,9 +1433,8 @@ void akvcam_rgb24_to_bgr32(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_RGB24_t src_line;
     akvcam_BGR32_t dst_line;
 
@@ -1457,9 +1455,8 @@ void akvcam_rgb24_to_bgr24(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_RGB24_t src_line;
     akvcam_BGR24_t dst_line;
 
@@ -1479,9 +1476,8 @@ void akvcam_rgb24_to_bgr16(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_RGB24_t src_line;
     akvcam_BGR16_t dst_line;
 
@@ -1502,9 +1498,8 @@ void akvcam_rgb24_to_uyvy(akvcam_frame_t dst, akvcam_frame_t src)
     size_t x;
     size_t y;
     size_t x_yuv;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_RGB24_t src_line;
     akvcam_UYVY_t dst_line;
     uint8_t r0;
@@ -1544,9 +1539,8 @@ void akvcam_rgb24_to_yuy2(akvcam_frame_t dst, akvcam_frame_t src)
     size_t x;
     size_t y;
     size_t x_yuv;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_RGB24_t src_line;
     akvcam_YUY2_t dst_line;
     uint8_t r0;
@@ -1585,9 +1579,8 @@ void akvcam_rgb24_to_nv12(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_RGB24_t src_line;
     uint8_t *dst_line_y;
     akvcam_VU_t dst_line_vu;
@@ -1619,9 +1612,8 @@ void akvcam_rgb24_to_nv21(akvcam_frame_t dst, akvcam_frame_t src)
 {
     size_t x;
     size_t y;
-    akvcam_format_t format = akvcam_frame_format_nr(src);
-    size_t width = akvcam_format_width(format);
-    size_t height = akvcam_format_height(format);
+    size_t width = akvcam_format_width(src->format);
+    size_t height = akvcam_format_height(src->format);
     akvcam_RGB24_t src_line;
     uint8_t *dst_line_y;
     akvcam_UV_t dst_line_vu;

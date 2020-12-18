@@ -26,6 +26,7 @@
 
 // public
 akvcam_list_t akvcam_list_new(void);
+akvcam_list_t akvcam_list_new_copy(akvcam_list_t other);
 void akvcam_list_delete(akvcam_list_t self);
 akvcam_list_t akvcam_list_ref(akvcam_list_t self);
 

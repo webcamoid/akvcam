@@ -31,6 +31,7 @@ akvcam_format_t akvcam_format_new(__u32 fourcc,
                                   size_t width,
                                   size_t height,
                                   const struct v4l2_fract *frame_rate);
+akvcam_format_t akvcam_format_new_copy(akvcam_format_t other);
 void akvcam_format_delete(akvcam_format_t self);
 akvcam_format_t akvcam_format_ref(akvcam_format_t self);
 
@@ -60,8 +61,6 @@ void akvcam_format_round_nearest(int width, int height,
                                  int align);
 __u32 akvcam_format_fourcc_from_string(const char *fourcc_str);
 const char *akvcam_format_string_from_fourcc(__u32 fourcc);
-akvcam_format_t akvcam_format_nearest_nr(akvcam_formats_list_t formats,
-                                         const akvcam_format_t format);
 akvcam_format_t akvcam_format_nearest(akvcam_formats_list_t formats,
                                       const akvcam_format_t format);
 akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_t formats);

@@ -33,7 +33,6 @@ typedef struct
     char name[AKVCAM_MAX_STRING_SIZE];
     char description[AKVCAM_MAX_STRING_SIZE];
     akvcam_devices_list_t devices;
-    struct mutex devices_mutex;
 } akvcam_driver, *akvcam_driver_t;
 
 static akvcam_driver_t akvcam_driver_global = NULL;
@@ -67,12 +66,11 @@ int akvcam_driver_init(const char *name, const char *description)
     if (akvcam_driver_global)
         return -EINVAL;
 
-    akpr_debug("Initializing driver\n");
+    akpr_info("Initializing driver\n");
     akvcam_driver_global = kzalloc(sizeof(akvcam_driver), GFP_KERNEL);
     snprintf(akvcam_driver_global->name, AKVCAM_MAX_STRING_SIZE, "%s", name);
     snprintf(akvcam_driver_global->description, AKVCAM_MAX_STRING_SIZE, "%s", description);
-    mutex_init(&akvcam_driver_global->devices_mutex);
-    akpr_debug("Reading settings\n");
+    akpr_info("Reading settings\n");
     settings = akvcam_settings_new();
 
     if (akvcam_settings_load(settings, akvcam_settings_file())) {
@@ -101,12 +99,7 @@ void akvcam_driver_uninit(void)
         return;
 
     akvcam_driver_unregister();
-
-    if (!mutex_lock_interruptible(&akvcam_driver_global->devices_mutex)) {
-        akvcam_list_delete(akvcam_driver_global->devices);
-        mutex_unlock(&akvcam_driver_global->devices_mutex);
-    }
-
+    akvcam_list_delete(akvcam_driver_global->devices);
     kfree(akvcam_driver_global);
 }
 
@@ -142,11 +135,6 @@ akvcam_devices_list_t akvcam_driver_devices_nr(void)
 akvcam_devices_list_t akvcam_driver_devices(void)
 {
     return akvcam_list_ref(akvcam_driver_devices_nr());
-}
-
-struct mutex *akvcam_driver_devices_mutex(void)
-{
-    return &akvcam_driver_global->devices_mutex;
 }
 
 akvcam_device_t akvcam_driver_device_from_num_nr(int32_t num)
@@ -370,7 +358,7 @@ akvcam_devices_list_t akvcam_driver_read_devices(akvcam_settings_t settings,
 
 bool akvcam_driver_strings_are_equals(const char *str1, const char *str2)
 {
-    return !strcmp(str1, str2);
+    return strcmp(str1, str2) == 0;
 }
 
 akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
@@ -383,7 +371,8 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
     char *description;
     akvcam_formats_list_t formats;
     akvcam_buffers_t buffers;
-    struct mutex *mtx;
+
+    akpr_info("Reading device\n");
 
     type = strcmp(akvcam_settings_value(settings, "type"),
                   "output") == 0? AKVCAM_DEVICE_TYPE_OUTPUT:
@@ -422,39 +411,34 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
     if (!mode)
         mode |= AKVCAM_RW_MODE_MMAP | AKVCAM_RW_MODE_USERPTR;
 
-    device = akvcam_device_new("akvcam-device",
-                               description,
-                               type,
-                               mode);
-
-    if (akvcam_settings_contains(settings, "videonr"))
-        akvcam_device_set_num(device,
-                              akvcam_settings_value_int32(settings, "videonr"));
-
+    akpr_info("Device mode: %s\n", akvcam_string_from_rw_mode(mode));
     formats = akvcam_driver_read_device_formats(settings, available_formats);
 
     if (akvcam_list_empty(formats)) {
         pr_err("Can't read device formats\n");
-        akvcam_device_delete(device);
         akvcam_list_delete(formats);
 
         return NULL;
     }
 
-    mtx = akvcam_device_formats_mutex(device);
-
-    if (!mutex_lock_interruptible(mtx)) {
-        akvcam_list_append(akvcam_device_formats_nr(device), formats);
-        mutex_unlock(mtx);
-    }
-
-    akvcam_device_set_format(device, akvcam_list_front(formats));
-    buffers = akvcam_device_buffers_nr(device);
-    akvcam_buffers_resize_rw(buffers, AKVCAM_BUFFERS_MIN);
+    device = akvcam_device_new("akvcam-device",
+                               description,
+                               type,
+                               mode,
+                               formats);
     akvcam_list_delete(formats);
 
-    if (!akvcam_device_v4l2_type(device))
+    if (akvcam_settings_contains(settings, "videonr"))
+        akvcam_device_set_num(device,
+                              akvcam_settings_value_int32(settings, "videonr"));
+
+    buffers = akvcam_device_buffers_nr(device);
+    akvcam_buffers_resize_rw(buffers, AKVCAM_BUFFERS_MIN);
+
+    if (!akvcam_device_v4l2_type(device)) {
         akvcam_device_delete(device);
+        device = NULL;
+    }
 
     return device;
 }
@@ -629,13 +613,9 @@ void akvcam_driver_print_devices(void)
     akvcam_list_element_t it = NULL;
     AKVCAM_RW_MODE mode;
 
-    if (mutex_lock_interruptible(&akvcam_driver_global->devices_mutex))
-        return;
-
     if (!akvcam_driver_global
         || !akvcam_driver_global->devices
         || akvcam_list_empty(akvcam_driver_global->devices)) {
-        mutex_unlock(&akvcam_driver_global->devices_mutex);
         akpr_warning("No devices found\n");
 
         return;
@@ -681,8 +661,6 @@ void akvcam_driver_print_devices(void)
         akvcam_driver_print_connections(device);
         akpr_info("\n");
     }
-
-    mutex_unlock(&akvcam_driver_global->devices_mutex);
 }
 
 void akvcam_driver_print_formats(const akvcam_device_t device)
@@ -691,31 +669,26 @@ void akvcam_driver_print_formats(const akvcam_device_t device)
     akvcam_format_t format;
     akvcam_list_element_t it = NULL;
     struct v4l2_fract *frame_rate;
-    struct mutex *mtx;
 
-    mtx = akvcam_device_formats_mutex(device);
+    formats = akvcam_device_formats(device);
 
-    if (!mutex_lock_interruptible(mtx)) {
-        formats = akvcam_device_formats_nr(device);
+    if (akvcam_list_empty(formats)) {
+        akpr_warning("No formats defined\n");
+    } else {
+        akpr_info("\tFormats:\n");
 
-        if (akvcam_list_empty(formats)) {
-            akpr_warning("No formats defined\n");
-        } else {
-            akpr_info("\tFormats:\n");
+        for (;;) {
+            format = akvcam_list_next(formats, &it);
 
-            for (;;) {
-                format = akvcam_list_next(formats, &it);
+            if (!it)
+                break;
 
-                if (!it)
-                    break;
-
-                frame_rate = akvcam_format_frame_rate(format);
-                akpr_info("\t\t%s\n", akvcam_format_to_string(format));
-            }
+            frame_rate = akvcam_format_frame_rate(format);
+            akpr_info("\t\t%s\n", akvcam_format_to_string(format));
         }
-
-        mutex_unlock(mtx);
     }
+
+    akvcam_list_delete(formats);
 }
 
 void akvcam_driver_print_connections(const akvcam_device_t device)

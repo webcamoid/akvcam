@@ -17,27 +17,31 @@
  */
 
 #include <linux/kref.h>
+#include <linux/mm.h>
 #include <linux/slab.h>
 #include <linux/videodev2.h>
 #include <linux/vmalloc.h>
 
 #include "buffer.h"
+#include "log.h"
+#include "utils.h"
 
 struct akvcam_buffer
 {
     struct kref ref;
+    struct mutex mtx;
     struct v4l2_buffer buffer;
     void *data;
-    size_t size;
-    __u32 offset;
 };
 
 akvcam_buffer_t akvcam_buffer_new(size_t size)
 {
     akvcam_buffer_t self = kzalloc(sizeof(struct akvcam_buffer), GFP_KERNEL);
     kref_init(&self->ref);
+    mutex_init(&self->mtx);
+    memset(&self->buffer, 0, sizeof(struct v4l2_buffer));
+    self->buffer.bytesused = (__u32) size;
     self->data = vzalloc(size);
-    self->size = size;
 
     return self;
 }
@@ -63,30 +67,107 @@ akvcam_buffer_t akvcam_buffer_ref(akvcam_buffer_t self)
     return self;
 }
 
-struct v4l2_buffer *akvcam_buffer_get(akvcam_buffer_t self)
+bool akvcam_buffer_read(akvcam_buffer_t self, struct v4l2_buffer *v4l2_buff)
 {
-    return &self->buffer;
+    if (!v4l2_buff)
+        return false;
+
+    if (mutex_lock_interruptible(&self->mtx))
+        return false;
+
+    memcpy(v4l2_buff, &self->buffer, sizeof(struct v4l2_buffer));
+    mutex_unlock(&self->mtx);
+
+    return true;
 }
 
-void *akvcam_buffer_data(akvcam_buffer_t self)
+bool akvcam_buffer_write(akvcam_buffer_t self,
+                         const struct v4l2_buffer *v4l2_buff)
 {
-    if (!self)
-        return NULL;
+    if (!v4l2_buff)
+        return false;
 
-    return self->data;
+    if (mutex_lock_interruptible(&self->mtx))
+        return false;
+
+    memcpy(&self->buffer, v4l2_buff, sizeof(struct v4l2_buffer));
+    mutex_unlock(&self->mtx);
+
+    return true;
 }
 
-size_t akvcam_buffer_size(akvcam_buffer_t self)
+bool akvcam_buffer_read_data(akvcam_buffer_t self, void *data, size_t size)
 {
-    return self->size;
+    size_t copy_size = akvcam_min(size, self->buffer.bytesused);
+
+    if (!data || copy_size < 1)
+        return false;
+
+    if (mutex_lock_interruptible(&self->mtx))
+        return false;
+
+    memcpy(data, self->data, copy_size);
+    mutex_unlock(&self->mtx);
+
+    return true;
 }
 
-__u32 akvcam_buffer_offset(akvcam_buffer_t self)
+bool akvcam_buffer_write_data(akvcam_buffer_t self,
+                              const void *data,
+                              size_t size)
 {
-    return self->offset;
+    size_t copy_size = akvcam_min(size, self->buffer.bytesused);
+
+    if (!data || copy_size < 1)
+        return false;
+
+    if (mutex_lock_interruptible(&self->mtx))
+        return false;
+
+    memcpy(self->data, data, copy_size);
+    mutex_unlock(&self->mtx);
+
+    return true;
 }
 
-void akvcam_buffer_set_offset(akvcam_buffer_t self, __u32 offset)
+int akvcam_buffer_map_data(akvcam_buffer_t self, struct vm_area_struct *vma)
 {
-    self->offset = offset;
+    struct page *page;
+    void *data = self->data;
+    unsigned long start = vma->vm_start;
+    unsigned long size = vma->vm_end - vma->vm_start;
+    int result = 0;
+
+    akpr_function();
+
+    if (mutex_lock_interruptible(&self->mtx))
+        return -EIO;
+
+    if (data) {
+        while (size > 0) {
+            page = vmalloc_to_page(data);
+
+            if (!page) {
+                result = -EINVAL;
+
+                break;
+            }
+
+            if (vm_insert_page(vma, start, page)) {
+                result = -EAGAIN;
+
+                break;
+            }
+
+            start += PAGE_SIZE;
+            data += PAGE_SIZE;
+            size -= PAGE_SIZE;
+        }
+    } else {
+        result = -EINVAL;
+    }
+
+    mutex_unlock(&self->mtx);
+
+    return result;
 }

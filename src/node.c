@@ -29,7 +29,6 @@
 #include "ioctl.h"
 #include "list.h"
 #include "log.h"
-#include "mmap.h"
 
 struct akvcam_node
 {
@@ -37,7 +36,6 @@ struct akvcam_node
     int32_t device_num;
     akvcam_events_t events;
     akvcam_ioctl_t ioctls;
-    struct mutex events_mutex;
     int64_t id;
     bool non_blocking;
 };
@@ -52,7 +50,6 @@ akvcam_node_t akvcam_node_new(int32_t device_num)
     self->device_num = device_num;
     self->events = akvcam_events_new();
     self->ioctls = akvcam_ioctl_new();
-    mutex_init(&self->events_mutex);
     self->id = node_id++;
 
     return self;
@@ -80,12 +77,7 @@ void akvcam_node_free(struct kref *ref)
     }
 
     akvcam_ioctl_delete(self->ioctls);
-
-    if (!mutex_lock_interruptible(&self->events_mutex)) {
-        akvcam_events_delete(self->events);
-        mutex_unlock(&self->events_mutex);
-    }
-
+    akvcam_events_delete(self->events);
     kfree(self);
 }
 
@@ -123,11 +115,6 @@ akvcam_events_t akvcam_node_events(const akvcam_node_t self)
     return akvcam_events_ref(self->events);
 }
 
-struct mutex *akvcam_node_events_mutex(const akvcam_node_t self)
-{
-    return &self->events_mutex;
-}
-
 bool akvcam_node_non_blocking(const akvcam_node_t self)
 {
     return self->non_blocking;
@@ -147,8 +134,6 @@ static int akvcam_node_open(struct file *filp)
 {
     akvcam_device_t device;
     akvcam_nodes_list_t nodes;
-    struct mutex *nodes_mtx;
-    int result = -EIO;
 
     akpr_function();
     device = akvcam_device_from_file_nr(filp);
@@ -160,21 +145,14 @@ static int akvcam_node_open(struct file *filp)
     filp->private_data = akvcam_node_new(akvcam_device_num(device));
     akvcam_node_set_non_blocking(filp->private_data,
                                  filp->f_flags & O_NONBLOCK);
-    nodes_mtx = akvcam_device_nodes_mutex(device);
-
-    if (!mutex_lock_interruptible(nodes_mtx)) {
-        nodes = akvcam_device_nodes_nr(device);
-        akvcam_list_push_back(nodes,
-                              filp->private_data,
-                              (akvcam_copy_t) akvcam_node_ref,
-                              (akvcam_delete_t) akvcam_node_delete);
-        result = 0;
-        mutex_unlock(nodes_mtx);
-    }
-
+    nodes = akvcam_device_nodes_nr(device);
+    akvcam_list_push_back(nodes,
+                          filp->private_data,
+                          (akvcam_copy_t) akvcam_node_ref,
+                          (akvcam_delete_t) akvcam_node_delete);
     akvcam_node_delete(filp->private_data);
 
-    return result;
+    return 0;
 }
 
 static ssize_t akvcam_node_read(struct file *filp,
@@ -184,8 +162,7 @@ static ssize_t akvcam_node_read(struct file *filp,
 {
     akvcam_device_t device;
     akvcam_buffers_t buffers;
-    ssize_t bytes_read = 0;
-    void *vdata;
+    ssize_t bytes_read;
 
     akpr_function();
     device = akvcam_device_from_file_nr(filp);
@@ -206,32 +183,23 @@ static ssize_t akvcam_node_read(struct file *filp,
     if (offset)
         *offset = 0;
 
-    if (akvcam_device_prepare_frame(device)) {
-        vdata = vmalloc(size);
-        bytes_read = akvcam_buffers_read_rw(buffers,
-                                            filp->private_data,
-                                            vdata,
-                                            size);
-        if (!copy_to_user(data, vdata, size))
-            akvcam_buffers_notify_frame(buffers);
-        else
-            bytes_read = -EIO;
-
-        vfree(vdata);
-    }
+    bytes_read = akvcam_buffers_read(buffers,
+                                     filp->private_data,
+                                     data,
+                                     size);
 
     return bytes_read;
 }
 
 static ssize_t akvcam_node_write(struct file *filp,
                                  const char __user *data,
-                                 size_t size, loff_t *offset)
+                                 size_t size,
+                                 loff_t *offset)
 {
     akvcam_node_t node;
     akvcam_device_t device;
     akvcam_buffers_t buffers;
-    ssize_t bytes_written = 0;
-    void *vdata;
+    ssize_t bytes_written;
 
     akpr_function();
     device = akvcam_device_from_file_nr(filp);
@@ -259,19 +227,13 @@ static ssize_t akvcam_node_write(struct file *filp,
 
     akvcam_device_set_broadcasting_node(device, akvcam_node_id(node));
     akvcam_device_set_streaming_rw(device, true);
-    vdata = vmalloc(size);
+    bytes_written = akvcam_buffers_write(buffers,
+                                         filp->private_data,
+                                         data,
+                                         size);
 
-    if (!copy_from_user(vdata, data, size)) {
-        bytes_written = akvcam_buffers_write_rw(buffers,
-                                                filp->private_data,
-                                                vdata,
-                                                size);
-    } else {
+    if (bytes_written < 0)
         akvcam_device_set_streaming_rw(device, false);
-        bytes_written = -EIO;
-    }
-
-    vfree(vdata);
 
     return bytes_written;
 }
@@ -294,7 +256,6 @@ static __poll_t akvcam_node_poll(struct file *filp,
     akvcam_node_t node = filp->private_data;
     akvcam_device_t device = akvcam_device_from_file_nr(filp);
     akvcam_buffers_t buffers = akvcam_device_buffers_nr(device);
-    struct mutex *events_mutex;
     __poll_t result = 0;
 
     akpr_function();
@@ -307,21 +268,40 @@ static __poll_t akvcam_node_poll(struct file *filp,
             return AK_EPOLLIN | AK_EPOLLPRI | AK_EPOLLRDNORM;
     }
 
-    events_mutex = akvcam_node_events_mutex(node);
-
-    if (!mutex_lock_interruptible(events_mutex)) {
-        result = akvcam_events_poll(node->events, filp, wait);
-        mutex_unlock(events_mutex);
-    }
+    result = akvcam_events_poll(node->events, filp, wait);
 
     return result;
 }
 
 static int akvcam_node_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-    akpr_function();
+    akvcam_device_t device;
+    akvcam_buffers_t buffers;
+    int32_t device_num;
+    int result;
 
-    return akvcam_mmap_do(filp, vma);
+    akpr_function();
+    vma->vm_ops = NULL;
+    vma->vm_private_data = filp->private_data;
+    device_num = akvcam_node_device_num(filp->private_data);
+    device = akvcam_driver_device_from_num_nr(device_num);
+
+    if (!device)
+        return -EIO;
+
+    buffers = akvcam_device_buffers_nr(device);
+
+    if (!buffers)
+        return -EIO;
+
+    result = akvcam_buffers_data_map(buffers,
+                                     (__u32) (vma->vm_pgoff << PAGE_SHIFT),
+                                     vma);
+
+    if (result)
+        akpr_err("MMAP failed: %s\n", akvcam_string_from_error(result));
+
+    return result;
 }
 
 bool akvcam_node_nodes_are_equals(akvcam_node_t node1, akvcam_node_t node2)
@@ -335,11 +315,8 @@ static int akvcam_node_release(struct file *filp)
     akvcam_nodes_list_t nodes;
     akvcam_list_element_t it;
     akvcam_device_t device;
-    struct mutex *nodes_mutex;
-    int result = 0;
 
     akpr_function();
-
     device = akvcam_device_from_file_nr(filp);
 
     if (!device)
@@ -352,24 +329,18 @@ static int akvcam_node_release(struct file *filp)
         return -ENOTTY;
 
     if (akvcam_node_id(node) == akvcam_device_broadcasting_node(device)) {
-        akvcam_device_set_streaming(device, false);
+        akvcam_device_stop_streaming(device);
         akvcam_device_set_streaming_rw(device, false);
     }
 
-    nodes_mutex = akvcam_device_nodes_mutex(device);
+    nodes = akvcam_device_nodes_nr(device);
+    it = akvcam_list_find(nodes,
+                          node,
+                          (akvcam_are_equals_t) akvcam_node_nodes_are_equals);
 
-    if (!mutex_lock_interruptible(nodes_mutex)) {
-        nodes = akvcam_device_nodes_nr(device);
-        it = akvcam_list_find(nodes,
-                              node,
-                              (akvcam_are_equals_t) akvcam_node_nodes_are_equals);
-
-        if (it)
-            akvcam_list_erase(nodes, it);
-        else
-            result = -ENOTTY;
-
-        mutex_unlock(nodes_mutex);
+    if (it) {
+        akvcam_list_erase(nodes, it);
+        filp->private_data = NULL;
     }
 
     return 0;

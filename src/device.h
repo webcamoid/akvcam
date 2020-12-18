@@ -33,7 +33,8 @@ struct file;
 akvcam_device_t akvcam_device_new(const char *name,
                                   const char *description,
                                   AKVCAM_DEVICE_TYPE type,
-                                  AKVCAM_RW_MODE rw_mode);
+                                  AKVCAM_RW_MODE rw_mode,
+                                  akvcam_formats_list_t formats);
 void akvcam_device_delete(akvcam_device_t self);
 akvcam_device_t akvcam_device_ref(akvcam_device_t self);
 
@@ -49,10 +50,7 @@ const char *akvcam_device_description(const akvcam_device_t self);
 AKVCAM_DEVICE_TYPE akvcam_device_type(const akvcam_device_t self);
 enum v4l2_buf_type akvcam_device_v4l2_type(const akvcam_device_t self);
 AKVCAM_RW_MODE akvcam_device_rw_mode(const akvcam_device_t self);
-akvcam_formats_list_t akvcam_device_formats_nr(const akvcam_device_t self);
 akvcam_formats_list_t akvcam_device_formats(const akvcam_device_t self);
-struct mutex *akvcam_device_formats_mutex(const akvcam_device_t self);
-akvcam_format_t akvcam_device_format_nr(const akvcam_device_t self);
 akvcam_format_t akvcam_device_format(const akvcam_device_t self);
 void akvcam_device_set_format(const akvcam_device_t self,
                               akvcam_format_t format);
@@ -60,7 +58,6 @@ akvcam_controls_t akvcam_device_controls_nr(const akvcam_device_t self);
 akvcam_controls_t akvcam_device_controls(const akvcam_device_t self);
 akvcam_nodes_list_t akvcam_device_nodes_nr(const akvcam_device_t self);
 akvcam_nodes_list_t akvcam_device_nodes(const akvcam_device_t self);
-struct mutex *akvcam_device_nodes_mutex(const akvcam_device_t self);
 akvcam_buffers_t akvcam_device_buffers_nr(const akvcam_device_t self);
 akvcam_buffers_t akvcam_device_buffers(const akvcam_device_t self);
 enum v4l2_priority akvcam_device_priority(const akvcam_device_t self);
@@ -71,9 +68,9 @@ void akvcam_device_set_priority(akvcam_device_t self,
 enum v4l2_priority akvcam_device_priority(const akvcam_device_t self);
 bool akvcam_device_streaming(const akvcam_device_t self);
 bool akvcam_device_streaming_rw(const akvcam_device_t self);
-void akvcam_device_set_streaming(akvcam_device_t self, bool streaming);
+bool akvcam_device_start_streaming(akvcam_device_t self);
+void akvcam_device_stop_streaming(akvcam_device_t self);
 void akvcam_device_set_streaming_rw(akvcam_device_t self, bool streaming);
-bool akvcam_device_prepare_frame(akvcam_device_t self);
 akvcam_devices_list_t akvcam_device_connected_devices_nr(const akvcam_device_t self);
 akvcam_devices_list_t akvcam_device_connected_devices(const akvcam_device_t self);
 __u32 akvcam_device_caps(const akvcam_device_t self);

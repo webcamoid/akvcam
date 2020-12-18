@@ -22,6 +22,8 @@
 #include <linux/types.h>
 #include <linux/version.h>
 
+#include "device_types.h"
+
 #define UNUSED(x) (void)(x)
 #define AKVCAM_MAX_STRING_SIZE 1024
 
@@ -72,6 +74,29 @@
     #define AK_EPOLLWRNORM EPOLLWRNORM
 #endif
 
+#define akvcam_init_field(v4l2_struct, field) \
+    memset((v4l2_struct)->field, 0, sizeof((v4l2_struct)->field))
+
+#define akvcam_init_reserved(v4l2_struct) \
+    akvcam_init_field(v4l2_struct, reserved)
+
+#define akvcam_wait_condition(wait_queue, condition, mtx, msecs) \
+({ \
+    int result; \
+    int mutex_result; \
+    \
+    mutex_unlock(mtx); \
+    result = wait_event_interruptible_timeout(wait_queue, \
+                                              condition, \
+                                              msecs_to_jiffies(msecs)); \
+    mutex_result = mutex_lock_interruptible(mtx); \
+    \
+    if (mutex_result) \
+        result = mutex_result; \
+    \
+    result; \
+})
+
 typedef enum
 {
     AKVCAM_MEMORY_TYPE_KMALLOC,
@@ -86,6 +111,14 @@ struct __kernel_timespec;
 struct __kernel_v4l2_timeval;
 #endif
 
+enum v4l2_buf_type;
+enum v4l2_memory;
+enum v4l2_field;
+struct v4l2_format;
+struct v4l2_buffer;
+struct v4l2_requestbuffers;
+struct v4l2_create_buffers;
+
 typedef bool (*akvcam_are_equals_t)(const void *element_data, const void *data);
 typedef void *(*akvcam_copy_t)(void *data);
 typedef void (*akvcam_delete_t)(void *data);
@@ -96,6 +129,16 @@ int akvcam_set_last_error(int error);
 const char *akvcam_string_from_ioctl(uint cmd);
 const char *akvcam_string_from_error(int error);
 const char *akvcam_string_from_ioctl_error(uint cmd, int error);
+const char *akvcam_string_from_v4l2_buf_type(enum v4l2_buf_type type);
+const char *akvcam_string_from_rw_mode(AKVCAM_RW_MODE rw_mode);
+const char *akvcam_string_from_v4l2_memory(enum v4l2_memory memory);
+const char *akvcam_string_from_v4l2_format(const struct v4l2_format *format);
+const char *akvcam_string_from_v4l2_buffer(const struct v4l2_buffer *buffer);
+const char *akvcam_string_from_v4l2_buffer_flags(__u32 flags);
+const char *akvcam_string_from_v4l2_field(enum v4l2_field field);
+const char *akvcam_string_from_v4l2_requestbuffers(const struct v4l2_requestbuffers *reqbuffs);
+const char *akvcam_string_from_v4l2_buffer_capabilities(__u32 flags);
+const char *akvcam_string_from_v4l2_create_buffers(const struct v4l2_create_buffers *buffers);
 size_t akvcam_line_size(const char *buffer, size_t size, bool *found);
 char *akvcam_strdup(const char *str, AKVCAM_MEMORY_TYPE type);
 char *akvcam_strip_str(const char *str, AKVCAM_MEMORY_TYPE type);

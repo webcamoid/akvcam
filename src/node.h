@@ -34,7 +34,6 @@ int64_t akvcam_node_id(const akvcam_node_t self);
 int32_t akvcam_node_device_num(const akvcam_node_t self);
 akvcam_events_t akvcam_node_events_nr(const akvcam_node_t self);
 akvcam_events_t akvcam_node_events(const akvcam_node_t self);
-struct mutex *akvcam_node_events_mutex(const akvcam_node_t self);
 bool akvcam_node_non_blocking(const akvcam_node_t self);
 void akvcam_node_set_non_blocking(akvcam_node_t self, bool non_blocking);
 

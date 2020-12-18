@@ -384,7 +384,7 @@ int akvcam_controls_get_ext(const akvcam_controls_t self,
             control->value = _control->value;
         }
 
-        memset(control->reserved2, 0, sizeof(__u32));
+        akvcam_init_field(control, reserved2);
 
         if (!kernel)
             if (copy_to_user((struct v4l2_ext_control __user *)
@@ -516,7 +516,7 @@ int akvcam_controls_try_ext(akvcam_controls_t self,
     size_t menu_size = 0;
 
     controls->error_idx = controls->count;
-    memset(controls->reserved, 0, 2 * sizeof(__u32));
+    akvcam_init_reserved(controls);
 
 #ifdef V4L2_CTRL_WHICH_CUR_VAL
     which_control = controls->which;
@@ -550,7 +550,7 @@ int akvcam_controls_try_ext(akvcam_controls_t self,
             }
         }
 
-        *control->reserved2 = 0;
+        akvcam_init_field(control, reserved2);
         _control = akvcam_controls_params_by_id(self, control->id);
 
         if (!_control) {

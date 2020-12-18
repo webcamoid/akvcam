@@ -38,7 +38,6 @@ akvcam-objs := \
 	list.o \
 	log.o \
 	map.o \
-	mmap.o \
 	node.o \
 	rbuffer.o \
 	settings.o \
@@ -56,12 +55,13 @@ install: uninstall
 	$(COPY) dkms.conf $(INSTALLDIR)
 	$(COPY) *.h $(INSTALLDIR)
 	$(COPY) *.c $(INSTALLDIR)
-ifdef USE_DKMS
+
+dkms_install: | dkms_uninstall install
 	$(DKMS) install $(MODULE_NAME)/$(MODULE_VERSION)
-endif
 
 uninstall:
-ifdef USE_DKMS
+	$(RMDIR) $(INSTALLDIR)
+
+dkms_uninstall:
 	- $(DKMS) remove $(MODULE_NAME)/$(MODULE_VERSION) --all
-endif
 	$(RMDIR) $(INSTALLDIR)
