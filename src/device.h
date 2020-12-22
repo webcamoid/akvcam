@@ -66,14 +66,21 @@ void akvcam_device_set_priority(akvcam_device_t self,
                                 enum v4l2_priority priority,
                                 akvcam_node_t node);
 enum v4l2_priority akvcam_device_priority(const akvcam_device_t self);
+akvcam_node_t akvcam_device_controlling_node(const akvcam_device_t self);
+void akvcam_device_set_controlling_node(const akvcam_device_t self,
+                                        akvcam_node_t controlling_node);
 bool akvcam_device_streaming(const akvcam_device_t self);
 bool akvcam_device_streaming_rw(const akvcam_device_t self);
 bool akvcam_device_start_streaming(akvcam_device_t self);
 void akvcam_device_stop_streaming(akvcam_device_t self);
-void akvcam_device_set_streaming_rw(akvcam_device_t self, bool streaming);
+bool akvcam_device_start_streaming_rw(akvcam_device_t self);
+void akvcam_device_stop_streaming_rw(akvcam_device_t self);
 akvcam_devices_list_t akvcam_device_connected_devices_nr(const akvcam_device_t self);
 akvcam_devices_list_t akvcam_device_connected_devices(const akvcam_device_t self);
 __u32 akvcam_device_caps(const akvcam_device_t self);
+void akvcam_device_clock_run_once(akvcam_device_t self);
+bool akvcam_device_clock_start(akvcam_device_t self);
+void akvcam_device_clock_stop(akvcam_device_t self);
 
 // public static
 akvcam_device_t akvcam_device_from_file_nr(struct file *filp);

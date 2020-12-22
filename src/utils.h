@@ -26,6 +26,7 @@
 
 #define UNUSED(x) (void)(x)
 #define AKVCAM_MAX_STRING_SIZE 1024
+#define AKVCAM_WAIT_TIMEOUT_MSECS 1000
 
 #define akvcam_min(value1, value2) \
     ((value1) < (value2)? (value1): (value2))

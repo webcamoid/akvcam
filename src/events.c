@@ -24,6 +24,7 @@
 
 #include "events.h"
 #include "list.h"
+#include "log.h"
 #include "rbuffer.h"
 
 #define AKVCAM_EVENTS_QUEUE_MAX 32
@@ -186,18 +187,20 @@ bool akvcam_events_enqueue(akvcam_events_t self,
     return true;
 }
 
-bool akvcam_events_dequeue(akvcam_events_t self, struct v4l2_event *event)
+int akvcam_events_dequeue(akvcam_events_t self, struct v4l2_event *event)
 {
+    akpr_function();
+
     if (!self)
-        return false;
+        return -EIO;
 
     if (akvcam_rbuffer_data_size(self->events) < 1)
-        return false;
+        return -EAGAIN;
 
     akvcam_rbuffer_dequeue(self->events, event, false);
     event->pending = (__u32) akvcam_rbuffer_n_data(self->events);
 
-    return true;
+    return 0;
 }
 
 bool akvcam_events_available(const akvcam_events_t self)

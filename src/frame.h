@@ -69,6 +69,8 @@ void akvcam_frame_adjust(akvcam_frame_t self,
                          bool gray);
 
 // public static
+const char *akvcam_frame_scaling_to_string(AKVCAM_SCALING scaling);
+const char *akvcam_frame_aspect_ratio_to_string(AKVCAM_ASPECT_RATIO aspect_ratio);
 bool akvcam_frame_can_convert(__u32 in_fourcc, __u32 out_fourcc);
 
 #endif // AKVCAM_FRAME_H

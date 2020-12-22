@@ -43,7 +43,7 @@ __poll_t akvcam_events_poll(akvcam_events_t self,
                             struct poll_table_struct *wait);
 bool akvcam_events_enqueue(akvcam_events_t self,
                            const struct v4l2_event *event);
-bool akvcam_events_dequeue(akvcam_events_t self, struct v4l2_event *event);
+int akvcam_events_dequeue(akvcam_events_t self, struct v4l2_event *event);
 bool akvcam_events_available(const akvcam_events_t self);
 
 #endif // AKVCAM_EVENTS_H

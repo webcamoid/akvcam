@@ -231,7 +231,6 @@ int akvcam_ioctl_do(akvcam_ioctl_t self,
     size_t i;
     size_t size;
     char *data;
-    const char *error;
     int result;
 
     for (i = 0; i < self->n_ioctls; i++)
@@ -255,10 +254,8 @@ int akvcam_ioctl_do(akvcam_ioctl_t self,
                     result = -EFAULT;
                 }
 
-                if (result < 0 && akvcam_log_level() >= LOGLEVEL_ERR) {
-                    error =  akvcam_string_from_ioctl_error(cmd, result);
-                    akpr_err("%s\n", error);
-                }
+                if (result < 0)
+                    akpr_err("%s\n", akvcam_string_from_ioctl_error(cmd, result));
 
                 return result;
             }
@@ -1139,7 +1136,6 @@ int akvcam_ioctl_dqevent(akvcam_node_t node, struct v4l2_event *event)
 {
     akvcam_device_t device;
     akvcam_events_t events;
-    int result = -EINVAL;
     int32_t device_num;
 
     akpr_function();
@@ -1152,10 +1148,7 @@ int akvcam_ioctl_dqevent(akvcam_node_t node, struct v4l2_event *event)
 
     events = akvcam_node_events_nr(node);
 
-    if (akvcam_events_dequeue(events, event))
-        result = 0;
-
-    return result;
+    return akvcam_events_dequeue(events, event);
 }
 
 int akvcam_ioctl_reqbufs(akvcam_node_t node,
@@ -1163,7 +1156,9 @@ int akvcam_ioctl_reqbufs(akvcam_node_t node,
 {
     akvcam_device_t device;
     akvcam_buffers_t buffers;
+    akvcam_node_t controlling_node;
     int32_t device_num;
+    int result;
 
     akpr_function();
     device_num = akvcam_node_device_num(node);
@@ -1173,23 +1168,33 @@ int akvcam_ioctl_reqbufs(akvcam_node_t node,
     if (!device)
         return -EIO;
 
-    buffers = akvcam_device_buffers_nr(device);
+    controlling_node = akvcam_device_controlling_node(device);
 
-    return akvcam_buffers_allocate(buffers, node, request);
+    if (controlling_node
+        && akvcam_node_id(node) != akvcam_node_id(controlling_node))
+        return -EBUSY;
+
+    buffers = akvcam_device_buffers_nr(device);
+    result = akvcam_buffers_allocate(buffers, request);
+
+    if (result >= 0) {
+        if (request->count) {
+            akvcam_buffers_set_blocking(buffers, akvcam_node_blocking(node));
+            akvcam_device_set_controlling_node(device, node);
+        } else {
+            akvcam_device_set_controlling_node(device, NULL);
+            akvcam_buffers_set_blocking(buffers, false);
+        }
+    }
+
+    return result;
 }
 
 int akvcam_ioctl_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer)
 {
     akvcam_device_t device;
     akvcam_buffers_t buffers;
-    akvcam_format_t format;
-    akvcam_formats_list_t formats;
-    struct v4l2_plane *planes;
-    size_t n_planes;
-    size_t i;
-    int result = 0;
     int32_t device_num;
-    bool multiplanar;
 
     akpr_function();
     device_num = akvcam_node_device_num(node);
@@ -1201,62 +1206,7 @@ int akvcam_ioctl_querybuf(akvcam_node_t node, struct v4l2_buffer *buffer)
 
     buffers = akvcam_device_buffers_nr(device);
 
-    if (!akvcam_buffers_fill(buffers, buffer))
-        return -EINVAL;
-
-    formats = akvcam_device_formats(device);
-    multiplanar = akvcam_format_have_multiplanar(formats);
-    akvcam_list_delete(formats);
-
-    if (!multiplanar)
-        return 0;
-
-    if (buffer->length < 1)
-        return 0;
-
-    planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
-
-    if (copy_from_user(planes,
-                       (char __user *) buffer->m.planes,
-                       buffer->length * sizeof(struct v4l2_plane))) {
-        kfree(planes);
-
-        return -EIO;
-    }
-
-    format = akvcam_device_format(device);
-    n_planes = akvcam_min(buffer->length, akvcam_format_planes(format));
-
-    for (i = 0; i < n_planes; i++) {
-        if (akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_CAPTURE
-            || planes[i].bytesused < 1) {
-            planes[i].bytesused = (__u32) akvcam_format_plane_size(format, i);
-            planes[i].data_offset = 0;
-        }
-
-        planes[i].length = (__u32) akvcam_format_plane_size(format, i);
-        memset(&planes[i].m, 0, sizeof(struct v4l2_plane));
-
-        if (buffer->memory == V4L2_MEMORY_MMAP) {
-            planes[i].m.mem_offset =
-                    buffer->index
-                    * (__u32) akvcam_format_size(format)
-                    + (__u32) akvcam_format_offset(format, i);
-        }
-
-        akvcam_init_reserved(planes + i);
-    }
-
-    akvcam_format_delete(format);
-
-    if (copy_to_user((char __user *) buffer->m.planes,
-                     planes,
-                     buffer->length * sizeof(struct v4l2_plane)))
-        result = -EIO;
-
-    kfree(planes);
-
-    return result;
+    return akvcam_buffers_query(buffers, buffer);
 }
 
 int akvcam_ioctl_create_bufs(akvcam_node_t node,
@@ -1264,6 +1214,7 @@ int akvcam_ioctl_create_bufs(akvcam_node_t node,
 {
     akvcam_device_t device;
     akvcam_buffers_t buffs;
+    akvcam_node_t controlling_node;
     akvcam_format_t format;
     akvcam_formats_list_t formats;
     int32_t device_num;
@@ -1277,6 +1228,12 @@ int akvcam_ioctl_create_bufs(akvcam_node_t node,
     if (!device)
         return -EIO;
 
+    controlling_node = akvcam_device_controlling_node(device);
+
+    if (controlling_node
+        && akvcam_node_id(node) != akvcam_node_id(controlling_node))
+        return -EBUSY;
+
     buffs = akvcam_device_buffers_nr(device);
     formats = akvcam_device_formats(device);
     format = akvcam_format_from_v4l2(formats, &buffers->format);
@@ -1285,8 +1242,18 @@ int akvcam_ioctl_create_bufs(akvcam_node_t node,
     if (!format)
         return -EINVAL;
 
-    result = akvcam_buffers_create(buffs, node, buffers, format);
+    result = akvcam_buffers_create(buffs, buffers, format);
     akvcam_format_delete(format);
+
+    if (result >= 0) {
+        if (buffers->count) {
+            akvcam_buffers_set_blocking(buffs, akvcam_node_blocking(node));
+            akvcam_device_set_controlling_node(device, node);
+        } else {
+            akvcam_device_set_controlling_node(device, NULL);
+            akvcam_buffers_set_blocking(buffs, false);
+        }
+    }
 
     return result;
 }

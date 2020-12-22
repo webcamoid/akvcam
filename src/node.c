@@ -37,7 +37,7 @@ struct akvcam_node
     akvcam_events_t events;
     akvcam_ioctl_t ioctls;
     int64_t id;
-    bool non_blocking;
+    bool blocking;
 };
 
 static struct v4l2_file_operations akvcam_fops;
@@ -59,14 +59,20 @@ void akvcam_node_free(struct kref *ref)
 {
     akvcam_buffers_t buffers;
     akvcam_node_t priority_node;
+    akvcam_node_t controlling_node;
     akvcam_device_t device;
 
     akvcam_node_t self = container_of(ref, struct akvcam_node, ref);
     device = akvcam_driver_device_from_num_nr(self->device_num);
 
     if (device) {
-        buffers = akvcam_device_buffers_nr(device);
-        akvcam_buffers_deallocate(buffers, self);
+        controlling_node = akvcam_device_controlling_node(device);
+
+        if (controlling_node && self->id == controlling_node->id) {
+            buffers = akvcam_device_buffers_nr(device);
+            akvcam_buffers_deallocate(buffers);
+            akvcam_buffers_set_blocking(buffers, false);
+        }
 
         priority_node = akvcam_device_priority_node(device);
 
@@ -115,14 +121,14 @@ akvcam_events_t akvcam_node_events(const akvcam_node_t self)
     return akvcam_events_ref(self->events);
 }
 
-bool akvcam_node_non_blocking(const akvcam_node_t self)
+bool akvcam_node_blocking(const akvcam_node_t self)
 {
-    return self->non_blocking;
+    return self->blocking;
 }
 
-void akvcam_node_set_non_blocking(akvcam_node_t self, bool non_blocking)
+void akvcam_node_set_blocking(akvcam_node_t self, bool blocking)
 {
-    self->non_blocking = non_blocking;
+    self->blocking = blocking;
 }
 
 struct v4l2_file_operations *akvcam_node_fops(void)
@@ -143,8 +149,7 @@ static int akvcam_node_open(struct file *filp)
 
     akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device));
     filp->private_data = akvcam_node_new(akvcam_device_num(device));
-    akvcam_node_set_non_blocking(filp->private_data,
-                                 filp->f_flags & O_NONBLOCK);
+    akvcam_node_set_blocking(filp->private_data, !(filp->f_flags & O_NONBLOCK));
     nodes = akvcam_device_nodes_nr(device);
     akvcam_list_push_back(nodes,
                           filp->private_data,
@@ -160,6 +165,7 @@ static ssize_t akvcam_node_read(struct file *filp,
                                 size_t size,
                                 loff_t *offset)
 {
+    akvcam_node_t node;
     akvcam_device_t device;
     akvcam_buffers_t buffers;
     ssize_t bytes_read;
@@ -183,10 +189,20 @@ static ssize_t akvcam_node_read(struct file *filp,
     if (offset)
         *offset = 0;
 
-    bytes_read = akvcam_buffers_read(buffers,
-                                     filp->private_data,
-                                     data,
-                                     size);
+    node = filp->private_data;
+
+    if (!node)
+        return -ENOTTY;
+
+    akvcam_device_set_broadcasting_node(device, akvcam_node_id(node));
+    akvcam_device_start_streaming_rw(device);
+    akvcam_buffers_set_blocking(buffers, akvcam_node_blocking(node));
+    bytes_read = akvcam_buffers_read(buffers, data, size);
+
+    if (bytes_read >= 0)
+        akpr_debug("Bytes read: %ld\n", bytes_read);
+    else
+        akpr_err("%s\n", akvcam_string_from_error(bytes_read));
 
     return bytes_read;
 }
@@ -226,14 +242,17 @@ static ssize_t akvcam_node_write(struct file *filp,
         return -ENOTTY;
 
     akvcam_device_set_broadcasting_node(device, akvcam_node_id(node));
-    akvcam_device_set_streaming_rw(device, true);
-    bytes_written = akvcam_buffers_write(buffers,
-                                         filp->private_data,
-                                         data,
-                                         size);
+    akvcam_device_start_streaming_rw(device);
+    akvcam_buffers_set_blocking(buffers, akvcam_node_blocking(node));
+    bytes_written = akvcam_buffers_write(buffers, data, size);
 
     if (bytes_written < 0)
-        akvcam_device_set_streaming_rw(device, false);
+        akvcam_device_stop_streaming_rw(device);
+
+    if (bytes_written >= 0)
+        akpr_debug("Bytes written: %ld\n", bytes_written);
+    else
+        akpr_err("%s\n", akvcam_string_from_error(bytes_written));
 
     return bytes_written;
 }
@@ -330,7 +349,7 @@ static int akvcam_node_release(struct file *filp)
 
     if (akvcam_node_id(node) == akvcam_device_broadcasting_node(device)) {
         akvcam_device_stop_streaming(device);
-        akvcam_device_set_streaming_rw(device, false);
+        akvcam_device_stop_streaming_rw(device);
     }
 
     nodes = akvcam_device_nodes_nr(device);

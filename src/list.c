@@ -123,27 +123,21 @@ bool akvcam_list_empty(const akvcam_list_t self)
 
 void *akvcam_list_at(const akvcam_list_t self, size_t i)
 {
-    akvcam_list_element_t element;
-    size_t e;
+    akvcam_list_element_t it = NULL;
+    void *element_data;
+    size_t j;
 
-    if (!self)
-        return NULL;
+    for (j = 0;; j++) {
+        element_data = akvcam_list_next(self, &it);
 
-    if (i >= self->size || self->size < 1)
-        return NULL;
+        if (!it)
+            break;
 
-    if (i == 0) {
-        element = self->head;
-    } else if (i == self->size - 1) {
-        element = self->tail;
-    } else {
-        element = self->head;
-
-        for (e = 0; e < i; e++)
-            element = element->next;
+        if (i == j)
+            return element_data;
     }
 
-    return element->data;
+    return NULL;
 }
 
 void *akvcam_list_front(const akvcam_list_t self)
@@ -201,27 +195,20 @@ akvcam_list_element_t akvcam_list_push_back(akvcam_list_t self,
 
 akvcam_list_element_t akvcam_list_it(akvcam_list_t self, size_t i)
 {
-    akvcam_list_element_t element;
-    size_t e;
+    akvcam_list_element_t it = NULL;
+    size_t j;
 
-    if (!self)
-        return NULL;
+    for (j = 0;; j++) {
+        akvcam_list_next(self, &it);
 
-    if (i >= self->size || self->size < 1)
-        return NULL;
+        if (!it)
+            break;
 
-    if (i == 0)
-        return self->head;
+        if (i == j)
+            return it;
+    }
 
-    if (i == self->size - 1)
-        return self->tail;
-
-    element = self->head;
-
-    for (e = 0; e < i; e++)
-        element = element->next;
-
-    return element;
+    return NULL;
 }
 
 void akvcam_list_erase(akvcam_list_t self, const akvcam_list_element_t element)

@@ -57,9 +57,11 @@ struct akvcam_device
     akvcam_nodes_list_t nodes;
     akvcam_devices_list_t connected_devices;
     akvcam_node_t priority_node;
+    akvcam_node_t controlling_node;
     akvcam_buffers_t buffers;
     akvcam_frame_t current_frame;
     struct mutex mtx;
+    struct mutex clock_mtx;
     struct v4l2_device v4l2_dev;
     struct video_device *vdev;
     struct task_struct *thread;
@@ -127,12 +129,12 @@ akvcam_device_t akvcam_device_new(const char *name,
     multiplanar = akvcam_format_have_multiplanar(formats);
     self->buffer_type = akvcam_device_v4l2_from_device_type(type, multiplanar);
     self->buffers = akvcam_buffers_new(rw_mode, self->buffer_type, multiplanar);
-    self->priority_node = NULL;
     self->rw_mode = rw_mode;
     self->videonr = -1;
     self->broadcasting_node = -1;
     self->priority = V4L2_PRIORITY_DEFAULT;
     mutex_init(&self->mtx);
+    mutex_init(&self->clock_mtx);
 
     akvcam_buffers_set_format(self->buffers, self->format);
     memset(&self->v4l2_dev, 0, sizeof(struct v4l2_device));
@@ -351,6 +353,17 @@ enum v4l2_priority akvcam_device_priority(const akvcam_device_t self)
     return self->priority;
 }
 
+akvcam_node_t akvcam_device_controlling_node(const akvcam_device_t self)
+{
+    return self->controlling_node;
+}
+
+void akvcam_device_set_controlling_node(const akvcam_device_t self,
+                                        akvcam_node_t controlling_node)
+{
+    self->controlling_node = controlling_node;
+}
+
 bool akvcam_device_streaming(const akvcam_device_t self)
 {
     return self->streaming;
@@ -369,20 +382,11 @@ bool akvcam_device_start_streaming(akvcam_device_t self)
 
     if (!self->streaming) {
         akvcam_buffers_reset_sequence(self->buffers);
+        broadcasting_node = self->broadcasting_node;
+        akvcam_device_stop_streaming_rw(self);
+        self->broadcasting_node = broadcasting_node;
 
-        if (self->type == AKVCAM_DEVICE_TYPE_OUTPUT) {
-            broadcasting_node = self->broadcasting_node;
-            akvcam_device_set_streaming_rw(self, false);
-            self->broadcasting_node = broadcasting_node;
-        }
-
-        self->thread = kthread_run((akvcam_thread_t)
-                                   akvcam_device_clock_timeout,
-                                   self,
-                                   "akvcam-thread-%llu",
-                                   akvcam_id());
-
-        if (!self->thread)
+        if (!akvcam_device_clock_start(self))
             return false;
 
         self->streaming = true;
@@ -396,36 +400,50 @@ void akvcam_device_stop_streaming(akvcam_device_t self)
     akpr_function();
 
     if (self->streaming) {
-        if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
-            kthread_stop(self->thread);
-            self->thread = NULL;
-        }
-
+        akvcam_device_clock_stop(self);
         self->streaming = false;
     }
 
     self->broadcasting_node = -1;
 }
 
-void akvcam_device_set_streaming_rw(akvcam_device_t self, bool streaming)
+bool akvcam_device_start_streaming_rw(akvcam_device_t self)
 {
     akpr_function();
-    akpr_debug("Streaming: %d\n", streaming);
 
-    if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
-        if (self->streaming_rw != streaming) {
-            if (!mutex_lock_interruptible(&self->mtx)) {
-                akvcam_frame_delete(self->current_frame);
-                self->current_frame = NULL;
-                mutex_unlock(&self->mtx);
-            }
+    if (!self->streaming_rw) {
+        if (!akvcam_device_clock_start(self))
+            return false;
+
+        if (!mutex_lock_interruptible(&self->mtx)) {
+            akvcam_frame_delete(self->current_frame);
+            self->current_frame = NULL;
+            mutex_unlock(&self->mtx);
         }
+
+        self->streaming_rw = true;
     }
 
-    self->streaming_rw = streaming;
+    return true;
+}
 
-    if (!streaming)
-        self->broadcasting_node = -1;
+void akvcam_device_stop_streaming_rw(akvcam_device_t self)
+{
+    akpr_function();
+
+    if (self->streaming_rw) {
+        akvcam_device_clock_stop(self);
+
+        if (!mutex_lock_interruptible(&self->mtx)) {
+            akvcam_frame_delete(self->current_frame);
+            self->current_frame = NULL;
+            mutex_unlock(&self->mtx);
+        }
+
+        self->streaming_rw = false;
+    }
+
+    self->broadcasting_node = -1;
 }
 
 static bool akvcam_device_are_equals(const akvcam_device_t device,
@@ -624,14 +642,105 @@ __u32 akvcam_device_caps(const akvcam_device_t self)
     return caps;
 }
 
-int akvcam_device_clock_timeout(akvcam_device_t self)
+void akvcam_device_clock_run_once(akvcam_device_t self)
 {
     akvcam_list_element_t it = NULL;
     akvcam_device_t capture_device;
     akvcam_device_t output_device;
-    akvcam_frame_t frame;
+    akvcam_frame_t frame = NULL;
     akvcam_frame_t adjusted_frame;
     akvcam_frame_t default_frame = akvcam_default_frame();
+    int result;
+
+    akpr_function();
+
+    if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
+        output_device = akvcam_list_front(self->connected_devices);
+
+        if (!mutex_lock_interruptible(&self->mtx)) {
+            if (output_device
+                && (output_device->streaming || output_device->streaming_rw)
+                && self->current_frame) {
+                akpr_debug("Reading current frame.\n");
+                frame = akvcam_frame_new_copy(self->current_frame);
+            }
+
+            mutex_unlock(&self->mtx);
+        }
+
+        if (!frame) {
+            if (default_frame && akvcam_frame_size(default_frame) > 0) {
+                akpr_debug("Reading default frame.\n");
+                frame = akvcam_frame_new_copy(default_frame);
+            } else {
+                akpr_debug("Generating random frame.\n");
+                frame = akvcam_frame_new(self->format, NULL, 0);
+                get_random_bytes(akvcam_frame_data(frame),
+                                 (int) akvcam_frame_size(frame));
+            }
+        }
+
+        adjusted_frame = akvcam_device_frame_apply_adjusts(self, frame);
+        akvcam_frame_delete(frame);
+        result = akvcam_buffers_write_frame(self->buffers, adjusted_frame);
+
+        if (result < 0)
+            akpr_err("Failed writing frame: %s.\n", akvcam_string_from_error(result));
+
+        akvcam_frame_delete(adjusted_frame);
+        akvcam_device_notify_frame(self);
+    } else {
+        for (;;) {
+            capture_device = akvcam_list_next(self->connected_devices, &it);
+
+            if (!it)
+                break;
+
+            if (!mutex_lock_interruptible(&capture_device->mtx)) {
+                akvcam_frame_delete(capture_device->current_frame);
+                capture_device->current_frame =
+                        akvcam_buffers_read_frame(self->buffers);
+                mutex_unlock(&capture_device->mtx);
+            }
+        }
+    }
+}
+
+bool akvcam_device_clock_start(akvcam_device_t self)
+{
+    bool result = true;
+
+    akvcam_device_clock_stop(self);
+
+    if (mutex_lock_interruptible(&self->clock_mtx))
+        return false;
+
+    self->thread = kthread_run((akvcam_thread_t)
+                               akvcam_device_clock_timeout,
+                               self,
+                               "akvcam-thread-%llu",
+                               akvcam_id());
+    result = self->thread? true: false;
+    mutex_unlock(&self->clock_mtx);
+
+    return result;
+}
+
+void akvcam_device_clock_stop(akvcam_device_t self)
+{
+    if (mutex_lock_interruptible(&self->clock_mtx))
+        return;
+
+    if (self->thread) {
+        kthread_stop(self->thread);
+        self->thread = NULL;
+    }
+
+    mutex_unlock(&self->clock_mtx);
+}
+
+int akvcam_device_clock_timeout(akvcam_device_t self)
+{
     struct v4l2_fract *frame_rate = akvcam_format_frame_rate(self->format);
     __u32 tsleep = 1000 * frame_rate->denominator;
 
@@ -639,59 +748,7 @@ int akvcam_device_clock_timeout(akvcam_device_t self)
         tsleep /= frame_rate->numerator;
 
     while (!kthread_should_stop()) {
-        if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
-            frame = NULL;
-            output_device = akvcam_list_front(self->connected_devices);
-
-            if (!mutex_lock_interruptible(&self->mtx)) {
-                if (output_device
-                    && (output_device->streaming || output_device->streaming_rw)
-                    && self->current_frame) {
-                    akpr_debug("Reading current frame.\n");
-                    frame = akvcam_frame_new_copy(self->current_frame);
-                }
-
-                mutex_unlock(&self->mtx);
-            }
-
-            if (!frame) {
-                if (default_frame && akvcam_frame_size(default_frame) > 0) {
-                    akpr_debug("Reading default frame.\n");
-                    frame = akvcam_frame_new_copy(default_frame);
-                } else {
-                    akpr_debug("Generating random frame.\n");
-                    frame = akvcam_frame_new(self->format, NULL, 0);
-                    get_random_bytes(akvcam_frame_data(frame),
-                                     (int) akvcam_frame_size(frame));
-                }
-            }
-
-            adjusted_frame = akvcam_device_frame_apply_adjusts(self, frame);
-            akvcam_frame_delete(frame);
-
-            if (!akvcam_buffers_write_frame(self->buffers, adjusted_frame))
-                akpr_err("Failed writing frame.\n");
-
-            akvcam_frame_delete(adjusted_frame);
-            akvcam_device_notify_frame(self);
-        } else {
-            it = NULL;
-
-            for (;;) {
-                capture_device = akvcam_list_next(self->connected_devices, &it);
-
-                if (!it)
-                    break;
-
-                if (!mutex_lock_interruptible(&capture_device->mtx)) {
-                    akvcam_frame_delete(capture_device->current_frame);
-                    capture_device->current_frame =
-                            akvcam_buffers_read_frame(self->buffers);
-                    mutex_unlock(&capture_device->mtx);
-                }
-            }
-        }
-
+        akvcam_device_clock_run_once(self);
         msleep_interruptible(tsleep);
     }
 
@@ -713,6 +770,20 @@ akvcam_frame_t akvcam_device_frame_apply_adjusts(const akvcam_device_t self,
 
     akpr_function();
     akvcam_format_delete(frame_format);
+
+    akpr_debug("brightness: %d\n", self->brightness);
+    akpr_debug("contrast: %d\n", self->contrast);
+    akpr_debug("gamma: %d\n", self->gamma);
+    akpr_debug("saturation: %d\n", self->saturation);
+    akpr_debug("hue: %d\n", self->hue);
+    akpr_debug("gray: %s\n", self->gray? "true": "false");
+    akpr_debug("horizontal_mirror: %s\n", self->horizontal_mirror? "true": "false");
+    akpr_debug("vertical_mirror: %s\n", self->vertical_mirror? "true": "false");
+    akpr_debug("swap_rgb: %s\n", self->swap_rgb? "true": "false");
+    akpr_debug("horizontal_flip: %s\n", self->horizontal_flip? "true": "false");
+    akpr_debug("vertical_flip: %s\n", self->vertical_flip? "true": "false");
+    akpr_debug("scaling: %s\n", akvcam_frame_scaling_to_string(self->scaling));
+    akpr_debug("aspect_ratio: %s\n", akvcam_frame_aspect_ratio_to_string(self->aspect_ratio));
 
     if (owidth * oheight > iwidth * iheight) {
         akvcam_frame_mirror(new_frame,

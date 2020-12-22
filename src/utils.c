@@ -322,6 +322,7 @@ const char *akvcam_string_from_v4l2_buf_type(enum v4l2_buf_type type)
 const char *akvcam_string_from_rw_mode(AKVCAM_RW_MODE rw_mode)
 {
     size_t i = 0;
+    size_t j = 0;
     size_t n;
     static char rw_mode_str[AKVCAM_MAX_STRING_SIZE];
     static akvcam_utils_rw_mode_strings rw_mode_strings[] = {
@@ -335,10 +336,11 @@ const char *akvcam_string_from_rw_mode(AKVCAM_RW_MODE rw_mode)
 
     for (i = 0; rw_mode_strings[i].rw_mode; i++)
         if (rw_mode_strings[i].rw_mode & rw_mode) {
-            if (i > 0)
+            if (j > 0)
                 n += snprintf(rw_mode_str + n, AKVCAM_MAX_STRING_SIZE - n, ", ");
 
             n += snprintf(rw_mode_str + n, AKVCAM_MAX_STRING_SIZE - n, "%s", rw_mode_strings[i].str);
+            j++;
         }
 
     snprintf(rw_mode_str + n, AKVCAM_MAX_STRING_SIZE - n, ")");
@@ -462,6 +464,7 @@ const char *akvcam_string_from_v4l2_buffer(const struct v4l2_buffer *buffer)
 const char *akvcam_string_from_v4l2_buffer_flags(__u32 flags)
 {
     size_t i = 0;
+    size_t j = 0;
     size_t n;
     static char flags_str[AKVCAM_MAX_STRING_SIZE];
     static akvcam_utils_buffer_flags_strings flags_strings[] = {
@@ -494,10 +497,11 @@ const char *akvcam_string_from_v4l2_buffer_flags(__u32 flags)
 
     for (i = 0; flags_strings[i].flag; i++)
         if (flags_strings[i].flag & flags) {
-            if (i > 0)
+            if (j > 0)
                 n += snprintf(flags_str + n, AKVCAM_MAX_STRING_SIZE - n, ", ");
 
             n += snprintf(flags_str + n, AKVCAM_MAX_STRING_SIZE - n, "%s", flags_strings[i].str);
+            j++;
         }
 
     snprintf(flags_str + n, AKVCAM_MAX_STRING_SIZE - n, ")");
@@ -564,6 +568,7 @@ const char *akvcam_string_from_v4l2_requestbuffers(const struct v4l2_requestbuff
 const char *akvcam_string_from_v4l2_buffer_capabilities(__u32 flags)
 {
     size_t i = 0;
+    size_t j = 0;
     size_t n;
     static char capabilities_str[AKVCAM_MAX_STRING_SIZE];
     static akvcam_utils_buffer_capabilities_strings capabilities_strings[] = {
@@ -580,10 +585,11 @@ const char *akvcam_string_from_v4l2_buffer_capabilities(__u32 flags)
 
     for (i = 0; capabilities_strings[i].flag; i++)
         if (capabilities_strings[i].flag & flags) {
-            if (i > 0)
+            if (j > 0)
                 n += snprintf(capabilities_str + n, AKVCAM_MAX_STRING_SIZE - n, ", ");
 
             n += snprintf(capabilities_str + n, AKVCAM_MAX_STRING_SIZE - n, "%s", capabilities_strings[i].str);
+            j++;
         }
 
     snprintf(capabilities_str + n, AKVCAM_MAX_STRING_SIZE - n, ")");

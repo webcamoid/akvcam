@@ -133,6 +133,18 @@ typedef struct
     uint32_t clrImportant;
 } akvcam_bmp_image_header, *akvcam_bmp_image_header_t;
 
+typedef struct
+{
+    AKVCAM_SCALING scaling;
+    char  str[32];
+} akvcam_frame_scaling_strings, *akvcam_frame_scaling_strings_t;
+
+typedef struct
+{
+    AKVCAM_ASPECT_RATIO aspect_ratio;
+    char  str[32];
+} akvcam_frame_aspect_ratio_strings, *akvcam_frame_aspect_ratio_strings_t;
+
 typedef void (*akvcam_extrapolate_t)(size_t dstCoord,
                                      size_t num, size_t den, size_t s,
                                      size_t *srcCoordMin, size_t *srcCoordMax,
@@ -1024,6 +1036,61 @@ void akvcam_frame_adjust(akvcam_frame_t self,
             line[x].b = (uint8_t) b;
         }
     }
+}
+
+const char *akvcam_frame_scaling_to_string(AKVCAM_SCALING scaling)
+{
+    size_t i;
+    static char scaling_str[AKVCAM_MAX_STRING_SIZE];
+    static akvcam_frame_scaling_strings scaling_strings[] = {
+        {AKVCAM_SCALING_FAST  , "Fast"  },
+        {AKVCAM_SCALING_LINEAR, "Linear"},
+        {-1                   , ""      },
+    };
+
+    memset(scaling_str, 0, AKVCAM_MAX_STRING_SIZE);
+
+    for (i = 0; scaling_strings[i].scaling >= 0; i++)
+        if (scaling_strings[i].scaling == scaling) {
+            snprintf(scaling_str,
+                     AKVCAM_MAX_STRING_SIZE,
+                     "%s",
+                     scaling_strings[i].str);
+
+            return scaling_str;
+        }
+
+    snprintf(scaling_str, AKVCAM_MAX_STRING_SIZE, "AKVCAM_SCALING(%d)", scaling);
+
+    return scaling_str;
+}
+
+const char *akvcam_frame_aspect_ratio_to_string(AKVCAM_ASPECT_RATIO aspect_ratio)
+{
+    size_t i;
+    static char aspect_ratio_str[AKVCAM_MAX_STRING_SIZE];
+    static akvcam_frame_aspect_ratio_strings aspect_ratio_strings[] = {
+        {AKVCAM_ASPECT_RATIO_IGNORE   , "Ignore"   },
+        {AKVCAM_ASPECT_RATIO_KEEP     , "Keep"     },
+        {AKVCAM_ASPECT_RATIO_EXPANDING, "Expanding"},
+        {-1                           , ""         },
+    };
+
+    memset(aspect_ratio_str, 0, AKVCAM_MAX_STRING_SIZE);
+
+    for (i = 0; aspect_ratio_strings[i].aspect_ratio >= 0; i++)
+        if (aspect_ratio_strings[i].aspect_ratio == aspect_ratio) {
+            snprintf(aspect_ratio_str,
+                     AKVCAM_MAX_STRING_SIZE,
+                     "%s",
+                     aspect_ratio_strings[i].str);
+
+            return aspect_ratio_str;
+        }
+
+    snprintf(aspect_ratio_str, AKVCAM_MAX_STRING_SIZE, "AKVCAM_ASPECT_RATIO(%d)", aspect_ratio);
+
+    return aspect_ratio_str;
 }
 
 bool akvcam_frame_can_convert(__u32 in_fourcc, __u32 out_fourcc)

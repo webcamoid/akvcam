@@ -31,7 +31,6 @@
 #include "frame.h"
 #include "list.h"
 #include "log.h"
-#include "node.h"
 #include "rbuffer.h"
 
 struct akvcam_buffers
@@ -44,8 +43,7 @@ struct akvcam_buffers
     akvcam_format_t format;
     wait_queue_head_t buffers_not_full;
     wait_queue_head_t buffers_not_empty;
-    int64_t main_node_id;
-    bool main_node_blocking;
+    bool blocking;
     size_t rw_buffer_size;
     AKVCAM_RW_MODE rw_mode;
     __u32 sequence;
@@ -72,7 +70,6 @@ akvcam_buffers_t akvcam_buffers_new(AKVCAM_RW_MODE rw_mode,
     init_waitqueue_head(&self->buffers_not_full);
     init_waitqueue_head(&self->buffers_not_empty);
     self->format = akvcam_format_new(0, 0, 0, NULL);
-    self->main_node_id = -1;
 
     return self;
 }
@@ -100,6 +97,16 @@ akvcam_buffers_t akvcam_buffers_ref(akvcam_buffers_t self)
     return self;
 }
 
+bool akvcam_buffers_blocking(akvcam_buffers_t self)
+{
+    return self->blocking;
+}
+
+void akvcam_buffers_set_blocking(akvcam_buffers_t self, bool blocking)
+{
+    self->blocking = blocking;
+}
+
 akvcam_format_t akvcam_buffers_format(akvcam_buffers_t self)
 {
     return akvcam_format_new_copy(self->format);
@@ -111,7 +118,6 @@ void akvcam_buffers_set_format(akvcam_buffers_t self, akvcam_format_t format)
 }
 
 int akvcam_buffers_allocate(akvcam_buffers_t self,
-                            akvcam_node_t node,
                             struct v4l2_requestbuffers *params)
 {
     size_t i;
@@ -119,7 +125,6 @@ int akvcam_buffers_allocate(akvcam_buffers_t self,
     struct v4l2_buffer v4l2_buff;
     size_t buffer_length;
     __u32 buffer_size;
-    int64_t node_id;
     int result = 0;
 
     akpr_function();
@@ -139,11 +144,6 @@ int akvcam_buffers_allocate(akvcam_buffers_t self,
         return -EINVAL;
     }
 
-    node_id = akvcam_node_id(node);
-
-    if (self->main_node_id >= 0 && self->main_node_id != node_id)
-        return -EBUSY;
-
     if (mutex_lock_interruptible(&self->buffers_mutex))
         return -EIO;
 
@@ -160,9 +160,6 @@ int akvcam_buffers_allocate(akvcam_buffers_t self,
 #endif
 
     if (params->count < 1) {
-        self->main_node_id = -1;
-        self->main_node_blocking = false;
-
         if (self->rw_mode & AKVCAM_RW_MODE_READWRITE) {
             if (self->rw_buffer_size < 1)
                 self->rw_buffer_size = 1;
@@ -174,8 +171,6 @@ int akvcam_buffers_allocate(akvcam_buffers_t self,
                                   AKVCAM_MEMORY_TYPE_VMALLOC);
         }
     } else {
-        self->main_node_id = node_id;
-        self->main_node_blocking = !akvcam_node_non_blocking(node);
         buffer_length = akvcam_format_size(self->format);
         buffer_size = (__u32) PAGE_ALIGN(buffer_length);
 
@@ -200,8 +195,7 @@ int akvcam_buffers_allocate(akvcam_buffers_t self,
                 v4l2_buff.length = v4l2_buff.bytesused;
 
             if (params->memory == V4L2_MEMORY_MMAP && !self->multiplanar) {
-                v4l2_buff.flags |= V4L2_BUF_FLAG_MAPPED
-                                |  V4L2_BUF_FLAG_QUEUED;
+                v4l2_buff.flags |= V4L2_BUF_FLAG_MAPPED;
                 v4l2_buff.m.offset = (__u32) i * buffer_size;
             }
 
@@ -226,23 +220,17 @@ int akvcam_buffers_allocate(akvcam_buffers_t self,
     return result;
 }
 
-void akvcam_buffers_deallocate(akvcam_buffers_t self, akvcam_node_t node)
+void akvcam_buffers_deallocate(akvcam_buffers_t self)
 {
-    if (node && akvcam_node_id(node) == self->main_node_id) {
-        self->main_node_id = -1;
-        self->main_node_blocking = false;
-
-        if (!mutex_lock_interruptible(&self->buffers_mutex)) {
-            akvcam_list_clear(self->buffers);
-            mutex_unlock(&self->buffers_mutex);
-        }
-
-        akvcam_buffers_resize_rw(self, self->rw_buffer_size);
+    if (!mutex_lock_interruptible(&self->buffers_mutex)) {
+        akvcam_list_clear(self->buffers);
+        mutex_unlock(&self->buffers_mutex);
     }
+
+    akvcam_buffers_resize_rw(self, self->rw_buffer_size);
 }
 
 int akvcam_buffers_create(akvcam_buffers_t self,
-                          akvcam_node_t node,
                           struct v4l2_create_buffers *buffers,
                           akvcam_format_t format)
 {
@@ -253,7 +241,6 @@ int akvcam_buffers_create(akvcam_buffers_t self,
     size_t buffer_length;
     __u32 buffer_size;
     __u32 offset = 0;
-    int64_t node_id;
     int result = 0;
 
     akpr_function();
@@ -278,11 +265,6 @@ int akvcam_buffers_create(akvcam_buffers_t self,
         return -EINVAL;
     }
 
-    node_id = akvcam_node_id(node);
-
-    if (self->main_node_id >= 0 && self->main_node_id != node_id)
-        return -EBUSY;
-
     if (mutex_lock_interruptible(&self->buffers_mutex))
         return -EIO;
 
@@ -300,18 +282,12 @@ int akvcam_buffers_create(akvcam_buffers_t self,
     akvcam_init_reserved(buffers);
 
     if (buffers->count > 0) {
-        if (self->main_node_id < 0)
-            buffers->index = 0;
-
         buffer_length = akvcam_format_size(format);
         buffer_size = (__u32) PAGE_ALIGN(buffer_length);
         last_buffer = akvcam_list_back(self->buffers);
 
         if (last_buffer && akvcam_buffer_read(last_buffer, &v4l2_buff))
             offset = v4l2_buff.m.offset + PAGE_ALIGN(v4l2_buff.length);
-
-        self->main_node_id = node_id;
-        self->main_node_blocking = !akvcam_node_non_blocking(node);
 
         for (i = 0; i < buffers->count; i++) {
             buffer = akvcam_buffer_new(buffer_length);
@@ -334,8 +310,7 @@ int akvcam_buffers_create(akvcam_buffers_t self,
                 v4l2_buff.length = v4l2_buff.bytesused;
 
             if (buffers->memory == V4L2_MEMORY_MMAP && !self->multiplanar) {
-                v4l2_buff.flags |= V4L2_BUF_FLAG_MAPPED
-                                |  V4L2_BUF_FLAG_QUEUED;
+                v4l2_buff.flags |= V4L2_BUF_FLAG_MAPPED;
                 v4l2_buff.m.offset = offset + (__u32) i * buffer_size;
             }
 
@@ -360,20 +335,26 @@ int akvcam_buffers_create(akvcam_buffers_t self,
     return result;
 }
 
-bool akvcam_buffers_fill(const akvcam_buffers_t self,
+int akvcam_buffers_query(const akvcam_buffers_t self,
                          struct v4l2_buffer *buffer)
 {
     akvcam_buffer_t akbuffer;
     struct v4l2_buffer v4l2_buff;
-    bool ok = false;
+    struct v4l2_plane *planes;
+    size_t n_planes;
+    size_t i;
+    int result;
 
     akpr_function();
+    akpr_debug("IN: %s\n", akvcam_string_from_v4l2_buffer(buffer));
 
-    if (self->main_node_id < 0)
-        return false;
+    if (akvcam_list_empty(self->buffers))
+        return -EINVAL;
 
-    if (mutex_lock_interruptible(&self->buffers_mutex))
-        return false;
+    result = mutex_lock_interruptible(&self->buffers_mutex);
+
+    if (result)
+        return result;
 
     akbuffer = akvcam_list_at(self->buffers, buffer->index);
 
@@ -384,18 +365,64 @@ bool akvcam_buffers_fill(const akvcam_buffers_t self,
             || buffer->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
             v4l2_buff.length = buffer->length;
             v4l2_buff.m.planes = buffer->m.planes;
-            akvcam_buffer_write(akbuffer, &v4l2_buff);
+
+            if (akvcam_buffer_write(akbuffer, &v4l2_buff))
+                result = -EIO;
+        }
+
+        if (!result && self->multiplanar) {
+            planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
+
+            if (copy_from_user(planes,
+                               (char __user *) buffer->m.planes,
+                               buffer->length * sizeof(struct v4l2_plane))) {
+                kfree(planes);
+
+                return -EIO;
+            }
+
+            n_planes = akvcam_min(buffer->length,
+                                  akvcam_format_planes(self->format));
+
+            for (i = 0; i < n_planes; i++) {
+                if (akvcam_device_type_from_v4l2(self->type) == AKVCAM_DEVICE_TYPE_CAPTURE
+                    || planes[i].bytesused < 1) {
+                    planes[i].bytesused =
+                            (__u32) akvcam_format_plane_size(self->format, i);
+                    planes[i].data_offset = 0;
+                }
+
+                planes[i].length =
+                        (__u32) akvcam_format_plane_size(self->format, i);
+                memset(&planes[i].m, 0, sizeof(struct v4l2_plane));
+
+                if (buffer->memory == V4L2_MEMORY_MMAP) {
+                    planes[i].m.mem_offset =
+                            buffer->index
+                            * (__u32) akvcam_format_size(self->format)
+                            + (__u32) akvcam_format_offset(self->format, i);
+                }
+
+                akvcam_init_reserved(planes + i);
+            }
+
+            if (copy_to_user((char __user *) buffer->m.planes,
+                             planes,
+                             buffer->length * sizeof(struct v4l2_plane)))
+                result = -EIO;
+
+            kfree(planes);
         }
 
         memcpy(buffer, &v4l2_buff, sizeof(struct v4l2_buffer));
-        buffer->flags &= (__u32) ~(V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE);
-        ok = true;
+    } else {
+        result = -EINVAL;
     }
 
     mutex_unlock(&self->buffers_mutex);
-    akpr_debug("%s\n", akvcam_string_from_v4l2_buffer(buffer));
+    akpr_debug("OUT: %s\n", akvcam_string_from_v4l2_buffer(buffer));
 
-    return ok;
+    return result;
 }
 
 int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
@@ -563,7 +590,7 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
     if (!akvcam_buffers_is_supported(self, buffer->memory))
         return -EINVAL;
 
-    if (self->main_node_id < 0)
+    if (akvcam_list_empty(self->buffers))
         return -EIO;
 
     result = mutex_lock_interruptible(&self->buffers_mutex);
@@ -571,12 +598,12 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
     if (result)
         return result;
 
-    if (self->main_node_blocking) {
+    if (self->blocking) {
         result =
                 akvcam_wait_condition(self->buffers_not_empty,
                                       akvcam_buffers_next_buffer(self) != NULL,
                                       &self->buffers_mutex,
-                                      1000);
+                                      AKVCAM_WAIT_TIMEOUT_MSECS);
 
         if (result < 1) {
             if (result != -EINTR)
@@ -762,7 +789,7 @@ int akvcam_buffers_data_map(const akvcam_buffers_t self,
 
 bool akvcam_buffers_allocated(const akvcam_buffers_t self)
 {
-    return self->main_node_id >= 0;
+    return !akvcam_list_empty(self->buffers);
 }
 
 size_t akvcam_buffers_size_rw(const akvcam_buffers_t self)
@@ -779,7 +806,7 @@ size_t akvcam_buffers_size_rw(const akvcam_buffers_t self)
 
 bool akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size)
 {
-    if (self->main_node_id >= 0)
+    if (!akvcam_list_empty(self->buffers))
         return false;
 
     if (!(self->rw_mode & AKVCAM_RW_MODE_READWRITE))
@@ -803,12 +830,13 @@ bool akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size)
 }
 
 ssize_t akvcam_buffers_read(akvcam_buffers_t self,
-                            akvcam_node_t node,
                             void __user *data,
                             size_t size)
 {
     void *vdata;
     ssize_t data_size;
+
+    akpr_function();
 
     if (!(self->rw_mode & AKVCAM_RW_MODE_READWRITE))
         return 0;
@@ -818,35 +846,12 @@ ssize_t akvcam_buffers_read(akvcam_buffers_t self,
     if (data_size)
         return data_size;
 
-    if (akvcam_node_non_blocking(node)) {
-        size = akvcam_min(akvcam_rbuffer_data_size(self->rw_buffers), size);
-
-        if (data_size > 0) {
-            vdata = vmalloc(size);
-
-            if (vdata) {
-                akvcam_rbuffer_dequeue_bytes(self->rw_buffers,
-                                             vdata,
-                                             &size,
-                                             false);
-
-                if (!copy_to_user(data, vdata, size))
-                    data_size = size;
-                else
-                    data_size = -EIO;
-
-                vfree(vdata);
-                wake_up_interruptible_all(&self->buffers_not_full);
-            } else {
-                data_size = -EIO;
-            }
-        }
-    } else {
+    if (self->blocking) {
         data_size =
                 akvcam_wait_condition(self->buffers_not_empty,
                                       akvcam_rbuffer_data_size(self->rw_buffers) >= size,
                                       &self->buffers_mutex,
-                                      1000);
+                                      AKVCAM_WAIT_TIMEOUT_MSECS);
 
         if (data_size > 0) {
             vdata = vmalloc(size);
@@ -867,6 +872,33 @@ ssize_t akvcam_buffers_read(akvcam_buffers_t self,
             } else {
                 data_size = -EIO;
             }
+        } else if (data_size == 0) {
+            data_size = -EAGAIN;
+        }
+    } else {
+        size = akvcam_min(akvcam_rbuffer_data_size(self->rw_buffers), size);
+
+        if (size > 0) {
+            vdata = vmalloc(size);
+
+            if (vdata) {
+                akvcam_rbuffer_dequeue_bytes(self->rw_buffers,
+                                             vdata,
+                                             &size,
+                                             false);
+
+                if (!copy_to_user(data, vdata, size))
+                    data_size = size;
+                else
+                    data_size = -EIO;
+
+                vfree(vdata);
+                wake_up_interruptible_all(&self->buffers_not_full);
+            } else {
+                data_size = -EIO;
+            }
+        } else {
+            data_size = -EAGAIN;
         }
     }
 
@@ -877,12 +909,13 @@ ssize_t akvcam_buffers_read(akvcam_buffers_t self,
 }
 
 ssize_t akvcam_buffers_write(akvcam_buffers_t self,
-                             akvcam_node_t node,
                              const void __user *data,
                              size_t size)
 {
     void *vdata;
     ssize_t data_size;
+
+    akpr_function();
 
     if (!(self->rw_mode & AKVCAM_RW_MODE_READWRITE))
         return 0;
@@ -892,7 +925,33 @@ ssize_t akvcam_buffers_write(akvcam_buffers_t self,
     if (data_size)
         return data_size;
 
-    if (akvcam_node_non_blocking(node)) {
+    if (self->blocking) {
+        data_size =
+                akvcam_wait_condition(self->buffers_not_full,
+                                      akvcam_rbuffer_available_data_size(self->rw_buffers) >= (ssize_t) size,
+                                      &self->buffers_mutex,
+                                      AKVCAM_WAIT_TIMEOUT_MSECS);
+
+        if (data_size > 0) {
+            vdata = vmalloc(size);
+
+            if (vdata) {
+                if (!copy_from_user(vdata, data, size)) {
+                    akvcam_rbuffer_queue_bytes(self->rw_buffers, vdata, size);
+                    wake_up_interruptible_all(&self->buffers_not_empty);
+                    data_size = size;
+                } else {
+                    data_size = -EIO;
+                }
+
+                vfree(vdata);
+            } else {
+                data_size = -EIO;
+            }
+        } else if (data_size == 0) {
+            data_size = -EAGAIN;
+        }
+    } else {
         data_size =
                 akvcam_min(akvcam_rbuffer_available_data_size(self->rw_buffers),
                            (ssize_t) size);
@@ -914,30 +973,8 @@ ssize_t akvcam_buffers_write(akvcam_buffers_t self,
             } else {
                 data_size = -EIO;
             }
-        }
-    } else {
-        data_size =
-                akvcam_wait_condition(self->buffers_not_full,
-                                      akvcam_rbuffer_available_data_size(self->rw_buffers) >= (ssize_t) size,
-                                      &self->buffers_mutex,
-                                      1000);
-
-        if (data_size > 0) {
-            vdata = vmalloc(size);
-
-            if (vdata) {
-                if (!copy_from_user(vdata, data, size)) {
-                    akvcam_rbuffer_queue_bytes(self->rw_buffers, vdata, size);
-                    wake_up_interruptible_all(&self->buffers_not_empty);
-                    data_size = size;
-                } else {
-                    data_size = -EIO;
-                }
-
-                vfree(vdata);
-            } else {
-                data_size = -EIO;
-            }
+        } else {
+            data_size = -EAGAIN;
         }
     }
 
@@ -985,18 +1022,18 @@ akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
     akpr_function();
 
     if (mutex_lock_interruptible(&self->buffers_mutex) == 0) {
-        if (self->main_node_id >= 0) {
+        if (!akvcam_list_empty(self->buffers)) {
             condition_result =
                     akvcam_wait_condition(self->buffers_not_empty,
                                           akvcam_buffers_next_read_buffer(self),
                                           &self->buffers_mutex,
-                                          1000);
+                                          AKVCAM_WAIT_TIMEOUT_MSECS);
         } else {
             condition_result =
                     akvcam_wait_condition(self->buffers_not_empty,
                                           !akvcam_rbuffer_elements_empty(self->rw_buffers),
                                           &self->buffers_mutex,
-                                          1000);
+                                          AKVCAM_WAIT_TIMEOUT_MSECS);
         }
 
         if (condition_result < 1) {
@@ -1006,7 +1043,7 @@ akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
             return frame;
         }
 
-        if (self->main_node_id >= 0) {
+        if (!akvcam_list_empty(self->buffers)) {
             buffer = akvcam_buffers_next_read_buffer(self);
 
             if (buffer && akvcam_buffer_read(buffer, &v4l2_buff)) {
@@ -1063,79 +1100,106 @@ static akvcam_buffer_t akvcam_buffers_next_write_buffer(akvcam_buffers_t self)
     return next_buffer;
 }
 
-bool akvcam_buffers_write_frame(akvcam_buffers_t self,
-                                akvcam_frame_t frame)
+int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame)
 {
     akvcam_buffer_t buffer;
     struct v4l2_buffer v4l2_buff;
-    size_t length;
-    bool ok = false;
-    int condition_result;
     char *data;
+    size_t length;
+    int condition_result = -ENOTTY;
+    int result = 0;
 
     akpr_function();
 
     if (mutex_lock_interruptible(&self->buffers_mutex) == 0) {
-        if (self->main_node_id >= 0) {
+        if (self->rw_mode & (AKVCAM_RW_MODE_MMAP | AKVCAM_RW_MODE_USERPTR)
+            && !akvcam_list_empty(self->buffers)) {
+            akpr_debug("Writting streaming buffers\n");
             condition_result =
                     akvcam_wait_condition(self->buffers_not_full,
                                           akvcam_buffers_next_write_buffer(self),
                                           &self->buffers_mutex,
-                                          1000);
-        } else {
+                                          AKVCAM_WAIT_TIMEOUT_MSECS);
+
+            if (condition_result < 1) {
+                if (condition_result != -EINTR)
+                    mutex_unlock(&self->buffers_mutex);
+
+                return condition_result;
+            }
+
+            buffer = akvcam_buffers_next_write_buffer(self);
+
+            if (buffer) {
+                if (akvcam_buffer_read(buffer, &v4l2_buff)) {
+                    if (v4l2_buff.memory == V4L2_MEMORY_MMAP
+                        || v4l2_buff.memory == V4L2_MEMORY_USERPTR) {
+                        if (frame) {
+                            length = akvcam_frame_size(frame);
+                            result = akvcam_buffer_write_data(buffer,
+                                                              akvcam_frame_data(frame),
+                                                              length)? 0: -EIO;
+                        } else {
+                            data = vzalloc(v4l2_buff.length);
+                            result = akvcam_buffer_write_data(buffer,
+                                                              data,
+                                                              v4l2_buff.length)? 0: -EIO;
+                            vfree(data);
+                        }
+
+                        if (result == 0) {
+                            akvcam_get_timestamp(&v4l2_buff.timestamp);
+                            v4l2_buff.sequence = self->sequence;
+                            v4l2_buff.flags |= V4L2_BUF_FLAG_DONE;
+
+                            if (akvcam_buffer_write(buffer, &v4l2_buff))
+                                self->sequence++;
+                            else
+                                result = -EIO;
+                        }
+                    }
+                } else {
+                    result = -EIO;
+                }
+            } else {
+                result = -EAGAIN;
+            }
+        } else if (frame
+                   && self->rw_mode & AKVCAM_RW_MODE_READWRITE
+                   && akvcam_list_empty(self->buffers)) {
+            akpr_debug("Writting RW buffers\n");
             condition_result =
                     akvcam_wait_condition(self->buffers_not_full,
                                           !akvcam_rbuffer_elements_full(self->rw_buffers),
                                           &self->buffers_mutex,
-                                          1000);
-        }
+                                          AKVCAM_WAIT_TIMEOUT_MSECS);
 
-        if (condition_result < 1) {
-            if (condition_result != -EINTR)
-                mutex_unlock(&self->buffers_mutex);
+            if (condition_result < 1) {
+                if (condition_result != -EINTR)
+                    mutex_unlock(&self->buffers_mutex);
 
-            return false;
-        }
-
-        if (self->main_node_id >= 0) {
-            buffer = akvcam_buffers_next_write_buffer(self);
-
-            if (buffer && akvcam_buffer_read(buffer, &v4l2_buff)) {
-                if (v4l2_buff.memory == V4L2_MEMORY_MMAP
-                    || v4l2_buff.memory == V4L2_MEMORY_USERPTR) {
-                    if (frame) {
-                        akvcam_buffer_write_data(buffer,
-                                                 akvcam_frame_data(frame),
-                                                 length);
-                    } else {
-                        data = vzalloc(v4l2_buff.length);
-                        akvcam_buffer_write_data(buffer,
-                                                 data,
-                                                 v4l2_buff.length);
-                        vfree(data);
-                    }
-
-                    akvcam_get_timestamp(&v4l2_buff.timestamp);
-                    v4l2_buff.sequence = self->sequence;
-                    v4l2_buff.flags |= V4L2_BUF_FLAG_DONE;
-                    ok = akvcam_buffer_write(buffer, &v4l2_buff);
-                    self->sequence++;
-                }
+                return condition_result;
             }
-        } else if (frame && self->rw_mode & AKVCAM_RW_MODE_READWRITE) {
+
+            length = akvcam_frame_size(frame);
+            akpr_debug("Queueing %lu bytes\n", length);
             akvcam_rbuffer_queue_bytes(self->rw_buffers,
                                        akvcam_frame_data(frame),
-                                       akvcam_frame_size(frame));
-            ok = true;
+                                       length);
+            akpr_debug("Total bytes in queue: %lu\n", akvcam_rbuffer_data_size(self->rw_buffers));
+            akpr_debug("Total frames in queue: %lu\n", akvcam_rbuffer_n_data(self->rw_buffers));
+        } else {
+            akpr_debug("Invalid device mode.\n");
+            result = -ENOTTY;
         }
 
-        if (ok)
+        if (result == 0)
             wake_up_interruptible_all(&self->buffers_not_empty);
 
         mutex_unlock(&self->buffers_mutex);
     }
 
-    return ok;
+    return result;
 }
 
 __u32 akvcam_buffers_sequence(akvcam_buffers_t self)

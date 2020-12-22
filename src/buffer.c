@@ -100,6 +100,8 @@ bool akvcam_buffer_read_data(akvcam_buffer_t self, void *data, size_t size)
 {
     size_t copy_size = akvcam_min(size, self->buffer.bytesused);
 
+    akpr_function();
+
     if (!data || copy_size < 1)
         return false;
 
@@ -117,6 +119,8 @@ bool akvcam_buffer_write_data(akvcam_buffer_t self,
                               size_t size)
 {
     size_t copy_size = akvcam_min(size, self->buffer.bytesused);
+
+    akpr_function();
 
     if (!data || copy_size < 1)
         return false;
