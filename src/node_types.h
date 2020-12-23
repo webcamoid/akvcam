@@ -23,6 +23,8 @@
 
 struct akvcam_node;
 typedef struct akvcam_node *akvcam_node_t;
+typedef const struct akvcam_node *akvcam_node_ct;
 typedef akvcam_list_tt(akvcam_node_t) akvcam_nodes_list_t;
+typedef akvcam_list_ctt(akvcam_node_t) akvcam_nodes_list_ct;
 
 #endif // AKVCAM_NODE_TYPES_H

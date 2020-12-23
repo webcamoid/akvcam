@@ -28,18 +28,18 @@
 akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
                                 const void *data,
                                 size_t size);
-akvcam_frame_t akvcam_frame_new_copy(akvcam_frame_t other);
+akvcam_frame_t akvcam_frame_new_copy(akvcam_frame_ct other);
 void akvcam_frame_delete(akvcam_frame_t self);
 akvcam_frame_t akvcam_frame_ref(akvcam_frame_t self);
 
-void akvcam_frame_copy(akvcam_frame_t self, const akvcam_frame_t other);
-akvcam_format_t akvcam_frame_format(const akvcam_frame_t self);
-void *akvcam_frame_data(const akvcam_frame_t self);
-void *akvcam_frame_line(const akvcam_frame_t self, size_t plane, size_t y);
-const void *akvcam_frame_const_line(const akvcam_frame_t self,
+void akvcam_frame_copy(akvcam_frame_t self, akvcam_frame_ct other);
+akvcam_format_t akvcam_frame_format(akvcam_frame_ct self);
+void *akvcam_frame_data(akvcam_frame_ct self);
+void *akvcam_frame_line(akvcam_frame_ct self, size_t plane, size_t y);
+const void *akvcam_frame_const_line(akvcam_frame_ct self,
                                     size_t plane,
                                     size_t y);
-size_t akvcam_frame_size(const akvcam_frame_t self);
+size_t akvcam_frame_size(akvcam_frame_ct self);
 void akvcam_frame_resize(akvcam_frame_t self, size_t size);
 void akvcam_frame_clear(akvcam_frame_t self);
 bool akvcam_frame_load(akvcam_frame_t self, const char *file_name);

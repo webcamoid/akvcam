@@ -21,6 +21,7 @@
 
 struct akvcam_frame;
 typedef struct akvcam_frame *akvcam_frame_t;
+typedef const struct akvcam_frame *akvcam_frame_ct;
 
 typedef enum
 {

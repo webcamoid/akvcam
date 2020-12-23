@@ -38,7 +38,7 @@ struct akvcam_list
     akvcam_list_element_t tail;
 };
 
-void akvcam_matrix_combine_p(akvcam_matrix_t matrix,
+void akvcam_matrix_combine_p(akvcam_matrix_ct matrix,
                              size_t index,
                              akvcam_list_t combined,
                              akvcam_matrix_t combinations);
@@ -51,7 +51,7 @@ akvcam_list_t akvcam_list_new(void)
     return self;
 }
 
-akvcam_list_t akvcam_list_new_copy(akvcam_list_t other)
+akvcam_list_t akvcam_list_new_copy(akvcam_list_ct other)
 {
     akvcam_list_t self = kzalloc(sizeof(struct akvcam_list), GFP_KERNEL);
     kref_init(&self->ref);
@@ -81,13 +81,13 @@ akvcam_list_t akvcam_list_ref(akvcam_list_t self)
     return self;
 }
 
-void akvcam_list_copy(akvcam_list_t self, const akvcam_list_t other)
+void akvcam_list_copy(akvcam_list_t self, akvcam_list_ct other)
 {
     akvcam_list_clear(self);
     akvcam_list_append(self, other);
 }
 
-void akvcam_list_append(akvcam_list_t self, const akvcam_list_t other)
+void akvcam_list_append(akvcam_list_t self, akvcam_list_ct other)
 {
     akvcam_list_element_t it = NULL;
     void *data;
@@ -105,7 +105,7 @@ void akvcam_list_append(akvcam_list_t self, const akvcam_list_t other)
     }
 }
 
-size_t akvcam_list_size(const akvcam_list_t self)
+size_t akvcam_list_size(akvcam_list_ct self)
 {
     if (!self)
         return 0;
@@ -113,7 +113,7 @@ size_t akvcam_list_size(const akvcam_list_t self)
     return self->size;
 }
 
-bool akvcam_list_empty(const akvcam_list_t self)
+bool akvcam_list_empty(akvcam_list_ct self)
 {
     if (!self)
         return true;
@@ -121,7 +121,7 @@ bool akvcam_list_empty(const akvcam_list_t self)
     return self->size < 1;
 }
 
-void *akvcam_list_at(const akvcam_list_t self, size_t i)
+void *akvcam_list_at(akvcam_list_ct self, size_t i)
 {
     akvcam_list_element_t it = NULL;
     void *element_data;
@@ -140,7 +140,7 @@ void *akvcam_list_at(const akvcam_list_t self, size_t i)
     return NULL;
 }
 
-void *akvcam_list_front(const akvcam_list_t self)
+void *akvcam_list_front(akvcam_list_ct self)
 {
     if (!self || self->size < 1)
         return NULL;
@@ -148,7 +148,7 @@ void *akvcam_list_front(const akvcam_list_t self)
     return self->head->data;
 }
 
-void *akvcam_list_back(const akvcam_list_t self)
+void *akvcam_list_back(akvcam_list_ct self)
 {
     if (!self || self->size < 1)
         return NULL;
@@ -158,8 +158,8 @@ void *akvcam_list_back(const akvcam_list_t self)
 
 akvcam_list_element_t akvcam_list_push_back(akvcam_list_t self,
                                             void *data,
-                                            const akvcam_copy_t copier,
-                                            const akvcam_delete_t deleter)
+                                            akvcam_copy_t copier,
+                                            akvcam_delete_t deleter)
 {
     akvcam_list_element_t element;
 
@@ -193,7 +193,7 @@ akvcam_list_element_t akvcam_list_push_back(akvcam_list_t self,
     return element;
 }
 
-akvcam_list_element_t akvcam_list_it(akvcam_list_t self, size_t i)
+akvcam_list_element_t akvcam_list_it(akvcam_list_ct self, size_t i)
 {
     akvcam_list_element_t it = NULL;
     size_t j;
@@ -211,7 +211,7 @@ akvcam_list_element_t akvcam_list_it(akvcam_list_t self, size_t i)
     return NULL;
 }
 
-void akvcam_list_erase(akvcam_list_t self, const akvcam_list_element_t element)
+void akvcam_list_erase(akvcam_list_t self, akvcam_list_element_ct element)
 {
     akvcam_list_element_t it;
 
@@ -264,9 +264,9 @@ void akvcam_list_clear(akvcam_list_t self)
     self->tail = NULL;
 }
 
-akvcam_list_element_t akvcam_list_find(const akvcam_list_t self,
+akvcam_list_element_t akvcam_list_find(akvcam_list_ct self,
                                        const void *data,
-                                       const akvcam_are_equals_t equals)
+                                       akvcam_are_equals_t equals)
 {
     akvcam_list_element_t it = NULL;
     void *element_data;
@@ -287,9 +287,9 @@ akvcam_list_element_t akvcam_list_find(const akvcam_list_t self,
     return NULL;
 }
 
-ssize_t akvcam_list_index_of(const akvcam_list_t self,
+ssize_t akvcam_list_index_of(akvcam_list_ct self,
                              const void *data,
-                             const akvcam_are_equals_t equals)
+                             akvcam_are_equals_t equals)
 {
     akvcam_list_element_t it = NULL;
     void *element_data;
@@ -311,14 +311,14 @@ ssize_t akvcam_list_index_of(const akvcam_list_t self,
     return -1;
 }
 
-bool akvcam_list_contains(const akvcam_list_t self,
+bool akvcam_list_contains(akvcam_list_ct self,
                           const void *data,
-                          const akvcam_are_equals_t equals)
+                          akvcam_are_equals_t equals)
 {
     return akvcam_list_find(self, data, equals) != NULL;
 }
 
-void *akvcam_list_next(const akvcam_list_t self,
+void *akvcam_list_next(akvcam_list_ct self,
                        akvcam_list_element_t *element)
 {
     if (!element)
@@ -341,7 +341,7 @@ void *akvcam_list_next(const akvcam_list_t self,
     return self->head? self->head->data: NULL;
 }
 
-void *akvcam_list_element_data(const akvcam_list_element_t element)
+void *akvcam_list_element_data(akvcam_list_element_ct element)
 {
     if (!element)
         return NULL;
@@ -349,7 +349,7 @@ void *akvcam_list_element_data(const akvcam_list_element_t element)
     return element->data;
 }
 
-akvcam_copy_t akvcam_list_element_copier(const akvcam_list_element_t element)
+akvcam_copy_t akvcam_list_element_copier(akvcam_list_element_ct element)
 {
     if (!element)
         return NULL;
@@ -357,7 +357,7 @@ akvcam_copy_t akvcam_list_element_copier(const akvcam_list_element_t element)
     return element->copier;
 }
 
-akvcam_delete_t akvcam_list_element_deleter(const akvcam_list_element_t element)
+akvcam_delete_t akvcam_list_element_deleter(akvcam_list_element_ct element)
 {
     if (!element)
         return NULL;
@@ -365,7 +365,7 @@ akvcam_delete_t akvcam_list_element_deleter(const akvcam_list_element_t element)
     return element->deleter;
 }
 
-akvcam_matrix_t akvcam_matrix_combine(const akvcam_matrix_t matrix)
+akvcam_matrix_t akvcam_matrix_combine(akvcam_matrix_ct matrix)
 {
     akvcam_list_t combined;
     akvcam_matrix_t combinations;
@@ -382,7 +382,7 @@ akvcam_matrix_t akvcam_matrix_combine(const akvcam_matrix_t matrix)
  * and each element in a row is a column. We combine each element in a row with
  * each element in the next rows.
  */
-void akvcam_matrix_combine_p(akvcam_matrix_t matrix,
+void akvcam_matrix_combine_p(akvcam_matrix_ct matrix,
                              size_t index,
                              akvcam_list_t combined,
                              akvcam_matrix_t combinations)

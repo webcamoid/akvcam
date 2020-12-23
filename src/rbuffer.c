@@ -48,7 +48,7 @@ akvcam_rbuffer_t akvcam_rbuffer_new(void)
     return self;
 }
 
-akvcam_rbuffer_t akvcam_rbuffer_new_copy(const akvcam_rbuffer_t other)
+akvcam_rbuffer_t akvcam_rbuffer_new_copy(akvcam_rbuffer_ct other)
 {
     akvcam_rbuffer_t self = kzalloc(sizeof(struct akvcam_rbuffer), GFP_KERNEL);
     kref_init(&self->ref);
@@ -88,7 +88,7 @@ akvcam_rbuffer_t akvcam_rbuffer_ref(akvcam_rbuffer_t self)
     return self;
 }
 
-void akvcam_rbuffer_copy(akvcam_rbuffer_t self, const akvcam_rbuffer_t other)
+void akvcam_rbuffer_copy(akvcam_rbuffer_t self, akvcam_rbuffer_ct other)
 {
     if (self->data)
         akvcam_rbuffer_free_data(self->memory_type, self->data);
@@ -153,17 +153,17 @@ void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
     self->memory_type = memory_type;
 }
 
-size_t akvcam_rbuffer_size(const akvcam_rbuffer_t self)
+size_t akvcam_rbuffer_size(akvcam_rbuffer_ct self)
 {
     return self->size;
 }
 
-size_t akvcam_rbuffer_data_size(const akvcam_rbuffer_t self)
+size_t akvcam_rbuffer_data_size(akvcam_rbuffer_ct self)
 {
     return self->data_size;
 }
 
-size_t akvcam_rbuffer_n_elements(const akvcam_rbuffer_t self)
+size_t akvcam_rbuffer_n_elements(akvcam_rbuffer_ct self)
 {
     if (self->step < 1)
         return self->size;
@@ -171,12 +171,12 @@ size_t akvcam_rbuffer_n_elements(const akvcam_rbuffer_t self)
     return self->size / self->step;
 }
 
-size_t akvcam_rbuffer_element_size(const akvcam_rbuffer_t self)
+size_t akvcam_rbuffer_element_size(akvcam_rbuffer_ct self)
 {
     return self->step;
 }
 
-size_t akvcam_rbuffer_n_data(const akvcam_rbuffer_t self)
+size_t akvcam_rbuffer_n_data(akvcam_rbuffer_ct self)
 {
     if (self->step < 1)
         return self->data_size;
@@ -184,27 +184,27 @@ size_t akvcam_rbuffer_n_data(const akvcam_rbuffer_t self)
     return self->data_size / self->step;
 }
 
-ssize_t akvcam_rbuffer_available_data_size(const akvcam_rbuffer_t self)
+ssize_t akvcam_rbuffer_available_data_size(akvcam_rbuffer_ct self)
 {
     return self->size - self->data_size;
 }
 
-bool akvcam_rbuffer_data_empty(const akvcam_rbuffer_t self)
+bool akvcam_rbuffer_data_empty(akvcam_rbuffer_ct self)
 {
     return self->data_size < 1;
 }
 
-bool akvcam_rbuffer_elements_empty(const akvcam_rbuffer_t self)
+bool akvcam_rbuffer_elements_empty(akvcam_rbuffer_ct self)
 {
     return self->data_size < self->step;
 }
 
-bool akvcam_rbuffer_data_full(const akvcam_rbuffer_t self)
+bool akvcam_rbuffer_data_full(akvcam_rbuffer_ct self)
 {
     return self->data_size >= self->size;
 }
 
-bool akvcam_rbuffer_elements_full(const akvcam_rbuffer_t self)
+bool akvcam_rbuffer_elements_full(akvcam_rbuffer_ct self)
 {
     return (self->step + self->data_size) > self->size;
 }
@@ -302,7 +302,7 @@ void akvcam_rbuffer_clear(akvcam_rbuffer_t self)
     self->write = 0;
 }
 
-void *akvcam_rbuffer_ptr_at(const akvcam_rbuffer_t self, size_t i)
+void *akvcam_rbuffer_ptr_at(akvcam_rbuffer_ct self, size_t i)
 {
     size_t offset = i * self->step;
 
@@ -314,7 +314,7 @@ void *akvcam_rbuffer_ptr_at(const akvcam_rbuffer_t self, size_t i)
     return self->data + offset;
 }
 
-void *akvcam_rbuffer_ptr_front(const akvcam_rbuffer_t self)
+void *akvcam_rbuffer_ptr_front(akvcam_rbuffer_ct self)
 {
     if (!self->data || self->data_size < 1)
         return NULL;
@@ -322,7 +322,7 @@ void *akvcam_rbuffer_ptr_front(const akvcam_rbuffer_t self)
     return self->data + self->read;
 }
 
-void *akvcam_rbuffer_ptr_back(const akvcam_rbuffer_t self)
+void *akvcam_rbuffer_ptr_back(akvcam_rbuffer_ct self)
 {
     size_t offset;
 
@@ -334,9 +334,9 @@ void *akvcam_rbuffer_ptr_back(const akvcam_rbuffer_t self)
     return self->data + offset;
 }
 
-void *akvcam_rbuffer_find(const akvcam_rbuffer_t self,
+void *akvcam_rbuffer_find(akvcam_rbuffer_ct self,
                           const void *data,
-                          const akvcam_are_equals_t equals,
+                          akvcam_are_equals_t equals,
                           ssize_t *offset)
 {
     size_t i;

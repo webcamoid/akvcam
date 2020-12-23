@@ -33,10 +33,11 @@ typedef union
     __u8  name[32];
     __s64 value;
 } akvcam_menu_item, *akvcam_menu_item_t;
+typedef const akvcam_menu_item *akvcam_menu_item_ct;
 
-typedef akvcam_menu_item_t (*akvcam_control_menu_t)(akvcam_controls_t controls,
-                                                    size_t *size,
-                                                    bool *int_menu);
+typedef akvcam_menu_item_ct (*akvcam_control_menu_t)(akvcam_controls_ct controls,
+                                                     size_t *size,
+                                                     bool *int_menu);
 
 typedef struct
 {
@@ -50,6 +51,7 @@ typedef struct
     __u32 flags;
     akvcam_control_menu_t menu;
 } akvcam_control_params, *akvcam_control_params_t;
+typedef const akvcam_control_params *akvcam_control_params_ct;
 
 typedef struct
 {
@@ -57,22 +59,23 @@ typedef struct
     __s32 value;
     char value_str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_control_value, *akvcam_control_value_t;
+typedef const akvcam_control_value *akvcam_control_value_ct;
 
 struct akvcam_controls
 {
     struct kref ref;
     akvcam_control_value_t values;
     akvcam_controls_changed_callback controls_changed;
-    akvcam_control_params_t control_params;
+    akvcam_control_params_ct control_params;
     size_t n_controls;
     AKVCAM_DEVICE_TYPE type;
 };
 
-akvcam_menu_item_t akvcam_controls_colorfx_menu(akvcam_controls_t controls,
-                                                size_t *size,
-                                                bool *int_menu);
+akvcam_menu_item_ct akvcam_controls_colorfx_menu(akvcam_controls_ct controls,
+                                                 size_t *size,
+                                                 bool *int_menu);
 
-static akvcam_control_params akvcam_controls_capture[] = {
+static const akvcam_control_params akvcam_controls_capture[] = {
     {V4L2_CID_USER_CLASS, V4L2_CTRL_TYPE_CTRL_CLASS,   "User Controls",    0,   0, 0, 0, V4L2_CTRL_FLAG_READ_ONLY
                                                                                        | V4L2_CTRL_FLAG_WRITE_ONLY, NULL                        },
     {V4L2_CID_BRIGHTNESS,    V4L2_CTRL_TYPE_INTEGER,      "Brightness", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER, NULL                        },
@@ -86,12 +89,12 @@ static akvcam_control_params akvcam_controls_capture[] = {
     {0                  ,                         0,                "",    0,   0, 0, 0,                         0, NULL                        },
 };
 
-akvcam_menu_item_t akvcam_controls_scaling_menu(akvcam_controls_t controls,
+akvcam_menu_item_ct akvcam_controls_scaling_menu(akvcam_controls_ct controls,
+                                                 size_t *size,
+                                                 bool *int_menu);
+akvcam_menu_item_ct akvcam_controls_aspect_menu(akvcam_controls_ct controls,
                                                 size_t *size,
                                                 bool *int_menu);
-akvcam_menu_item_t akvcam_controls_aspect_menu(akvcam_controls_t controls,
-                                               size_t *size,
-                                               bool *int_menu);
 
 static akvcam_control_params akvcam_controls_output[] = {
     {V4L2_CID_USER_CLASS    , V4L2_CTRL_TYPE_CTRL_CLASS,      "User Controls", 0, 0, 0, 0, V4L2_CTRL_FLAG_READ_ONLY
@@ -106,9 +109,9 @@ static akvcam_control_params akvcam_controls_output[] = {
 
 size_t akvcam_controls_capture_count(void);
 size_t akvcam_controls_output_count(void);
-akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,
+akvcam_control_value_t akvcam_controls_value_by_id(akvcam_controls_ct self,
                                                    __u32 id);
-akvcam_control_params_t akvcam_controls_params_by_id(const akvcam_controls_t self,
+akvcam_control_params_ct akvcam_controls_params_by_id(akvcam_controls_ct self,
                                                      __u32 id);
 
 akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE device_type)
@@ -158,7 +161,7 @@ akvcam_controls_t akvcam_controls_ref(akvcam_controls_t self)
     return self;
 }
 
-int akvcam_controls_fill(const akvcam_controls_t self,
+int akvcam_controls_fill(akvcam_controls_ct self,
                          struct v4l2_queryctrl *control)
 {
 #ifdef VIDIOC_QUERY_EXT_CTRL
@@ -185,13 +188,13 @@ int akvcam_controls_fill(const akvcam_controls_t self,
 #endif
 }
 
-int akvcam_controls_fill_menu(const akvcam_controls_t self,
+int akvcam_controls_fill_menu(akvcam_controls_ct self,
                               struct v4l2_querymenu *menu)
 {
-    akvcam_menu_item_t menu_items;
+    akvcam_menu_item_ct menu_items;
     size_t size = 0;
     bool int_menu = false;
-    akvcam_control_params_t params;
+    akvcam_control_params_ct params;
 
     params = akvcam_controls_params_by_id(self, menu->id);
     menu->reserved = 0;
@@ -217,7 +220,7 @@ int akvcam_controls_fill_menu(const akvcam_controls_t self,
 }
 
 #ifdef VIDIOC_QUERY_EXT_CTRL
-int akvcam_controls_fill_ext(const akvcam_controls_t self,
+int akvcam_controls_fill_ext(akvcam_controls_ct self,
                              struct v4l2_query_ext_ctrl *control)
 {
     size_t i;
@@ -227,7 +230,7 @@ int akvcam_controls_fill_ext(const akvcam_controls_t self,
     bool next = control->id
               & (V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND);
     bool is_private;
-    akvcam_control_params_t _control = NULL;
+    akvcam_control_params_ct _control = NULL;
      size_t menu_size = 0;
 
     if (self->n_controls < 1)
@@ -239,7 +242,7 @@ int akvcam_controls_fill_ext(const akvcam_controls_t self,
         priv_id = V4L2_CID_PRIVATE_BASE;
 
         for (i = 0; i < self->n_controls; i++) {
-            akvcam_control_params_t ctrl = self->control_params + i;
+            akvcam_control_params_ct ctrl = self->control_params + i;
             is_private = V4L2_CTRL_DRIVER_PRIV(ctrl->id);
 
             if (ctrl->id == id || (is_private && priv_id == id)) {
@@ -283,7 +286,7 @@ int akvcam_controls_fill_ext(const akvcam_controls_t self,
 }
 #endif
 
-int akvcam_controls_get(const akvcam_controls_t self,
+int akvcam_controls_get(akvcam_controls_ct self,
                         struct v4l2_control *control)
 {
     int result;
@@ -315,15 +318,15 @@ int akvcam_controls_get(const akvcam_controls_t self,
     return 0;
 }
 
-int akvcam_controls_get_ext(const akvcam_controls_t self,
+int akvcam_controls_get_ext(akvcam_controls_ct self,
                             struct v4l2_ext_controls *controls,
                             uint32_t flags)
 {
 #ifdef VIDIOC_QUERY_EXT_CTRL
     size_t i;
     struct v4l2_ext_control *control = NULL;
-    akvcam_control_value_t _control;
-    akvcam_control_params_t control_params;
+    akvcam_control_value_ct _control;
+    akvcam_control_params_ct control_params;
     __u32 buffer_size;
     __kernel_size_t str_len;
     bool kernel = flags & AKVCAM_CONTROLS_FLAG_KERNEL;
@@ -436,7 +439,7 @@ int akvcam_controls_set_ext(akvcam_controls_t self,
                             uint32_t flags)
 {
     size_t i;
-    akvcam_control_params *control_params;
+    akvcam_control_params_ct control_params;
     struct v4l2_ext_control *control = NULL;
     akvcam_control_value_t _control;
     struct v4l2_event event;
@@ -502,12 +505,12 @@ int akvcam_controls_set_ext(akvcam_controls_t self,
     return result;
 }
 
-int akvcam_controls_try_ext(akvcam_controls_t self,
+int akvcam_controls_try_ext(akvcam_controls_ct self,
                             struct v4l2_ext_controls *controls,
                             uint32_t flags)
 {
     size_t i;
-    akvcam_control_params_t _control;
+    akvcam_control_params_ct _control;
     struct v4l2_ext_control *control = NULL;
     int result = 0;
     uint32_t mode = flags & 0x3;
@@ -598,7 +601,7 @@ int akvcam_controls_try_ext(akvcam_controls_t self,
     return result;
 }
 
-bool akvcam_controls_contains(const akvcam_controls_t self, __u32 id)
+bool akvcam_controls_contains(akvcam_controls_ct self, __u32 id)
 {
     size_t i;
 
@@ -609,12 +612,12 @@ bool akvcam_controls_contains(const akvcam_controls_t self, __u32 id)
     return false;
 }
 
-bool akvcam_controls_generate_event(const akvcam_controls_t self,
+bool akvcam_controls_generate_event(akvcam_controls_ct self,
                                     __u32 id,
                                     struct v4l2_event *event)
 {
     size_t i;
-    akvcam_control_params_t control_params;
+    akvcam_control_params_ct control_params;
     akvcam_control_value_t control;
     size_t menu_size = 0;
 
@@ -680,11 +683,11 @@ size_t akvcam_controls_output_count(void)
     return count;
 }
 
-akvcam_menu_item_t akvcam_controls_colorfx_menu(akvcam_controls_t controls,
+akvcam_menu_item_ct akvcam_controls_colorfx_menu(akvcam_controls_ct controls,
                                                 size_t *size,
                                                 bool *int_menu)
 {
-    static akvcam_menu_item colorfx[] = {
+    static const akvcam_menu_item colorfx[] = {
         {.name = "None"         },
         {.name = "Black & White"},
     };
@@ -700,11 +703,11 @@ akvcam_menu_item_t akvcam_controls_colorfx_menu(akvcam_controls_t controls,
     return colorfx;
 }
 
-akvcam_menu_item_t akvcam_controls_scaling_menu(akvcam_controls_t controls,
-                                                size_t *size,
-                                                bool *int_menu)
+akvcam_menu_item_ct akvcam_controls_scaling_menu(akvcam_controls_ct controls,
+                                                 size_t *size,
+                                                 bool *int_menu)
 {
-    static akvcam_menu_item scaling[] = {
+    static const akvcam_menu_item scaling[] = {
         {.name = "Fast"  },
         {.name = "Linear"},
     };
@@ -720,11 +723,11 @@ akvcam_menu_item_t akvcam_controls_scaling_menu(akvcam_controls_t controls,
     return scaling;
 }
 
-akvcam_menu_item_t akvcam_controls_aspect_menu(akvcam_controls_t controls,
-                                               size_t *size,
-                                               bool *int_menu)
+akvcam_menu_item_ct akvcam_controls_aspect_menu(akvcam_controls_ct controls,
+                                                size_t *size,
+                                                bool *int_menu)
 {
-    static akvcam_menu_item aspect[] = {
+    static const akvcam_menu_item aspect[] = {
         {.name = "Ignore"   },
         {.name = "Keep"     },
         {.name = "Expanding"},
@@ -741,8 +744,8 @@ akvcam_menu_item_t akvcam_controls_aspect_menu(akvcam_controls_t controls,
     return aspect;
 }
 
-akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,
-                                                   __u32 id)
+akvcam_control_value_t akvcam_controls_value_by_id(akvcam_controls_ct self,
+                                                    __u32 id)
 {
     size_t i;
     __u32 priv_id = V4L2_CID_PRIVATE_BASE;
@@ -763,13 +766,13 @@ akvcam_control_value_t akvcam_controls_value_by_id(const akvcam_controls_t self,
     return NULL;
 }
 
-akvcam_control_params_t akvcam_controls_params_by_id(const akvcam_controls_t self,
-                                                     __u32 id)
+akvcam_control_params_ct akvcam_controls_params_by_id(akvcam_controls_ct self,
+                                                      __u32 id)
 {
     size_t i;
     __u32 priv_id = V4L2_CID_PRIVATE_BASE;
     bool is_private;
-    akvcam_control_params_t param;
+    akvcam_control_params_ct param;
 
     for (i = 0; i < self->n_controls; i++) {
         param = self->control_params + i;

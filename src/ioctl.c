@@ -839,16 +839,16 @@ int akvcam_ioctl_g_parm(akvcam_node_t node, struct v4l2_streamparm *param)
         || param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
         param->parm.output.capability = V4L2_CAP_TIMEPERFRAME;
         param->parm.output.timeperframe.numerator =
-                akvcam_format_frame_rate(format)->denominator;
+                akvcam_format_frame_rate(format).denominator;
         param->parm.output.timeperframe.denominator =
-                akvcam_format_frame_rate(format)->numerator;
+                akvcam_format_frame_rate(format).numerator;
         n_buffers = &param->parm.output.writebuffers;
     } else {
         param->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
         param->parm.capture.timeperframe.numerator =
-                akvcam_format_frame_rate(format)->denominator;
+                akvcam_format_frame_rate(format).denominator;
         param->parm.capture.timeperframe.denominator =
-                akvcam_format_frame_rate(format)->numerator;
+                akvcam_format_frame_rate(format).numerator;
         n_buffers = &param->parm.capture.readbuffers;
     }
 
@@ -869,6 +869,7 @@ int akvcam_ioctl_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
     akvcam_format_t format;
     akvcam_format_t nearest_format = NULL;
     akvcam_buffers_t buffers;
+    struct v4l2_fract frame_rate;
     __u32 total_buffers = 0;
     __u32 *n_buffers;
     int32_t device_num;
@@ -888,15 +889,13 @@ int akvcam_ioctl_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
 
     if (param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT
         || param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-        akvcam_format_frame_rate(format)->numerator =
-                param->parm.output.timeperframe.denominator;
-        akvcam_format_frame_rate(format)->denominator =
-                param->parm.output.timeperframe.numerator;
+        frame_rate.numerator = param->parm.output.timeperframe.denominator;
+        frame_rate.denominator = param->parm.output.timeperframe.numerator;
+        akvcam_format_set_frame_rate(format, frame_rate);
     } else {
-        akvcam_format_frame_rate(format)->numerator =
-                param->parm.capture.timeperframe.denominator;
-        akvcam_format_frame_rate(format)->denominator =
-                param->parm.capture.timeperframe.numerator;
+        frame_rate.numerator = param->parm.capture.timeperframe.denominator;
+        frame_rate.denominator = param->parm.capture.timeperframe.numerator;
+        akvcam_format_set_frame_rate(format, frame_rate);
         total_buffers = param->parm.capture.readbuffers;
     }
 
@@ -918,16 +917,16 @@ int akvcam_ioctl_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
         || param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
         param->parm.output.capability = V4L2_CAP_TIMEPERFRAME;
         param->parm.output.timeperframe.numerator =
-                akvcam_format_frame_rate(nearest_format)->denominator;
+                akvcam_format_frame_rate(nearest_format).denominator;
         param->parm.output.timeperframe.denominator =
-                akvcam_format_frame_rate(nearest_format)->numerator;
+                akvcam_format_frame_rate(nearest_format).numerator;
         n_buffers = &param->parm.output.writebuffers;
     } else {
         param->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
         param->parm.capture.timeperframe.numerator =
-                akvcam_format_frame_rate(nearest_format)->denominator;
+                akvcam_format_frame_rate(nearest_format).denominator;
         param->parm.capture.timeperframe.denominator =
-                akvcam_format_frame_rate(nearest_format)->numerator;
+                akvcam_format_frame_rate(nearest_format).numerator;
         n_buffers = &param->parm.capture.readbuffers;
     }
 

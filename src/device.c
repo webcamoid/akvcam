@@ -96,14 +96,14 @@ typedef int (*akvcam_thread_t)(void *data);
 
 enum v4l2_buf_type akvcam_device_v4l2_from_device_type(AKVCAM_DEVICE_TYPE type,
                                                        bool multiplanar);
-void akvcam_device_event_received(akvcam_device_t self,
+void akvcam_device_event_received(akvcam_device_ct self,
                                   struct v4l2_event *event);
 void akvcam_device_controls_changed(akvcam_device_t self,
                                     struct v4l2_event *event);
 int akvcam_device_clock_timeout(akvcam_device_t self);
-akvcam_frame_t akvcam_device_frame_apply_adjusts(const akvcam_device_t self,
-                                                 akvcam_frame_t frame);
-void akvcam_device_notify_frame(akvcam_device_t self);
+akvcam_frame_t akvcam_device_frame_apply_adjusts(akvcam_device_ct self,
+                                                 akvcam_frame_ct frame);
+void akvcam_device_notify_frame(akvcam_device_ct self);
 akvcam_frame_t akvcam_default_frame(void);
 
 akvcam_device_t akvcam_device_new(const char *name,
@@ -240,102 +240,101 @@ void akvcam_device_unregister(akvcam_device_t self)
     v4l2_device_unregister(&self->v4l2_dev);
 }
 
-int32_t akvcam_device_num(const akvcam_device_t self)
+int32_t akvcam_device_num(akvcam_device_ct self)
 {
     return self->vdev?
                 self->vdev->num:
                 self->videonr;
 }
 
-void akvcam_device_set_num(const akvcam_device_t self, int32_t num)
+void akvcam_device_set_num(akvcam_device_t self, int32_t num)
 {
     self->videonr = num;
 }
 
-int64_t akvcam_device_broadcasting_node(const akvcam_device_t self)
+int64_t akvcam_device_broadcasting_node(akvcam_device_ct self)
 {
     return self->broadcasting_node;
 }
 
-void akvcam_device_set_broadcasting_node(const akvcam_device_t self,
+void akvcam_device_set_broadcasting_node(akvcam_device_t self,
                                          int64_t broadcasting_node)
 {
     self->broadcasting_node = broadcasting_node;
 }
 
-bool akvcam_device_is_registered(const akvcam_device_t self)
+bool akvcam_device_is_registered(akvcam_device_ct self)
 {
     return self->vdev;
 }
 
-const char *akvcam_device_description(const akvcam_device_t self)
+const char *akvcam_device_description(akvcam_device_t self)
 {
     return self->description;
 }
 
-AKVCAM_DEVICE_TYPE akvcam_device_type(const akvcam_device_t self)
+AKVCAM_DEVICE_TYPE akvcam_device_type(akvcam_device_ct self)
 {
     return self->type;
 }
 
-enum v4l2_buf_type akvcam_device_v4l2_type(const akvcam_device_t self)
+enum v4l2_buf_type akvcam_device_v4l2_type(akvcam_device_ct self)
 {
     return self->buffer_type;
 }
 
-AKVCAM_RW_MODE akvcam_device_rw_mode(const akvcam_device_t self)
+AKVCAM_RW_MODE akvcam_device_rw_mode(akvcam_device_ct self)
 {
     return self->rw_mode;
 }
 
-akvcam_formats_list_t akvcam_device_formats(const akvcam_device_t self)
+akvcam_formats_list_t akvcam_device_formats(akvcam_device_ct self)
 {
     return akvcam_list_new_copy(self->formats);
 }
 
-akvcam_format_t akvcam_device_format(const akvcam_device_t self)
+akvcam_format_t akvcam_device_format(akvcam_device_ct self)
 {
     return akvcam_format_new_copy(self->format);
 }
 
-void akvcam_device_set_format(const akvcam_device_t self,
-                              akvcam_format_t format)
+void akvcam_device_set_format(akvcam_device_t self, akvcam_format_t format)
 {
     akvcam_format_copy(self->format, format);
     akvcam_buffers_set_format(self->buffers, format);
 }
 
-akvcam_controls_t akvcam_device_controls_nr(const akvcam_device_t self)
+akvcam_controls_t akvcam_device_controls_nr(akvcam_device_ct self)
 {
     return self->controls;
 }
 
-akvcam_controls_t akvcam_device_controls(const akvcam_device_t self)
+akvcam_controls_t akvcam_device_controls(akvcam_device_ct self)
 {
     return akvcam_controls_ref(self->controls);
 }
 
-akvcam_nodes_list_t akvcam_device_nodes_nr(const akvcam_device_t self)
+akvcam_nodes_list_t akvcam_device_nodes_nr(akvcam_device_ct self)
 {
     return self->nodes;
 }
 
-akvcam_nodes_list_t akvcam_device_nodes(const akvcam_device_t self)
+akvcam_nodes_list_t akvcam_device_nodes(akvcam_device_ct self)
 {
     return akvcam_list_ref(self->nodes);
 }
 
-akvcam_buffers_t akvcam_device_buffers_nr(const akvcam_device_t self)
+akvcam_buffers_t akvcam_device_buffers_nr(akvcam_device_ct self)
 {
     return self->buffers;
 }
 
-akvcam_buffers_t akvcam_device_buffers(const akvcam_device_t self)
+akvcam_buffers_t akvcam_device_buffers(akvcam_device_ct self)
 {
     return akvcam_buffers_ref(self->buffers);
 }
 
-akvcam_node_t akvcam_device_priority_node(const akvcam_device_t self)
+akvcam_node_t akvcam_device_priority_node(akvcam_device_ct self)
 {
     return self->priority_node;
 }
@@ -348,28 +347,28 @@ void akvcam_device_set_priority(akvcam_device_t self,
     self->priority_node = node;
 }
 
-enum v4l2_priority akvcam_device_priority(const akvcam_device_t self)
+enum v4l2_priority akvcam_device_priority(akvcam_device_ct self)
 {
     return self->priority;
 }
 
-akvcam_node_t akvcam_device_controlling_node(const akvcam_device_t self)
+akvcam_node_t akvcam_device_controlling_node(akvcam_device_ct self)
 {
     return self->controlling_node;
 }
 
-void akvcam_device_set_controlling_node(const akvcam_device_t self,
+void akvcam_device_set_controlling_node(akvcam_device_t self,
                                         akvcam_node_t controlling_node)
 {
     self->controlling_node = controlling_node;
 }
 
-bool akvcam_device_streaming(const akvcam_device_t self)
+bool akvcam_device_streaming(akvcam_device_ct self)
 {
     return self->streaming;
 }
 
-bool akvcam_device_streaming_rw(const akvcam_device_t self)
+bool akvcam_device_streaming_rw(akvcam_device_ct self)
 {
     return self->streaming_rw;
 }
@@ -509,7 +508,7 @@ enum v4l2_buf_type akvcam_device_v4l2_from_device_type(AKVCAM_DEVICE_TYPE type,
     return (enum v4l2_buf_type) 0;
 }
 
-void akvcam_device_event_received(akvcam_device_t self,
+void akvcam_device_event_received(akvcam_device_ct self,
                                   struct v4l2_event *event)
 {
     akvcam_node_t node;
@@ -598,17 +597,17 @@ void akvcam_device_controls_changed(akvcam_device_t self,
     }
 }
 
-akvcam_devices_list_t akvcam_device_connected_devices_nr(const akvcam_device_t self)
+akvcam_devices_list_t akvcam_device_connected_devices_nr(akvcam_device_ct self)
 {
     return self->connected_devices;
 }
 
-akvcam_devices_list_t akvcam_device_connected_devices(const akvcam_device_t self)
+akvcam_devices_list_t akvcam_device_connected_devices(akvcam_device_ct self)
 {
     return akvcam_list_ref(self->connected_devices);
 }
 
-__u32 akvcam_device_caps(const akvcam_device_t self)
+__u32 akvcam_device_caps(akvcam_device_ct self)
 {
     __u32 caps = 0;
 
@@ -741,11 +740,11 @@ void akvcam_device_clock_stop(akvcam_device_t self)
 
 int akvcam_device_clock_timeout(akvcam_device_t self)
 {
-    struct v4l2_fract *frame_rate = akvcam_format_frame_rate(self->format);
-    __u32 tsleep = 1000 * frame_rate->denominator;
+    struct v4l2_fract frame_rate = akvcam_format_frame_rate(self->format);
+    __u32 tsleep = 1000 * frame_rate.denominator;
 
-    if (frame_rate->numerator)
-        tsleep /= frame_rate->numerator;
+    if (frame_rate.numerator)
+        tsleep /= frame_rate.numerator;
 
     while (!kthread_should_stop()) {
         akvcam_device_clock_run_once(self);
@@ -755,8 +754,8 @@ int akvcam_device_clock_timeout(akvcam_device_t self)
     return 0;
 }
 
-akvcam_frame_t akvcam_device_frame_apply_adjusts(const akvcam_device_t self,
-                                                 akvcam_frame_t frame)
+akvcam_frame_t akvcam_device_frame_apply_adjusts(akvcam_device_ct self,
+                                                 akvcam_frame_ct frame)
 {
     bool horizontal_flip = self->horizontal_flip != self->horizontal_mirror;
     bool vertical_flip = self->vertical_flip != self->vertical_mirror;
@@ -832,7 +831,7 @@ akvcam_frame_t akvcam_device_frame_apply_adjusts(const akvcam_device_t self,
     return new_frame;
 }
 
-void akvcam_device_notify_frame(akvcam_device_t self)
+void akvcam_device_notify_frame(akvcam_device_ct self)
 {
     struct v4l2_event event;
 

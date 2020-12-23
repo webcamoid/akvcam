@@ -57,9 +57,21 @@ typedef struct
 
 typedef struct
 {
+    __u32 pixelformat;
+    char  str[AKVCAM_MAX_STRING_SIZE];
+} akvcam_utils_pixelformat_strings, *akvcam_utils_pixelformat_strings_t;
+
+typedef struct
+{
     enum v4l2_memory memory;
     char  str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_v4l2_memory_strings, *akvcam_utils_v4l2_memory_strings_t;
+
+typedef struct
+{
+    enum v4l2_colorspace colorspace;
+    char  str[AKVCAM_MAX_STRING_SIZE];
+} akvcam_utils_v4l2_colorspace_strings, *akvcam_utils_v4l2_colorspace_strings_t;
 
 typedef struct
 {
@@ -100,7 +112,7 @@ const char *akvcam_string_from_ioctl(uint cmd)
 {
     size_t i;
     static char ioctlstr[AKVCAM_MAX_STRING_SIZE];
-    static akvcam_utils_ioctl_strings ioctl_strings[] = {
+    static const akvcam_utils_ioctl_strings ioctl_strings[] = {
         {UVCIOC_CTRL_MAP           , "UVCIOC_CTRL_MAP"           },
         {UVCIOC_CTRL_QUERY         , "UVCIOC_CTRL_QUERY"         },
         {VIDIOC_QUERYCAP           , "VIDIOC_QUERYCAP"           },
@@ -206,7 +218,7 @@ const char *akvcam_string_from_error(int error)
 {
     size_t i;
     static char errorstr[AKVCAM_MAX_STRING_SIZE];
-    static akvcam_utils_error_strings error_strings[] = {
+    static const akvcam_utils_error_strings error_strings[] = {
         {EPERM	, "EPERM"  , "Operation not permitted"            },
         {ENOENT	, "ENOENT" , "No such file or directory"          },
         {ESRCH	, "ESRCH"  , "No such process"                    },
@@ -284,7 +296,7 @@ const char *akvcam_string_from_v4l2_buf_type(enum v4l2_buf_type type)
 {
     size_t i;
     static char buf_type_str[AKVCAM_MAX_STRING_SIZE];
-    static akvcam_utils_buf_type_strings buf_type_strings[] = {
+    static const akvcam_utils_buf_type_strings buf_type_strings[] = {
         {V4L2_BUF_TYPE_VIDEO_CAPTURE       , "V4L2_BUF_TYPE_VIDEO_CAPTURE"       },
         {V4L2_BUF_TYPE_VIDEO_OUTPUT        , "V4L2_BUF_TYPE_VIDEO_OUTPUT"        },
         {V4L2_BUF_TYPE_VIDEO_OVERLAY       , "V4L2_BUF_TYPE_VIDEO_OVERLAY"       },
@@ -325,7 +337,7 @@ const char *akvcam_string_from_rw_mode(AKVCAM_RW_MODE rw_mode)
     size_t j = 0;
     size_t n;
     static char rw_mode_str[AKVCAM_MAX_STRING_SIZE];
-    static akvcam_utils_rw_mode_strings rw_mode_strings[] = {
+    static const akvcam_utils_rw_mode_strings rw_mode_strings[] = {
         {AKVCAM_RW_MODE_READWRITE, "rw"     },
         {AKVCAM_RW_MODE_MMAP     , "mmap"   },
         {AKVCAM_RW_MODE_USERPTR  , "userptr"},
@@ -352,7 +364,7 @@ const char *akvcam_string_from_v4l2_memory(enum v4l2_memory memory)
 {
     size_t i;
     static char memory_str[AKVCAM_MAX_STRING_SIZE];
-    static akvcam_utils_v4l2_memory_strings memory_strings[] = {
+    static const akvcam_utils_v4l2_memory_strings memory_strings[] = {
         {V4L2_MEMORY_MMAP   , "V4L2_MEMORY_MMAP"   },
         {V4L2_MEMORY_USERPTR, "V4L2_MEMORY_USERPT" },
         {V4L2_MEMORY_OVERLAY, "V4L2_MEMORY_OVERLAY"},
@@ -382,6 +394,9 @@ const char *akvcam_string_from_v4l2_format(const struct v4l2_format *format)
     static char format_str[AKVCAM_MAX_STRING_SIZE];
     size_t n;
     const char *type;
+    const char *pixelformat;
+    const char *colorspace;
+    const char *field;
 
     memset(format_str, 0, AKVCAM_MAX_STRING_SIZE);
     n = snprintf(format_str, AKVCAM_MAX_STRING_SIZE, "struct v4l2_format {\n");
@@ -392,18 +407,24 @@ const char *akvcam_string_from_v4l2_format(const struct v4l2_format *format)
         || format->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
         n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\twidth: %u\n", format->fmt.pix.width);
         n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\theight: %u\n", format->fmt.pix.height);
-        n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tpixelformat: %u\n", format->fmt.pix.pixelformat);
-        n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tfield: %u\n", format->fmt.pix.field);
+        pixelformat = akvcam_string_from_v4l2_pixelformat(format->fmt.pix.pixelformat);
+        n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tpixelformat: %s\n", pixelformat);
+        field = akvcam_string_from_v4l2_field(format->fmt.pix.field);
+        n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tfield: %s\n", field);
         n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tbytesperline: %u\n", format->fmt.pix.bytesperline);
         n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tsizeimage: %u\n", format->fmt.pix.sizeimage);
-        n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tcolorspace: %u\n", format->fmt.pix.colorspace);
+        colorspace = akvcam_string_from_v4l2_colorspace(format->fmt.pix.colorspace);
+        n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tcolorspace: %s\n", colorspace);
     } else if (format->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
                || format->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
         n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\twidth: %u\n", format->fmt.pix_mp.width);
         n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\theight: %u\n", format->fmt.pix_mp.height);
-        n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tpixelformat: %u\n", format->fmt.pix_mp.pixelformat);
-        n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tfield: %u\n", format->fmt.pix_mp.field);
-        n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tcolorspace: %u\n", format->fmt.pix_mp.colorspace);
+        pixelformat = akvcam_string_from_v4l2_pixelformat(format->fmt.pix_mp.pixelformat);
+        n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tpixelformat: %s\n", pixelformat);
+        field = akvcam_string_from_v4l2_field(format->fmt.pix_mp.field);
+        n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tfield: %s\n", field);
+        colorspace = akvcam_string_from_v4l2_colorspace(format->fmt.pix_mp.colorspace);
+        n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tcolorspace: %s\n", colorspace);
         n += snprintf(format_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tnum_planes: %u\n", format->fmt.pix_mp.num_planes);
     }
 
@@ -467,7 +488,7 @@ const char *akvcam_string_from_v4l2_buffer_flags(__u32 flags)
     size_t j = 0;
     size_t n;
     static char flags_str[AKVCAM_MAX_STRING_SIZE];
-    static akvcam_utils_buffer_flags_strings flags_strings[] = {
+    static const akvcam_utils_buffer_flags_strings flags_strings[] = {
         {V4L2_BUF_FLAG_MAPPED              , "mapped"              },
         {V4L2_BUF_FLAG_QUEUED              , "queued"              },
         {V4L2_BUF_FLAG_DONE                , "done"                },
@@ -513,7 +534,7 @@ const char *akvcam_string_from_v4l2_field(enum v4l2_field field)
 {
     size_t i;
     static char field_str[AKVCAM_MAX_STRING_SIZE];
-    static akvcam_utils_field_strings field_strings[] = {
+    static const akvcam_utils_field_strings field_strings[] = {
         {V4L2_FIELD_ANY          , "V4L2_FIELD_ANY"          },
         {V4L2_FIELD_NONE         , "V4L2_FIELD_NONE"         },
         {V4L2_FIELD_TOP          , "V4L2_FIELD_TOP"          },
@@ -571,12 +592,12 @@ const char *akvcam_string_from_v4l2_buffer_capabilities(__u32 flags)
     size_t j = 0;
     size_t n;
     static char capabilities_str[AKVCAM_MAX_STRING_SIZE];
-    static akvcam_utils_buffer_capabilities_strings capabilities_strings[] = {
-        {V4L2_BUF_CAP_SUPPORTS_MMAP		           , "mmap"                },
-        {V4L2_BUF_CAP_SUPPORTS_USERPTR		       , "userptr"             },
-        {V4L2_BUF_CAP_SUPPORTS_DMABUF		       , "dmabuf"              },
-        {V4L2_BUF_CAP_SUPPORTS_REQUESTS		       , "requests"            },
-        {V4L2_BUF_CAP_SUPPORTS_ORPHANED_BUFS	   , "orphaned_bufs"       },
+    static const akvcam_utils_buffer_capabilities_strings capabilities_strings[] = {
+        {V4L2_BUF_CAP_SUPPORTS_MMAP                , "mmap"                },
+        {V4L2_BUF_CAP_SUPPORTS_USERPTR             , "userptr"             },
+        {V4L2_BUF_CAP_SUPPORTS_DMABUF              , "dmabuf"              },
+        {V4L2_BUF_CAP_SUPPORTS_REQUESTS            , "requests"            },
+        {V4L2_BUF_CAP_SUPPORTS_ORPHANED_BUFS       , "orphaned_bufs"       },
         {V4L2_BUF_CAP_SUPPORTS_M2M_HOLD_CAPTURE_BUF, "m2m_hold_capture_buf"},
         {0                                         , ""                    },
     };
@@ -617,6 +638,60 @@ const char *akvcam_string_from_v4l2_create_buffers(const struct v4l2_create_buff
     snprintf(buffers_str + n, AKVCAM_MAX_STRING_SIZE - n, "}");
 
     return buffers_str;
+}
+
+const char *akvcam_string_from_v4l2_pixelformat(__u32 pixelformat)
+{
+    static char pixelformat_str[AKVCAM_MAX_STRING_SIZE];
+    char str[5];
+    size_t n;
+
+    pixelformat = cpu_to_le32(pixelformat);
+    memcpy(str, &pixelformat, sizeof(__u32));
+    str[4] = 0;
+    n = snprintf(pixelformat_str, AKVCAM_MAX_STRING_SIZE, "V4L2_PIX_FMT(");
+    n += snprintf(pixelformat_str + n, AKVCAM_MAX_STRING_SIZE - n, "%s", str);
+    snprintf(pixelformat_str + n, AKVCAM_MAX_STRING_SIZE - n, ")");
+
+    return pixelformat_str;
+}
+
+const char *akvcam_string_from_v4l2_colorspace(enum v4l2_colorspace colorspace)
+{
+    size_t i;
+    static char colorspace_str[AKVCAM_MAX_STRING_SIZE];
+    static const akvcam_utils_v4l2_colorspace_strings colorspace_strings[] = {
+        {V4L2_COLORSPACE_DEFAULT      , "V4L2_COLORSPACE_DEFAULT"      },
+        {V4L2_COLORSPACE_SMPTE170M    , "V4L2_COLORSPACE_SMPTE170M"    },
+        {V4L2_COLORSPACE_SMPTE240M    , "V4L2_COLORSPACE_SMPTE240M"    },
+        {V4L2_COLORSPACE_REC709       , "V4L2_COLORSPACE_REC709"       },
+        {V4L2_COLORSPACE_BT878        , "V4L2_COLORSPACE_BT878"        },
+        {V4L2_COLORSPACE_470_SYSTEM_M , "V4L2_COLORSPACE_470_SYSTEM_M" },
+        {V4L2_COLORSPACE_470_SYSTEM_BG, "V4L2_COLORSPACE_470_SYSTEM_BG"},
+        {V4L2_COLORSPACE_JPEG         , "V4L2_COLORSPACE_JPEG"         },
+        {V4L2_COLORSPACE_SRGB         , "V4L2_COLORSPACE_SRGB"         },
+        {V4L2_COLORSPACE_OPRGB        , "V4L2_COLORSPACE_OPRGB"        },
+        {V4L2_COLORSPACE_BT2020       , "V4L2_COLORSPACE_BT2020"       },
+        {V4L2_COLORSPACE_RAW          , "V4L2_COLORSPACE_RAW"          },
+        {V4L2_COLORSPACE_DCI_P3       , "V4L2_COLORSPACE_DCI_P3"       },
+        {-1                           , ""                             },
+    };
+
+    memset(colorspace_str, 0, AKVCAM_MAX_STRING_SIZE);
+
+    for (i = 0; colorspace_strings[i].colorspace >= 0; i++)
+        if (colorspace_strings[i].colorspace == colorspace) {
+            snprintf(colorspace_str,
+                     AKVCAM_MAX_STRING_SIZE,
+                     "%s",
+                     colorspace_strings[i].str);
+
+            return colorspace_str;
+        }
+
+    snprintf(colorspace_str, AKVCAM_MAX_STRING_SIZE, "v4l2_colorspace(%d)", colorspace);
+
+    return colorspace_str;
 }
 
 size_t akvcam_line_size(const char *buffer, size_t size, bool *found)

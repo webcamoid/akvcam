@@ -160,40 +160,40 @@ uint8_t akvcam_yuv_g(int y, int u, int v);
 uint8_t akvcam_yuv_b(int y, int u, int v);
 
 // BGR to RGB formats
-void akvcam_bgr24_to_rgb32(akvcam_frame_t dst, akvcam_frame_t src);
-void akvcam_bgr24_to_rgb24(akvcam_frame_t dst, akvcam_frame_t src);
-void akvcam_bgr24_to_rgb16(akvcam_frame_t dst, akvcam_frame_t src);
-void akvcam_bgr24_to_rgb15(akvcam_frame_t dst, akvcam_frame_t src);
+void akvcam_bgr24_to_rgb32(akvcam_frame_t dst, akvcam_frame_ct src);
+void akvcam_bgr24_to_rgb24(akvcam_frame_t dst, akvcam_frame_ct src);
+void akvcam_bgr24_to_rgb16(akvcam_frame_t dst, akvcam_frame_ct src);
+void akvcam_bgr24_to_rgb15(akvcam_frame_t dst, akvcam_frame_ct src);
 
 // BGR to BGR formats
-void akvcam_bgr24_to_bgr32(akvcam_frame_t dst, akvcam_frame_t src);
-void akvcam_bgr24_to_bgr16(akvcam_frame_t dst, akvcam_frame_t src);
+void akvcam_bgr24_to_bgr32(akvcam_frame_t dst, akvcam_frame_ct src);
+void akvcam_bgr24_to_bgr16(akvcam_frame_t dst, akvcam_frame_ct src);
 
 // BGR to Luminance+Chrominance formats
-void akvcam_bgr24_to_uyvy(akvcam_frame_t dst, akvcam_frame_t src);
-void akvcam_bgr24_to_yuy2(akvcam_frame_t dst, akvcam_frame_t src);
+void akvcam_bgr24_to_uyvy(akvcam_frame_t dst, akvcam_frame_ct src);
+void akvcam_bgr24_to_yuy2(akvcam_frame_t dst, akvcam_frame_ct src);
 
 // BGR to two planes -- one Y, one Cr + Cb interleaved
-void akvcam_bgr24_to_nv12(akvcam_frame_t dst, akvcam_frame_t src);
-void akvcam_bgr24_to_nv21(akvcam_frame_t dst, akvcam_frame_t src);
+void akvcam_bgr24_to_nv12(akvcam_frame_t dst, akvcam_frame_ct src);
+void akvcam_bgr24_to_nv21(akvcam_frame_t dst, akvcam_frame_ct src);
 
 // RGB to RGB formats
-void akvcam_rgb24_to_rgb32(akvcam_frame_t dst, akvcam_frame_t src);
-void akvcam_rgb24_to_rgb16(akvcam_frame_t dst, akvcam_frame_t src);
-void akvcam_rgb24_to_rgb15(akvcam_frame_t dst, akvcam_frame_t src);
+void akvcam_rgb24_to_rgb32(akvcam_frame_t dst, akvcam_frame_ct src);
+void akvcam_rgb24_to_rgb16(akvcam_frame_t dst, akvcam_frame_ct src);
+void akvcam_rgb24_to_rgb15(akvcam_frame_t dst, akvcam_frame_ct src);
 
 // RGB to BGR formats
-void akvcam_rgb24_to_bgr32(akvcam_frame_t dst, akvcam_frame_t src);
-void akvcam_rgb24_to_bgr24(akvcam_frame_t dst, akvcam_frame_t src);
-void akvcam_rgb24_to_bgr16(akvcam_frame_t dst, akvcam_frame_t src);
+void akvcam_rgb24_to_bgr32(akvcam_frame_t dst, akvcam_frame_ct src);
+void akvcam_rgb24_to_bgr24(akvcam_frame_t dst, akvcam_frame_ct src);
+void akvcam_rgb24_to_bgr16(akvcam_frame_t dst, akvcam_frame_ct src);
 
 // RGB to Luminance+Chrominance formats
-void akvcam_rgb24_to_uyvy(akvcam_frame_t dst, akvcam_frame_t src);
-void akvcam_rgb24_to_yuy2(akvcam_frame_t dst, akvcam_frame_t src);
+void akvcam_rgb24_to_uyvy(akvcam_frame_t dst, akvcam_frame_ct src);
+void akvcam_rgb24_to_yuy2(akvcam_frame_t dst, akvcam_frame_ct src);
 
 // RGB to two planes -- one Y, one Cr + Cb interleaved
-void akvcam_rgb24_to_nv12(akvcam_frame_t dst, akvcam_frame_t src);
-void akvcam_rgb24_to_nv21(akvcam_frame_t dst, akvcam_frame_t src);
+void akvcam_rgb24_to_nv12(akvcam_frame_t dst, akvcam_frame_ct src);
+void akvcam_rgb24_to_nv21(akvcam_frame_t dst, akvcam_frame_ct src);
 
 void akvcam_extrapolate_up(size_t dstCoord,
                            size_t num, size_t den, size_t s,
@@ -218,7 +218,7 @@ void akvcam_rgb_to_hsl(int r, int g, int b, int *h, int *s, int *l);
 void akvcam_hsl_to_rgb(int h, int s, int l, int *r, int *g, int *b);
 
 typedef void (*akvcam_video_convert_funtion_t)(akvcam_frame_t dst,
-                                               akvcam_frame_t src);
+                                               akvcam_frame_ct src);
 
 typedef struct
 {
@@ -226,8 +226,9 @@ typedef struct
     __u32 to;
     akvcam_video_convert_funtion_t convert;
 } akvcam_video_convert, *akvcam_video_convert_t;
+typedef const akvcam_video_convert *akvcam_video_convert_ct;
 
-static akvcam_video_convert akvcam_frame_convert_table[] = {
+static const akvcam_video_convert akvcam_frame_convert_table[] = {
     {V4L2_PIX_FMT_BGR24, V4L2_PIX_FMT_RGB32 , akvcam_bgr24_to_rgb32},
     {V4L2_PIX_FMT_BGR24, V4L2_PIX_FMT_RGB24 , akvcam_bgr24_to_rgb24},
     {V4L2_PIX_FMT_BGR24, V4L2_PIX_FMT_RGB565, akvcam_bgr24_to_rgb16},
@@ -288,7 +289,7 @@ akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
     return self;
 }
 
-akvcam_frame_t akvcam_frame_new_copy(akvcam_frame_t other)
+akvcam_frame_t akvcam_frame_new_copy(akvcam_frame_ct other)
 {
     akvcam_frame_t self = kzalloc(sizeof(struct akvcam_frame), GFP_KERNEL);
     kref_init(&self->ref);
@@ -330,7 +331,7 @@ akvcam_frame_t akvcam_frame_ref(akvcam_frame_t self)
     return self;
 }
 
-void akvcam_frame_copy(akvcam_frame_t self, const akvcam_frame_t other)
+void akvcam_frame_copy(akvcam_frame_t self, akvcam_frame_ct other)
 {
     akvcam_format_copy(self->format, other->format);
     self->size = other->size;
@@ -348,29 +349,29 @@ void akvcam_frame_copy(akvcam_frame_t self, const akvcam_frame_t other)
     }
 }
 
-akvcam_format_t akvcam_frame_format(const akvcam_frame_t self)
+akvcam_format_t akvcam_frame_format(akvcam_frame_ct self)
 {
     return akvcam_format_new_copy(self->format);
 }
 
-void *akvcam_frame_data(const akvcam_frame_t self)
+void *akvcam_frame_data(akvcam_frame_ct self)
 {
     return self->data;
 }
 
-void *akvcam_frame_line(const akvcam_frame_t self, size_t plane, size_t y)
+void *akvcam_frame_line(akvcam_frame_ct self, size_t plane, size_t y)
 {
     return (char *) self->data
             + akvcam_format_offset(self->format, plane)
             + y * akvcam_format_bypl(self->format, plane);
 }
 
-const void *akvcam_frame_const_line(const akvcam_frame_t self, size_t plane, size_t y)
+const void *akvcam_frame_const_line(akvcam_frame_ct self, size_t plane, size_t y)
 {
     return akvcam_frame_line(self, plane, y);
 }
 
-size_t akvcam_frame_size(const akvcam_frame_t self)
+size_t akvcam_frame_size(akvcam_frame_ct self)
 {
     return self->size;
 }
@@ -1042,7 +1043,7 @@ const char *akvcam_frame_scaling_to_string(AKVCAM_SCALING scaling)
 {
     size_t i;
     static char scaling_str[AKVCAM_MAX_STRING_SIZE];
-    static akvcam_frame_scaling_strings scaling_strings[] = {
+    static const akvcam_frame_scaling_strings scaling_strings[] = {
         {AKVCAM_SCALING_FAST  , "Fast"  },
         {AKVCAM_SCALING_LINEAR, "Linear"},
         {-1                   , ""      },
@@ -1069,7 +1070,7 @@ const char *akvcam_frame_aspect_ratio_to_string(AKVCAM_ASPECT_RATIO aspect_ratio
 {
     size_t i;
     static char aspect_ratio_str[AKVCAM_MAX_STRING_SIZE];
-    static akvcam_frame_aspect_ratio_strings aspect_ratio_strings[] = {
+    static const akvcam_frame_aspect_ratio_strings aspect_ratio_strings[] = {
         {AKVCAM_ASPECT_RATIO_IGNORE   , "Ignore"   },
         {AKVCAM_ASPECT_RATIO_KEEP     , "Keep"     },
         {AKVCAM_ASPECT_RATIO_EXPANDING, "Expanding"},
@@ -1154,7 +1155,7 @@ uint8_t akvcam_yuv_b(int y, int u, int v)
     return (uint8_t) (akvcam_bound(0, b, 255));
 }
 
-void akvcam_bgr24_to_rgb32(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_bgr24_to_rgb32(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1176,7 +1177,7 @@ void akvcam_bgr24_to_rgb32(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_bgr24_to_rgb24(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_bgr24_to_rgb24(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1197,7 +1198,7 @@ void akvcam_bgr24_to_rgb24(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_bgr24_to_rgb16(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_bgr24_to_rgb16(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1218,7 +1219,7 @@ void akvcam_bgr24_to_rgb16(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_bgr24_to_rgb15(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_bgr24_to_rgb15(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1240,7 +1241,7 @@ void akvcam_bgr24_to_rgb15(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_bgr24_to_bgr32(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_bgr24_to_bgr32(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1262,7 +1263,7 @@ void akvcam_bgr24_to_bgr32(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_bgr24_to_bgr16(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_bgr24_to_bgr16(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1283,7 +1284,7 @@ void akvcam_bgr24_to_bgr16(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_bgr24_to_uyvy(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_bgr24_to_uyvy(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1324,7 +1325,7 @@ void akvcam_bgr24_to_uyvy(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_bgr24_to_yuy2(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_bgr24_to_yuy2(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1365,7 +1366,7 @@ void akvcam_bgr24_to_yuy2(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_bgr24_to_nv12(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_bgr24_to_nv12(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1398,7 +1399,7 @@ void akvcam_bgr24_to_nv12(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_bgr24_to_nv21(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_bgr24_to_nv21(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1431,7 +1432,7 @@ void akvcam_bgr24_to_nv21(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_rgb24_to_rgb32(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_rgb24_to_rgb32(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1453,7 +1454,7 @@ void akvcam_rgb24_to_rgb32(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_rgb24_to_rgb16(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_rgb24_to_rgb16(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1474,7 +1475,7 @@ void akvcam_rgb24_to_rgb16(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_rgb24_to_rgb15(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_rgb24_to_rgb15(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1496,7 +1497,7 @@ void akvcam_rgb24_to_rgb15(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_rgb24_to_bgr32(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_rgb24_to_bgr32(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1518,7 +1519,7 @@ void akvcam_rgb24_to_bgr32(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_rgb24_to_bgr24(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_rgb24_to_bgr24(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1539,7 +1540,7 @@ void akvcam_rgb24_to_bgr24(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_rgb24_to_bgr16(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_rgb24_to_bgr16(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1560,7 +1561,7 @@ void akvcam_rgb24_to_bgr16(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_rgb24_to_uyvy(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_rgb24_to_uyvy(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1601,7 +1602,7 @@ void akvcam_rgb24_to_uyvy(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_rgb24_to_yuy2(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_rgb24_to_yuy2(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1642,7 +1643,7 @@ void akvcam_rgb24_to_yuy2(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_rgb24_to_nv12(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_rgb24_to_nv12(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1675,7 +1676,7 @@ void akvcam_rgb24_to_nv12(akvcam_frame_t dst, akvcam_frame_t src)
     }
 }
 
-void akvcam_rgb24_to_nv21(akvcam_frame_t dst, akvcam_frame_t src)
+void akvcam_rgb24_to_nv21(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
@@ -1859,7 +1860,7 @@ size_t akvcam_convert_funcs_count(void)
 akvcam_video_convert_funtion_t akvcam_convert_func(__u32 from, __u32 to)
 {
     size_t i;
-    akvcam_video_convert_t convert;
+    akvcam_video_convert_ct convert;
 
     for (i = 0; i < akvcam_convert_funcs_count(); i++) {
         convert = akvcam_frame_convert_table + i;

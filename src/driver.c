@@ -53,8 +53,8 @@ bool akvcam_driver_contains_node(const u32 *connections,
                                  size_t n_connectios,
                                  u32 node);
 void akvcam_driver_print_devices(void);
-void akvcam_driver_print_formats(const akvcam_device_t device);
-void akvcam_driver_print_connections(const akvcam_device_t device);
+void akvcam_driver_print_formats(akvcam_device_ct device);
+void akvcam_driver_print_connections(akvcam_device_ct device);
 
 int akvcam_driver_init(const char *name, const char *description)
 {
@@ -663,12 +663,11 @@ void akvcam_driver_print_devices(void)
     }
 }
 
-void akvcam_driver_print_formats(const akvcam_device_t device)
+void akvcam_driver_print_formats(akvcam_device_ct device)
 {
     akvcam_formats_list_t formats;
     akvcam_format_t format;
     akvcam_list_element_t it = NULL;
-    struct v4l2_fract *frame_rate;
 
     formats = akvcam_device_formats(device);
 
@@ -683,7 +682,6 @@ void akvcam_driver_print_formats(const akvcam_device_t device)
             if (!it)
                 break;
 
-            frame_rate = akvcam_format_frame_rate(format);
             akpr_info("\t\t%s\n", akvcam_format_to_string(format));
         }
     }
@@ -691,7 +689,7 @@ void akvcam_driver_print_formats(const akvcam_device_t device)
     akvcam_list_delete(formats);
 }
 
-void akvcam_driver_print_connections(const akvcam_device_t device)
+void akvcam_driver_print_connections(akvcam_device_ct device)
 {
     akvcam_devices_list_t devices;
     akvcam_device_t connected_device;

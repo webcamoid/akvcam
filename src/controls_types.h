@@ -31,5 +31,6 @@
 
 struct akvcam_controls;
 typedef struct akvcam_controls *akvcam_controls_t;
+typedef const struct akvcam_controls *akvcam_controls_ct;
 
 #endif // AKVCAM_CONTROLS_TYPES_H

@@ -40,17 +40,17 @@ akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE device_type);
 void akvcam_controls_delete(akvcam_controls_t self);
 akvcam_controls_t akvcam_controls_ref(akvcam_controls_t self);
 
-int akvcam_controls_fill(const akvcam_controls_t self,
+int akvcam_controls_fill(akvcam_controls_ct self,
                          struct v4l2_queryctrl *control);
-int akvcam_controls_fill_menu(const akvcam_controls_t self,
+int akvcam_controls_fill_menu(akvcam_controls_ct self,
                               struct v4l2_querymenu *menu);
 #ifdef VIDIOC_QUERY_EXT_CTRL
-int akvcam_controls_fill_ext(const akvcam_controls_t self,
+int akvcam_controls_fill_ext(akvcam_controls_ct self,
                              struct v4l2_query_ext_ctrl *control);
 #endif
-int akvcam_controls_get(const akvcam_controls_t self,
+int akvcam_controls_get(akvcam_controls_ct self,
                         struct v4l2_control *control);
-int akvcam_controls_get_ext(const akvcam_controls_t self,
+int akvcam_controls_get_ext(akvcam_controls_ct self,
                             struct v4l2_ext_controls *controls,
                             uint32_t flags);
 int akvcam_controls_set(akvcam_controls_t self,
@@ -58,11 +58,11 @@ int akvcam_controls_set(akvcam_controls_t self,
 int akvcam_controls_set_ext(akvcam_controls_t self,
                             struct v4l2_ext_controls *controls,
                             uint32_t flags);
-int akvcam_controls_try_ext(akvcam_controls_t self,
+int akvcam_controls_try_ext(akvcam_controls_ct self,
                             struct v4l2_ext_controls *controls,
                             uint32_t flags);
-bool akvcam_controls_contains(const akvcam_controls_t self, __u32 id);
-bool akvcam_controls_generate_event(const akvcam_controls_t self,
+bool akvcam_controls_contains(akvcam_controls_ct self, __u32 id);
+bool akvcam_controls_generate_event(akvcam_controls_ct self,
                                     __u32 id,
                                     struct v4l2_event *event);
 

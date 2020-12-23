@@ -30,11 +30,11 @@ akvcam_node_t akvcam_node_new(int32_t device_num);
 void akvcam_node_delete(akvcam_node_t self);
 akvcam_node_t akvcam_node_ref(akvcam_node_t self);
 
-int64_t akvcam_node_id(const akvcam_node_t self);
-int32_t akvcam_node_device_num(const akvcam_node_t self);
-akvcam_events_t akvcam_node_events_nr(const akvcam_node_t self);
-akvcam_events_t akvcam_node_events(const akvcam_node_t self);
-bool akvcam_node_blocking(const akvcam_node_t self);
+int64_t akvcam_node_id(akvcam_node_ct self);
+int32_t akvcam_node_device_num(akvcam_node_ct self);
+akvcam_events_t akvcam_node_events_nr(akvcam_node_ct self);
+akvcam_events_t akvcam_node_events(akvcam_node_ct self);
+bool akvcam_node_blocking(akvcam_node_ct self);
 void akvcam_node_set_blocking(akvcam_node_t self, bool blocking);
 
 // public static

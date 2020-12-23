@@ -21,5 +21,6 @@
 
 struct akvcam_buffers;
 typedef struct akvcam_buffers *akvcam_buffers_t;
+typedef const struct akvcam_buffers *akvcam_buffers_ct;
 
 #endif // AKVCAM_BUFFERS_TYPES_H

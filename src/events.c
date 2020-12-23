@@ -38,7 +38,7 @@ struct akvcam_events
     __u32 sequence;
 };
 
-void akvcam_events_remove_unsub(akvcam_events_t self,
+void akvcam_events_remove_unsub(akvcam_events_ct self,
                                 const struct v4l2_event_subscription *sub);
 
 akvcam_events_t akvcam_events_new(void)
@@ -87,12 +87,12 @@ bool akvcam_events_subscriptions_are_equals(const struct v4l2_event_subscription
                    sizeof(struct v4l2_event_subscription));
 }
 
-struct v4l2_event_subscription *akvcam_events_subscription_copy(struct v4l2_event_subscription *subscription)
+struct v4l2_event_subscription *akvcam_events_subscription_copy(const struct v4l2_event_subscription *subscription)
 {
     return kmemdup(subscription, sizeof(struct v4l2_event_subscription), GFP_KERNEL);
 }
 
-void akvcam_events_subscribe(akvcam_events_t self,
+void akvcam_events_subscribe(akvcam_events_ct self,
                              struct v4l2_event_subscription *subscription)
 {
     akvcam_list_element_t it;
@@ -109,7 +109,7 @@ void akvcam_events_subscribe(akvcam_events_t self,
                           (akvcam_delete_t) kfree);
 }
 
-void akvcam_events_unsubscribe(akvcam_events_t self,
+void akvcam_events_unsubscribe(akvcam_events_ct self,
                                const struct v4l2_event_subscription *subscription)
 {
     akvcam_list_element_t it;
@@ -187,7 +187,7 @@ bool akvcam_events_enqueue(akvcam_events_t self,
     return true;
 }
 
-int akvcam_events_dequeue(akvcam_events_t self, struct v4l2_event *event)
+int akvcam_events_dequeue(akvcam_events_ct self, struct v4l2_event *event)
 {
     akpr_function();
 
@@ -203,12 +203,12 @@ int akvcam_events_dequeue(akvcam_events_t self, struct v4l2_event *event)
     return 0;
 }
 
-bool akvcam_events_available(const akvcam_events_t self)
+bool akvcam_events_available(akvcam_events_ct self)
 {
     return akvcam_rbuffer_data_size(self->events) > 0;
 }
 
-void akvcam_events_remove_unsub(akvcam_events_t self,
+void akvcam_events_remove_unsub(akvcam_events_ct self,
                                 const struct v4l2_event_subscription *sub)
 {
     struct v4l2_event event;

@@ -21,5 +21,6 @@
 
 struct akvcam_events;
 typedef struct akvcam_events *akvcam_events_t;
+typedef const struct akvcam_events *akvcam_events_ct;
 
 #endif // AKVCAM_EVENTS_TYPES_H

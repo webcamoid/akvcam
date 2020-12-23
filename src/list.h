@@ -26,38 +26,38 @@
 
 // public
 akvcam_list_t akvcam_list_new(void);
-akvcam_list_t akvcam_list_new_copy(akvcam_list_t other);
+akvcam_list_t akvcam_list_new_copy(akvcam_list_ct other);
 void akvcam_list_delete(akvcam_list_t self);
 akvcam_list_t akvcam_list_ref(akvcam_list_t self);
 
-void akvcam_list_copy(akvcam_list_t self, const akvcam_list_t other);
-void akvcam_list_append(akvcam_list_t self, const akvcam_list_t other);
-size_t akvcam_list_size(const akvcam_list_t self);
-bool akvcam_list_empty(const akvcam_list_t self);
-void *akvcam_list_at(const akvcam_list_t self, size_t i);
-void *akvcam_list_front(const akvcam_list_t self);
-void *akvcam_list_back(const akvcam_list_t self);
+void akvcam_list_copy(akvcam_list_t self, akvcam_list_ct other);
+void akvcam_list_append(akvcam_list_t self, akvcam_list_ct other);
+size_t akvcam_list_size(akvcam_list_ct self);
+bool akvcam_list_empty(akvcam_list_ct self);
+void *akvcam_list_at(akvcam_list_ct self, size_t i);
+void *akvcam_list_front(akvcam_list_ct self);
+void *akvcam_list_back(akvcam_list_ct self);
 akvcam_list_element_t akvcam_list_push_back(akvcam_list_t self,
                                             void *data,
-                                            const akvcam_copy_t copier,
-                                            const akvcam_delete_t deleter);
-akvcam_list_element_t akvcam_list_it(akvcam_list_t self, size_t i);
-void akvcam_list_erase(akvcam_list_t self, const akvcam_list_element_t element);
+                                            akvcam_copy_t copier,
+                                            akvcam_delete_t deleter);
+akvcam_list_element_t akvcam_list_it(akvcam_list_ct self, size_t i);
+void akvcam_list_erase(akvcam_list_t self, akvcam_list_element_ct element);
 void akvcam_list_clear(akvcam_list_t self);
-akvcam_list_element_t akvcam_list_find(const akvcam_list_t self,
+akvcam_list_element_t akvcam_list_find(akvcam_list_ct self,
                                        const void *data,
-                                       const akvcam_are_equals_t equals);
-ssize_t akvcam_list_index_of(const akvcam_list_t self,
+                                       akvcam_are_equals_t equals);
+ssize_t akvcam_list_index_of(akvcam_list_ct self,
                              const void *data,
-                             const akvcam_are_equals_t equals);
-bool akvcam_list_contains(const akvcam_list_t self,
+                             akvcam_are_equals_t equals);
+bool akvcam_list_contains(akvcam_list_ct self,
                           const void *data,
-                          const akvcam_are_equals_t equals);
-void *akvcam_list_next(const akvcam_list_t self,
+                          akvcam_are_equals_t equals);
+void *akvcam_list_next(akvcam_list_ct self,
                        akvcam_list_element_t *element);
-void *akvcam_list_element_data(const akvcam_list_element_t element);
-akvcam_copy_t akvcam_list_element_copier(const akvcam_list_element_t element);
-akvcam_delete_t akvcam_list_element_deleter(const akvcam_list_element_t element);
-akvcam_matrix_t akvcam_matrix_combine(const akvcam_matrix_t matrix);
+void *akvcam_list_element_data(akvcam_list_element_ct element);
+akvcam_copy_t akvcam_list_element_copier(akvcam_list_element_ct element);
+akvcam_delete_t akvcam_list_element_deleter(akvcam_list_element_ct element);
+akvcam_matrix_t akvcam_matrix_combine(akvcam_matrix_ct matrix);
 
 #endif // AKVCAM_LIST_H

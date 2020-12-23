@@ -29,7 +29,9 @@
 
 struct akvcam_device;
 typedef struct akvcam_device *akvcam_device_t;
+typedef const struct akvcam_device *akvcam_device_ct;
 typedef akvcam_list_tt(akvcam_device_t) akvcam_devices_list_t;
+typedef akvcam_list_ctt(akvcam_device_t) akvcam_devices_list_ct;
 typedef __u32 AKVCAM_RW_MODE;
 
 typedef enum

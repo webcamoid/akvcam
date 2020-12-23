@@ -76,7 +76,7 @@ akvcam_file_t akvcam_file_ref(akvcam_file_t self)
     return self;
 }
 
-const char *akvcam_file_file_name(akvcam_file_t self)
+const char *akvcam_file_file_name(akvcam_file_ct self)
 {
     return self->file_name;
 }
@@ -132,12 +132,12 @@ void akvcam_file_close(akvcam_file_t self)
     self->is_open = false;
 }
 
-bool akvcam_file_is_open(akvcam_file_t self)
+bool akvcam_file_is_open(akvcam_file_ct self)
 {
     return self->is_open;
 }
 
-bool akvcam_file_exists(akvcam_file_t self)
+bool akvcam_file_exists(akvcam_file_ct self)
 {
     struct kstat stats;
     mm_segment_t oldfs;
@@ -154,7 +154,7 @@ bool akvcam_file_exists(akvcam_file_t self)
     return result == 0;
 }
 
-size_t akvcam_file_size(akvcam_file_t self)
+size_t akvcam_file_size(akvcam_file_ct self)
 {
     struct kstat stats;
     mm_segment_t oldfs;
@@ -171,7 +171,7 @@ size_t akvcam_file_size(akvcam_file_t self)
     return result? 0: (size_t) stats.size;
 }
 
-bool akvcam_file_eof(akvcam_file_t self)
+bool akvcam_file_eof(akvcam_file_ct self)
 {
     return self->bytes_read >= self->size;
 }

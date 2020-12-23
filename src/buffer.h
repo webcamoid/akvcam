@@ -23,6 +23,7 @@
 
 struct akvcam_buffer;
 typedef struct akvcam_buffer *akvcam_buffer_t;
+typedef const struct akvcam_buffer *akvcam_buffer_ct;
 struct v4l2_buffer;
 struct vm_area_struct;
 

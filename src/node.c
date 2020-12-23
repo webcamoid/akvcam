@@ -101,27 +101,27 @@ akvcam_node_t akvcam_node_ref(akvcam_node_t self)
     return self;
 }
 
-int64_t akvcam_node_id(const akvcam_node_t self)
+int64_t akvcam_node_id(akvcam_node_ct self)
 {
     return self->id;
 }
 
-int32_t akvcam_node_device_num(const akvcam_node_t self)
+int32_t akvcam_node_device_num(akvcam_node_ct self)
 {
     return self->device_num;
 }
 
-akvcam_events_t akvcam_node_events_nr(const akvcam_node_t self)
+akvcam_events_t akvcam_node_events_nr(akvcam_node_ct self)
 {
     return self->events;
 }
 
-akvcam_events_t akvcam_node_events(const akvcam_node_t self)
+akvcam_events_t akvcam_node_events(akvcam_node_ct self)
 {
     return akvcam_events_ref(self->events);
 }
 
-bool akvcam_node_blocking(const akvcam_node_t self)
+bool akvcam_node_blocking(akvcam_node_ct self)
 {
     return self->blocking;
 }
@@ -323,7 +323,7 @@ static int akvcam_node_mmap(struct file *filp, struct vm_area_struct *vma)
     return result;
 }
 
-bool akvcam_node_nodes_are_equals(akvcam_node_t node1, akvcam_node_t node2)
+bool akvcam_node_nodes_are_equals(akvcam_node_ct node1, akvcam_node_ct node2)
 {
     return node1 == node2;
 }
