@@ -140,10 +140,10 @@ akvcam_devices_list_t akvcam_driver_devices(void)
 akvcam_device_t akvcam_driver_device_from_num_nr(int32_t num)
 {
     akvcam_list_element_t element = NULL;
-    akvcam_device_t device;
 
     for (;;) {
-        device = akvcam_list_next(akvcam_driver_global->devices, &element);
+        akvcam_device_t device =
+                akvcam_list_next(akvcam_driver_global->devices, &element);
 
         if (!element)
             break;

@@ -58,19 +58,16 @@ akvcam_node_t akvcam_node_new(int32_t device_num)
 
 static void akvcam_node_free(struct kref *ref)
 {
-    akvcam_buffers_t buffers;
-    akvcam_node_t priority_node;
-    akvcam_node_t controlling_node;
-    akvcam_device_t device;
-
     akvcam_node_t self = container_of(ref, struct akvcam_node, ref);
-    device = akvcam_driver_device_from_num_nr(self->device_num);
+    akvcam_device_t device = akvcam_driver_device_from_num_nr(self->device_num);
 
     if (device) {
-        controlling_node = akvcam_device_controlling_node(device);
+        akvcam_node_t priority_node;
+        akvcam_node_t controlling_node =
+                akvcam_device_controlling_node(device);
 
         if (controlling_node && self->id == controlling_node->id) {
-            buffers = akvcam_device_buffers_nr(device);
+            akvcam_buffers_t buffers = akvcam_device_buffers_nr(device);
             akvcam_buffers_deallocate(buffers);
             akvcam_buffers_set_blocking(buffers, false);
         }

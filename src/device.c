@@ -375,13 +375,11 @@ bool akvcam_device_streaming_rw(akvcam_device_ct self)
 
 bool akvcam_device_start_streaming(akvcam_device_t self)
 {
-    uint64_t broadcasting_node;
-
     akpr_function();
 
     if (!self->streaming) {
+        uint64_t broadcasting_node = self->broadcasting_node;
         akvcam_buffers_reset_sequence(self->buffers);
-        broadcasting_node = self->broadcasting_node;
         akvcam_device_stop_streaming_rw(self);
         self->broadcasting_node = broadcasting_node;
 
@@ -461,10 +459,9 @@ static bool akvcam_device_are_equals(const akvcam_device_t device,
 akvcam_device_t akvcam_device_from_file_nr(struct file *filp)
 {
     akvcam_list_element_t it;
-    int32_t device_num;
 
     if (filp->private_data) {
-        device_num = akvcam_node_device_num(filp->private_data);
+        int32_t device_num = akvcam_node_device_num(filp->private_data);
 
         return akvcam_driver_device_from_num_nr(device_num);
     }
@@ -511,11 +508,10 @@ enum v4l2_buf_type akvcam_device_v4l2_from_device_type(AKVCAM_DEVICE_TYPE type,
 void akvcam_device_event_received(akvcam_device_ct self,
                                   struct v4l2_event *event)
 {
-    akvcam_node_t node;
     akvcam_list_element_t element = NULL;
 
     for (;;) {
-        node = akvcam_list_next(self->nodes, &element);
+        akvcam_node_t node = akvcam_list_next(self->nodes, &element);
 
         if (!element)
             break;
@@ -644,8 +640,6 @@ __u32 akvcam_device_caps(akvcam_device_ct self)
 void akvcam_device_clock_run_once(akvcam_device_t self)
 {
     akvcam_list_element_t it = NULL;
-    akvcam_device_t capture_device;
-    akvcam_device_t output_device;
     akvcam_frame_t frame = NULL;
     akvcam_frame_t default_frame = akvcam_default_frame();
     int result;
@@ -654,8 +648,8 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
 
     if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
         akvcam_frame_t adjusted_frame;
-
-        output_device = akvcam_list_front(self->connected_devices);
+        akvcam_device_t output_device =
+                akvcam_list_front(self->connected_devices);
 
         if (!mutex_lock_interruptible(&self->mtx)) {
             if (output_device
@@ -691,7 +685,8 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
         akvcam_device_notify_frame(self);
     } else {
         for (;;) {
-            capture_device = akvcam_list_next(self->connected_devices, &it);
+            akvcam_device_t capture_device =
+                    akvcam_list_next(self->connected_devices, &it);
 
             if (!it)
                 break;

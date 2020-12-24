@@ -516,15 +516,10 @@ void akvcam_frame_mirror(akvcam_frame_t self,
                          bool verticalMirror)
 {
     __u32 fourcc;
-    akvcam_RGB24_t src_line;
-    akvcam_RGB24_t dst_line;
-    akvcam_RGB24_t tmp_line;
-    akvcam_RGB24 tmp_pixel;
     size_t width;
     size_t height;
     size_t x;
     size_t y;
-    size_t line_size;
 
     if (!horizontalMirror && !verticalMirror)
         return;
@@ -539,22 +534,22 @@ void akvcam_frame_mirror(akvcam_frame_t self,
 
     if (horizontalMirror)
         for (y = 0; y < height; y++) {
-            src_line = akvcam_frame_line(self, 0, y);
+            akvcam_RGB24_t src_line = akvcam_frame_line(self, 0, y);
 
             for (x = 0; x < width / 2; x++) {
-                tmp_pixel = src_line[x];
+                akvcam_RGB24 tmp_pixel = src_line[x];
                 src_line[x] = src_line[width - x - 1];
                 src_line[width - x - 1] = tmp_pixel;
             }
         }
 
     if (verticalMirror) {
-        line_size = akvcam_format_bypl(self->format, 0);
-        tmp_line = vmalloc(line_size);
+        size_t line_size = akvcam_format_bypl(self->format, 0);
+        akvcam_RGB24_t tmp_line = vmalloc(line_size);
 
         for (y = 0; y < height / 2; y++) {
-            src_line = akvcam_frame_line(self, 0, height - y - 1);
-            dst_line = akvcam_frame_line(self, 0, y);
+            akvcam_RGB24_t src_line = akvcam_frame_line(self, 0, height - y - 1);
+            akvcam_RGB24_t dst_line = akvcam_frame_line(self, 0, y);
             memcpy(tmp_line, dst_line, line_size);
             memcpy(dst_line, src_line, line_size);
             memcpy(src_line, tmp_line, line_size);
@@ -745,8 +740,6 @@ void akvcam_frame_swap_rgb(akvcam_frame_t self)
     size_t height;
     size_t x;
     size_t y;
-    akvcam_RGB24_t line;
-    uint8_t tmp;
 
     fourcc = akvcam_format_fourcc(self->format);
 
@@ -757,10 +750,10 @@ void akvcam_frame_swap_rgb(akvcam_frame_t self)
     height = akvcam_format_height(self->format);
 
     for (y = 0; y < height; y++) {
-        line = akvcam_frame_line(self, 0, y);
+        akvcam_RGB24_t line = akvcam_frame_line(self, 0, y);
 
         for (x = 0; x < width; x++) {
-            tmp = line[x].r;
+            uint8_t tmp = line[x].r;
             line[x].r = line[x].b;
             line[x].b = tmp;
         }
@@ -771,7 +764,7 @@ bool akvcam_frame_convert(akvcam_frame_t self, __u32 fourcc)
 {
     akvcam_format_t format;
     akvcam_frame_t frame;
-    akvcam_video_convert_funtion_t convert = NULL;
+    akvcam_video_convert_funtion_t convert;
 
     if (akvcam_format_fourcc(self->format) == fourcc)
         return true;
@@ -805,7 +798,6 @@ void akvcam_frame_adjust_hsl(akvcam_frame_t self,
     size_t height;
     size_t x;
     size_t y;
-    akvcam_RGB24_t line;
     int h;
     int s;
     int l;
@@ -825,7 +817,7 @@ void akvcam_frame_adjust_hsl(akvcam_frame_t self,
     height = akvcam_format_height(self->format);
 
     for (y = 0; y < height; y++) {
-        line = akvcam_frame_line(self, 0, y);
+        akvcam_RGB24_t line = akvcam_frame_line(self, 0, y);
 
         for (x = 0; x < width; x++) {
             akvcam_rgb_to_hsl(line[x].r, line[x].g, line[x].b, &h, &s, &l);
@@ -850,7 +842,6 @@ void akvcam_frame_adjust_contrast(akvcam_frame_t self, int contrast)
     size_t height;
     size_t x;
     size_t y;
-    akvcam_RGB24_t line;
     const uint8_t *contrast_table = akvcam_contrast_table();
     size_t contrast_offset;
 
@@ -869,7 +860,7 @@ void akvcam_frame_adjust_contrast(akvcam_frame_t self, int contrast)
     contrast_offset = (size_t) (contrast + 255) << 8;
 
     for (y = 0; y < height; y++) {
-        line = akvcam_frame_line(self, 0, y);
+        akvcam_RGB24_t line = akvcam_frame_line(self, 0, y);
 
         for (x = 0; x < width; x++) {
             line[x].r = contrast_table[contrast_offset | line[x].r];
@@ -886,7 +877,6 @@ void akvcam_frame_adjust_gamma(akvcam_frame_t self, int gamma)
     size_t height;
     size_t x;
     size_t y;
-    akvcam_RGB24_t line;
     const uint8_t *gamma_table = akvcam_gamma_table();
     size_t gamma_offset;
 
@@ -905,7 +895,7 @@ void akvcam_frame_adjust_gamma(akvcam_frame_t self, int gamma)
     gamma_offset = (size_t) (gamma + 255) << 8;
 
     for (y = 0; y < height; y++) {
-        line = akvcam_frame_line(self, 0, y);
+        akvcam_RGB24_t line = akvcam_frame_line(self, 0, y);
 
         for (x = 0; x < width; x++) {
             line[x].r = gamma_table[gamma_offset | line[x].r];
@@ -922,8 +912,6 @@ void akvcam_frame_to_gray_scale(akvcam_frame_t self)
     size_t height;
     size_t x;
     size_t y;
-    akvcam_RGB24_t line;
-    int luma;
 
     fourcc = akvcam_format_fourcc(self->format);
 
@@ -934,10 +922,10 @@ void akvcam_frame_to_gray_scale(akvcam_frame_t self)
     height = akvcam_format_height(self->format);
 
     for (y = 0; y < height; y++) {
-        line = akvcam_frame_line(self, 0, y);
+        akvcam_RGB24_t line = akvcam_frame_line(self, 0, y);
 
         for (x = 0; x < width; x++) {
-            luma = akvcam_grayval(line[x].r, line[x].g, line[x].b);
+            int luma = akvcam_grayval(line[x].r, line[x].g, line[x].b);
 
             line[x].r = (uint8_t) luma;
             line[x].g = (uint8_t) luma;
@@ -1161,12 +1149,10 @@ void akvcam_bgr24_to_rgb32(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_BGR24_t src_line;
-    akvcam_RGB32_t dst_line;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_RGB32_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             dst_line[x].x = 255;
@@ -1183,12 +1169,10 @@ void akvcam_bgr24_to_rgb24(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_BGR24_t src_line;
-    akvcam_RGB24_t dst_line;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_RGB24_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             dst_line[x].r = src_line[x].r;
@@ -1204,12 +1188,10 @@ void akvcam_bgr24_to_rgb16(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_BGR24_t src_line;
-    akvcam_RGB16_t dst_line;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_RGB16_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             dst_line[x].r = src_line[x].r >> 3;
@@ -1225,12 +1207,10 @@ void akvcam_bgr24_to_rgb15(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_BGR24_t src_line;
-    akvcam_RGB15_t dst_line;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_RGB15_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             dst_line[x].x = 1;
@@ -1247,12 +1227,10 @@ void akvcam_bgr24_to_bgr32(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_BGR24_t src_line;
-    akvcam_BGR32_t dst_line;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_BGR32_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             dst_line[x].x = 255;
@@ -1269,12 +1247,10 @@ void akvcam_bgr24_to_bgr16(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_BGR24_t src_line;
-    akvcam_BGR16_t dst_line;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_BGR16_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             dst_line[x].r = src_line[x].r >> 3;
@@ -1291,8 +1267,6 @@ void akvcam_bgr24_to_uyvy(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t x_yuv;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_BGR24_t src_line;
-    akvcam_UYVY_t dst_line;
     uint8_t r0;
     uint8_t g0;
     uint8_t b0;
@@ -1301,8 +1275,8 @@ void akvcam_bgr24_to_uyvy(akvcam_frame_t dst, akvcam_frame_ct src)
     uint8_t b1;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_UYVY_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             x_yuv = x / 2;
@@ -1332,8 +1306,6 @@ void akvcam_bgr24_to_yuy2(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t x_yuv;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_BGR24_t src_line;
-    akvcam_YUY2_t dst_line;
     uint8_t r0;
     uint8_t g0;
     uint8_t b0;
@@ -1342,8 +1314,8 @@ void akvcam_bgr24_to_yuy2(akvcam_frame_t dst, akvcam_frame_ct src)
     uint8_t b1;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_YUY2_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             x_yuv = x / 2;
@@ -1372,22 +1344,16 @@ void akvcam_bgr24_to_nv12(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_BGR24_t src_line;
-    uint8_t *dst_line_y;
-    akvcam_VU_t dst_line_vu;
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line_y = akvcam_frame_line(dst, 0, y);
-        dst_line_vu = akvcam_frame_line(dst, 1, y / 2);
+        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
+        uint8_t *dst_line_y = akvcam_frame_line(dst, 0, y);
+        akvcam_VU_t dst_line_vu = akvcam_frame_line(dst, 1, y / 2);
 
         for (x = 0; x < width; x++) {
-            r = src_line[x].r;
-            g = src_line[x].g;
-            b = src_line[x].b;
+            uint8_t r = src_line[x].r;
+            uint8_t g = src_line[x].g;
+            uint8_t b = src_line[x].b;
 
             dst_line_y[y] = akvcam_rgb_y(r, g, b);
 
@@ -1405,22 +1371,16 @@ void akvcam_bgr24_to_nv21(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_BGR24_t src_line;
-    uint8_t *dst_line_y;
-    akvcam_UV_t dst_line_vu;
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line_y = akvcam_frame_line(dst, 0, y);
-        dst_line_vu = akvcam_frame_line(dst, 1, y / 2);
+        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
+        uint8_t *dst_line_y = akvcam_frame_line(dst, 0, y);
+        akvcam_UV_t dst_line_vu = akvcam_frame_line(dst, 1, y / 2);
 
         for (x = 0; x < width; x++) {
-            r = src_line[x].r;
-            g = src_line[x].g;
-            b = src_line[x].b;
+            uint8_t r = src_line[x].r;
+            uint8_t g = src_line[x].g;
+            uint8_t b = src_line[x].b;
 
             dst_line_y[y] = akvcam_rgb_y(r, g, b);
 
@@ -1438,12 +1398,10 @@ void akvcam_rgb24_to_rgb32(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_RGB24_t src_line;
-    akvcam_RGB32_t dst_line;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_RGB32_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             dst_line[x].x = 255;
@@ -1460,12 +1418,10 @@ void akvcam_rgb24_to_rgb16(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_RGB24_t src_line;
-    akvcam_RGB16_t dst_line;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_RGB16_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             dst_line[x].r = src_line[x].r >> 3;
@@ -1481,12 +1437,10 @@ void akvcam_rgb24_to_rgb15(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_RGB24_t src_line;
-    akvcam_RGB15_t dst_line;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_RGB15_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             dst_line[x].x = 1;
@@ -1503,12 +1457,10 @@ void akvcam_rgb24_to_bgr32(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_RGB24_t src_line;
-    akvcam_BGR32_t dst_line;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_BGR32_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             dst_line[x].x = 255;
@@ -1525,12 +1477,10 @@ void akvcam_rgb24_to_bgr24(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_RGB24_t src_line;
-    akvcam_BGR24_t dst_line;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_BGR24_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             dst_line[x].r = src_line[x].r;
@@ -1546,12 +1496,10 @@ void akvcam_rgb24_to_bgr16(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_RGB24_t src_line;
-    akvcam_BGR16_t dst_line;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_BGR16_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
             dst_line[x].r = src_line[x].r >> 3;
@@ -1565,11 +1513,8 @@ void akvcam_rgb24_to_uyvy(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
-    size_t x_yuv;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_RGB24_t src_line;
-    akvcam_UYVY_t dst_line;
     uint8_t r0;
     uint8_t g0;
     uint8_t b0;
@@ -1578,11 +1523,11 @@ void akvcam_rgb24_to_uyvy(akvcam_frame_t dst, akvcam_frame_ct src)
     uint8_t b1;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_UYVY_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
-            x_yuv = x / 2;
+            size_t x_yuv = x / 2;
 
             r0 = src_line[x].r;
             g0 = src_line[x].g;
@@ -1606,11 +1551,8 @@ void akvcam_rgb24_to_yuy2(akvcam_frame_t dst, akvcam_frame_ct src)
 {
     size_t x;
     size_t y;
-    size_t x_yuv;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_RGB24_t src_line;
-    akvcam_YUY2_t dst_line;
     uint8_t r0;
     uint8_t g0;
     uint8_t b0;
@@ -1619,11 +1561,11 @@ void akvcam_rgb24_to_yuy2(akvcam_frame_t dst, akvcam_frame_ct src)
     uint8_t b1;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line = akvcam_frame_line(dst, 0, y);
+        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
+        akvcam_YUY2_t dst_line = akvcam_frame_line(dst, 0, y);
 
         for (x = 0; x < width; x++) {
-            x_yuv = x / 2;
+            size_t x_yuv = x / 2;
 
             r0 = src_line[x].r;
             g0 = src_line[x].g;
@@ -1649,22 +1591,16 @@ void akvcam_rgb24_to_nv12(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_RGB24_t src_line;
-    uint8_t *dst_line_y;
-    akvcam_VU_t dst_line_vu;
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line_y = akvcam_frame_line(dst, 0, y);
-        dst_line_vu = akvcam_frame_line(dst, 1, y / 2);
+        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
+        uint8_t *dst_line_y = akvcam_frame_line(dst, 0, y);
+        akvcam_VU_t dst_line_vu = akvcam_frame_line(dst, 1, y / 2);
 
         for (x = 0; x < width; x++) {
-            r = src_line[x].r;
-            g = src_line[x].g;
-            b = src_line[x].b;
+            uint8_t r = src_line[x].r;
+            uint8_t g = src_line[x].g;
+            uint8_t b = src_line[x].b;
 
             dst_line_y[y] = akvcam_rgb_y(r, g, b);
 
@@ -1682,22 +1618,16 @@ void akvcam_rgb24_to_nv21(akvcam_frame_t dst, akvcam_frame_ct src)
     size_t y;
     size_t width = akvcam_format_width(src->format);
     size_t height = akvcam_format_height(src->format);
-    akvcam_RGB24_t src_line;
-    uint8_t *dst_line_y;
-    akvcam_UV_t dst_line_vu;
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
 
     for (y = 0; y < height; y++) {
-        src_line = akvcam_frame_line(src, 0, y);
-        dst_line_y = akvcam_frame_line(dst, 0, y);
-        dst_line_vu = akvcam_frame_line(dst, 1, y / 2);
+        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
+        uint8_t *dst_line_y = akvcam_frame_line(dst, 0, y);
+        akvcam_UV_t dst_line_vu = akvcam_frame_line(dst, 1, y / 2);
 
         for (x = 0; x < width; x++) {
-            r = src_line[x].r;
-            g = src_line[x].g;
-            b = src_line[x].b;
+            uint8_t r = src_line[x].r;
+            uint8_t g = src_line[x].g;
+            uint8_t b = src_line[x].b;
 
             dst_line_y[y] = akvcam_rgb_y(r, g, b);
 
@@ -1847,12 +1777,14 @@ void akvcam_hsl_to_rgb(int h, int s, int l, int *r, int *g, int *b)
 
 size_t akvcam_convert_funcs_count(void)
 {
-    size_t i;
     static size_t count = 0;
 
-    if (count < 1)
+    if (count < 1) {
+        size_t i;
+
         for (i = 0; akvcam_frame_convert_table[i].from; i++)
             count++;
+    }
 
     return count;
 }
@@ -1860,10 +1792,9 @@ size_t akvcam_convert_funcs_count(void)
 akvcam_video_convert_funtion_t akvcam_convert_func(__u32 from, __u32 to)
 {
     size_t i;
-    akvcam_video_convert_ct convert;
 
     for (i = 0; i < akvcam_convert_funcs_count(); i++) {
-        convert = akvcam_frame_convert_table + i;
+        akvcam_video_convert_ct convert = akvcam_frame_convert_table + i;
 
         if (convert->from == from && convert->to == to)
             return convert->convert;
@@ -1894,9 +1825,6 @@ const uint8_t *akvcam_contrast_table(void)
     size_t i;
     size_t j = 0;
     ssize_t contrast;
-    ssize_t f_num;
-    ssize_t f_den;
-    ssize_t ic;
 
     if (contrast_table)
         return contrast_table;
@@ -1904,11 +1832,11 @@ const uint8_t *akvcam_contrast_table(void)
     contrast_table = vmalloc(511 * 256);
 
     for (contrast = -255; contrast < 256; contrast++) {
-        f_num = 259 * (255 + contrast);
-        f_den = 255 * (259 - contrast);
+        ssize_t f_num = 259 * (255 + contrast);
+        ssize_t f_den = 255 * (259 - contrast);
 
         for (i = 0; i < 256; i++, j++) {
-            ic = (f_num * ((ssize_t) i - 128) + 128 * f_den) / f_den;
+            ssize_t ic = (f_num * ((ssize_t) i - 128) + 128 * f_den) / f_den;
             contrast_table[j] = (uint8_t) akvcam_bound(0, ic, 255);
         }
     }

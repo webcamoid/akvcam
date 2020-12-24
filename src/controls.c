@@ -224,14 +224,11 @@ int akvcam_controls_fill_ext(akvcam_controls_ct self,
                              struct v4l2_query_ext_ctrl *control)
 {
     size_t i;
-    __u32 priv_id;
     __u32 id = control->id
              & ~(V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND);
     bool next = control->id
               & (V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND);
-    bool is_private;
     akvcam_control_params_ct _control = NULL;
-     size_t menu_size = 0;
 
     if (self->n_controls < 1)
         return -EINVAL;
@@ -239,11 +236,11 @@ int akvcam_controls_fill_ext(akvcam_controls_ct self,
     if (!id && next) {
         _control = self->control_params;
     } else {
-        priv_id = V4L2_CID_PRIVATE_BASE;
+        __u32 priv_id = V4L2_CID_PRIVATE_BASE;
 
         for (i = 0; i < self->n_controls; i++) {
             akvcam_control_params_ct ctrl = self->control_params + i;
-            is_private = V4L2_CTRL_DRIVER_PRIV(ctrl->id);
+            bool is_private = V4L2_CTRL_DRIVER_PRIV(ctrl->id);
 
             if (ctrl->id == id || (is_private && priv_id == id)) {
                 if (!next)
@@ -269,6 +266,7 @@ int akvcam_controls_fill_ext(akvcam_controls_ct self,
         control->minimum = _control->minimum;
 
         if (_control->menu) {
+            size_t menu_size = 0;
             _control->menu(self, &menu_size, NULL);
             control->maximum = (__s64) akvcam_max(menu_size - 1, 0);
         } else {
@@ -326,8 +324,6 @@ int akvcam_controls_get_ext(akvcam_controls_ct self,
     size_t i;
     struct v4l2_ext_control *control = NULL;
     akvcam_control_value_ct _control;
-    __u32 buffer_size;
-    __kernel_size_t str_len;
     bool kernel = flags & AKVCAM_CONTROLS_FLAG_KERNEL;
 
     int result = akvcam_controls_try_ext(self,
@@ -361,8 +357,9 @@ int akvcam_controls_get_ext(akvcam_controls_ct self,
         _control = akvcam_controls_value_by_id(self, control->id);
 
         if (control_params->type == V4L2_CTRL_TYPE_STRING) {
-            buffer_size = akvcam_min(control->size, AKVCAM_MAX_STRING_SIZE);
-            str_len = akvcam_strlen(_control->value_str);
+            __u32 buffer_size =
+                    akvcam_min(control->size, AKVCAM_MAX_STRING_SIZE);
+            __kernel_size_t str_len = akvcam_strlen(_control->value_str);
 
             if (buffer_size < str_len) {
                 result = -ENOSPC;
@@ -442,7 +439,6 @@ int akvcam_controls_set_ext(akvcam_controls_t self,
     size_t i;
     akvcam_control_params_ct control_params;
     struct v4l2_ext_control *control = NULL;
-    akvcam_control_value_t _control;
     struct v4l2_event event;
     bool kernel = flags & AKVCAM_CONTROLS_FLAG_KERNEL;
     int result = akvcam_controls_try_ext(self,
@@ -458,6 +454,8 @@ int akvcam_controls_set_ext(akvcam_controls_t self,
         control = kzalloc(sizeof(struct v4l2_ext_control), GFP_KERNEL);
 
     for (i = 0; i < controls->count; i++) {
+        akvcam_control_value_t _control;
+
         if (kernel) {
             control = controls->controls + i;
         } else {
@@ -514,10 +512,10 @@ int akvcam_controls_try_ext(akvcam_controls_ct self,
     akvcam_control_params_ct _control;
     struct v4l2_ext_control *control = NULL;
     int result = 0;
-    uint32_t mode = flags & 0x3;
+    uint32_t mode = flags & (AKVCAM_CONTROLS_FLAG_GET
+                             | AKVCAM_CONTROLS_FLAG_SET);
     bool kernel = flags & AKVCAM_CONTROLS_FLAG_KERNEL;
     __u32 which_control;
-    size_t menu_size = 0;
 
     controls->error_idx = controls->count;
     akvcam_init_reserved(controls);
@@ -582,6 +580,7 @@ int akvcam_controls_try_ext(akvcam_controls_ct self,
         }
 
         if (_control->menu) {
+            size_t menu_size = 0;
             _control->menu(self, &menu_size, NULL);
 
             if (control->value >= (__s32) menu_size) {
@@ -618,14 +617,11 @@ bool akvcam_controls_generate_event(akvcam_controls_ct self,
                                     struct v4l2_event *event)
 {
     size_t i;
-    akvcam_control_params_ct control_params;
-    akvcam_control_value_t control;
-    size_t menu_size = 0;
 
     for (i = 0; i < self->n_controls; i++)
         if (self->control_params[i].id == id) {
-            control = self->values + i;
-            control_params = self->control_params + i;
+            akvcam_control_value_t control = self->values + i;
+            akvcam_control_params_ct control_params = self->control_params + i;
 
             if (control_params->type == V4L2_CTRL_TYPE_CTRL_CLASS)
                 return false;
@@ -639,6 +635,7 @@ bool akvcam_controls_generate_event(akvcam_controls_ct self,
             event->u.ctrl.minimum = control_params->minimum;
 
             if (control_params->menu) {
+                size_t menu_size = 0;
                 control_params->menu(self, &menu_size, NULL);
                 event->u.ctrl.maximum = (__s32) akvcam_max(menu_size - 1, 0);
             } else {
@@ -750,12 +747,10 @@ akvcam_control_value_t akvcam_controls_value_by_id(akvcam_controls_ct self,
 {
     size_t i;
     __u32 priv_id = V4L2_CID_PRIVATE_BASE;
-    bool is_private;
-    akvcam_control_value_t value;
 
     for (i = 0; i < self->n_controls; i++) {
-        value = self->values + i;
-        is_private = V4L2_CTRL_DRIVER_PRIV(value->id);
+        akvcam_control_value_t value = self->values + i;
+        bool is_private = V4L2_CTRL_DRIVER_PRIV(value->id);
 
         if (value->id == id || (is_private && priv_id == id))
             return value;
@@ -772,12 +767,10 @@ akvcam_control_params_ct akvcam_controls_params_by_id(akvcam_controls_ct self,
 {
     size_t i;
     __u32 priv_id = V4L2_CID_PRIVATE_BASE;
-    bool is_private;
-    akvcam_control_params_ct param;
 
     for (i = 0; i < self->n_controls; i++) {
-        param = self->control_params + i;
-        is_private = V4L2_CTRL_DRIVER_PRIV(param->id);
+        akvcam_control_params_ct param = self->control_params + i;
+        bool is_private = V4L2_CTRL_DRIVER_PRIV(param->id);
 
         if (param->id == id || (is_private && priv_id == id))
             return param;

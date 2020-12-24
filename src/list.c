@@ -90,10 +90,9 @@ void akvcam_list_copy(akvcam_list_t self, akvcam_list_ct other)
 void akvcam_list_append(akvcam_list_t self, akvcam_list_ct other)
 {
     akvcam_list_element_t it = NULL;
-    void *data;
 
     for (;;) {
-        data = akvcam_list_next(other, &it);
+        void *data = akvcam_list_next(other, &it);
 
         if (!it)
             break;
@@ -124,11 +123,10 @@ bool akvcam_list_empty(akvcam_list_ct self)
 void *akvcam_list_at(akvcam_list_ct self, size_t i)
 {
     akvcam_list_element_t it = NULL;
-    void *element_data;
     size_t j;
 
     for (j = 0;; j++) {
-        element_data = akvcam_list_next(self, &it);
+        void *element_data = akvcam_list_next(self, &it);
 
         if (!it)
             break;
@@ -269,13 +267,12 @@ akvcam_list_element_t akvcam_list_find(akvcam_list_ct self,
                                        akvcam_are_equals_t equals)
 {
     akvcam_list_element_t it = NULL;
-    void *element_data;
 
     if (!equals)
         return NULL;
 
     for (;;) {
-        element_data = akvcam_list_next(self, &it);
+        void *element_data = akvcam_list_next(self, &it);
 
         if (!it)
             break;
@@ -292,14 +289,13 @@ ssize_t akvcam_list_index_of(akvcam_list_ct self,
                              akvcam_are_equals_t equals)
 {
     akvcam_list_element_t it = NULL;
-    void *element_data;
     ssize_t i;
 
     if (!equals)
         return -1;
 
     for (i = 0;; i++) {
-        element_data = akvcam_list_next(self, &it);
+        void *element_data = akvcam_list_next(self, &it);
 
         if (!it)
             break;
@@ -367,11 +363,8 @@ akvcam_delete_t akvcam_list_element_deleter(akvcam_list_element_ct element)
 
 akvcam_matrix_t akvcam_matrix_combine(akvcam_matrix_ct matrix)
 {
-    akvcam_list_t combined;
-    akvcam_matrix_t combinations;
-
-    combined = akvcam_list_new();
-    combinations = akvcam_list_new();
+    akvcam_list_t combined = akvcam_list_new();
+    akvcam_matrix_t combinations = akvcam_list_new();
     akvcam_matrix_combine_p(matrix, 0, combined, combinations);
     akvcam_list_delete(combined);
 
@@ -387,10 +380,8 @@ void akvcam_matrix_combine_p(akvcam_matrix_ct matrix,
                              akvcam_list_t combined,
                              akvcam_matrix_t combinations)
 {
-    akvcam_list_t combined_p1;
     akvcam_list_t row;
     akvcam_list_element_t it = NULL;
-    void *data;
 
     if (index >= akvcam_list_size(matrix)) {
         akvcam_list_push_back(combinations,
@@ -404,7 +395,8 @@ void akvcam_matrix_combine_p(akvcam_matrix_ct matrix,
     row = akvcam_list_at(matrix, index);
 
     for (;;) {
-        data = akvcam_list_next(row, &it);
+        akvcam_list_t combined_p1;
+        void *data = akvcam_list_next(row, &it);
 
         if (!it)
             break;

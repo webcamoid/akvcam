@@ -229,16 +229,14 @@ int akvcam_ioctl_do(akvcam_ioctl_t self,
                     void __user *arg)
 {
     size_t i;
-    size_t size;
-    char *data;
     int result;
 
     for (i = 0; i < self->n_ioctls; i++)
         if (akvcam_ioctls_private[i].cmd == cmd) {
             if (akvcam_ioctls_private[i].proc) {
                 if (arg) {
-                    size = akvcam_ioctls_private[i].data_size;
-                    data = kzalloc(size, GFP_KERNEL);
+                    size_t size = akvcam_ioctls_private[i].data_size;
+                    void *data = kzalloc(size, GFP_KERNEL);
 
                         if (copy_from_user(data, arg, size) == 0) {
                             result = akvcam_ioctls_private[i].proc(node, data);
@@ -272,7 +270,7 @@ int akvcam_ioctl_do(akvcam_ioctl_t self,
 int akvcam_ioctl_querycap(akvcam_node_t node,
                           struct v4l2_capability *capability)
 {
-    __u32 caps = 0;
+    __u32 caps;
     akvcam_device_t device;
     int32_t device_num;
 
@@ -440,7 +438,7 @@ int akvcam_ioctl_querymenu(akvcam_node_t node, struct v4l2_querymenu *menu)
 int akvcam_ioctl_g_ctrl(akvcam_node_t node, struct v4l2_control *control)
 {
     akvcam_device_t device;
-    akvcam_controls_t controls_;
+    akvcam_controls_t controls;
     int32_t device_num;
 
     akpr_function();
@@ -454,15 +452,15 @@ int akvcam_ioctl_g_ctrl(akvcam_node_t node, struct v4l2_control *control)
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE)
         return -ENOTTY;
 
-    controls_ = akvcam_device_controls_nr(device);
+    controls = akvcam_device_controls_nr(device);
 
-    return akvcam_controls_get(controls_, control);
+    return akvcam_controls_get(controls, control);
 }
 
 int akvcam_ioctl_s_ctrl(akvcam_node_t node, struct v4l2_control *control)
 {
     akvcam_device_t device;
-    akvcam_controls_t controls_;
+    akvcam_controls_t controls;
     int32_t device_num;
 
     akpr_function();
@@ -476,9 +474,9 @@ int akvcam_ioctl_s_ctrl(akvcam_node_t node, struct v4l2_control *control)
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE)
         return -ENOTTY;
 
-    controls_ = akvcam_device_controls_nr(device);
+    controls = akvcam_device_controls_nr(device);
 
-    return akvcam_controls_set(controls_, control);
+    return akvcam_controls_set(controls, control);
 }
 
 int akvcam_ioctl_enuminput(akvcam_node_t node, struct v4l2_input *input)
@@ -699,7 +697,6 @@ int akvcam_ioctl_g_fmt(akvcam_node_t node, struct v4l2_format *format)
         for (i = 0; i < format->fmt.pix_mp.num_planes; i++) {
             size_t bypl = akvcam_format_bypl(current_format, i);
             size_t plane_size = akvcam_format_plane_size(current_format, i);
-
             format->fmt.pix_mp.plane_fmt[i].bytesperline = (__u32) bypl;
             format->fmt.pix_mp.plane_fmt[i].sizeimage = (__u32) plane_size;
         }
@@ -713,10 +710,9 @@ int akvcam_ioctl_g_fmt(akvcam_node_t node, struct v4l2_format *format)
 int akvcam_ioctl_s_fmt(akvcam_node_t node, struct v4l2_format *format)
 {
     akvcam_device_t device;
-    akvcam_format_t current_format;
     akvcam_buffers_t buffers;
-    int result;
     int32_t device_num;
+    int result;
 
     akpr_function();
     device_num = akvcam_node_device_num(node);
@@ -725,10 +721,11 @@ int akvcam_ioctl_s_fmt(akvcam_node_t node, struct v4l2_format *format)
 
     if (!device)
         return -EIO;
+
     result = akvcam_ioctl_try_fmt(node, format);
 
     if (result == 0) {
-        current_format = akvcam_device_format(device);
+        akvcam_format_t current_format = akvcam_device_format(device);
         akvcam_format_set_fourcc(current_format, format->fmt.pix.pixelformat);
         akvcam_format_set_width(current_format, format->fmt.pix.width);
         akvcam_format_set_height(current_format, format->fmt.pix.height);
@@ -751,8 +748,6 @@ int akvcam_ioctl_try_fmt(akvcam_node_t node, struct v4l2_format *format)
     akvcam_formats_list_t formats;
     struct v4l2_fract frame_rate = {0, 0};
     size_t i;
-    size_t bypl;
-    size_t plane_size;
     int32_t device_num;
 
     akpr_function();
@@ -801,8 +796,8 @@ int akvcam_ioctl_try_fmt(akvcam_node_t node, struct v4l2_format *format)
         format->fmt.pix_mp.num_planes = (__u8) akvcam_format_planes(nearest_format);
 
         for (i = 0; i < format->fmt.pix_mp.num_planes; i++) {
-            bypl = akvcam_format_bypl(nearest_format, i);
-            plane_size = akvcam_format_plane_size(nearest_format, i);
+            size_t bypl = akvcam_format_bypl(nearest_format, i);
+            size_t plane_size = akvcam_format_plane_size(nearest_format, i);
             format->fmt.pix_mp.plane_fmt[i].bytesperline = (__u32) bypl;
             format->fmt.pix_mp.plane_fmt[i].sizeimage = (__u32) plane_size;
         }

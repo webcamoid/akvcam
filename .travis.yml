@@ -23,6 +23,7 @@ matrix:
       - KERNEL_VERSION=4.4.248-0404248
       - KERNEL_VERSION_C=202012111341
       - UNSIGNED_IMG=1
+      - NEED_MODULES=1
       - USE_QEMU=1
       - DAILY_BUILD=1
   - os: linux
@@ -36,6 +37,7 @@ matrix:
       - KERNEL_VERSION=4.4.248-0404248
       - KERNEL_VERSION_C=202012111341
       - UNSIGNED_IMG=1
+      - NEED_MODULES=1
       - USE_QEMU=1
       - RELEASE_BUILD=1
   - os: linux

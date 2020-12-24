@@ -136,7 +136,6 @@ bool akvcam_buffer_write_data(akvcam_buffer_t self,
 
 int akvcam_buffer_map_data(akvcam_buffer_t self, struct vm_area_struct *vma)
 {
-    struct page *page;
     __u8 *data = self->data;
     unsigned long start = vma->vm_start;
     unsigned long size = vma->vm_end - vma->vm_start;
@@ -149,7 +148,7 @@ int akvcam_buffer_map_data(akvcam_buffer_t self, struct vm_area_struct *vma)
 
     if (data) {
         while (size > 0) {
-            page = vmalloc_to_page(data);
+            struct page *page = vmalloc_to_page(data);
 
             if (!page) {
                 result = -EINVAL;

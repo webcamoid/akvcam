@@ -340,7 +340,6 @@ int akvcam_buffers_query(akvcam_buffers_t self,
 {
     akvcam_buffer_t akbuffer;
     struct v4l2_buffer v4l2_buff;
-    struct v4l2_plane *planes;
     size_t n_planes;
     size_t i;
     int result;
@@ -371,7 +370,8 @@ int akvcam_buffers_query(akvcam_buffers_t self,
         }
 
         if (!result && self->multiplanar) {
-            planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
+            struct v4l2_plane *planes =
+                    kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
 
             if (copy_from_user(planes,
                                (char __user *) buffer->m.planes,
@@ -429,7 +429,6 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
 {
     akvcam_buffer_t akbuffer;
     struct v4l2_buffer v4l2_buff;
-    size_t n_planes;
     size_t i;
     int result = 0;
 
@@ -485,8 +484,9 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
                                 if (!copy_from_user(planes,
                                                     (char __user *) buffer->m.planes,
                                                     buffer->length * sizeof(struct v4l2_plane))) {
-                                    n_planes = akvcam_min(buffer->length,
-                                                          akvcam_format_planes(self->format));
+                                    size_t n_planes =
+                                            akvcam_min(buffer->length,
+                                                       akvcam_format_planes(self->format));
 
                                     for (i = 0; i < n_planes; i++)
                                         if (copy_from_user((char *) data + akvcam_format_offset(self->format, i),
@@ -553,13 +553,12 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
 static akvcam_buffer_t akvcam_buffers_next_buffer(akvcam_buffers_ct self)
 {
     akvcam_list_element_t it = NULL;
-    akvcam_buffer_t buffer;
     akvcam_buffer_t next_buffer = NULL;
     struct v4l2_buffer v4l2_buff;
     __u32 sequence = UINT_MAX;
 
     for (;;) {
-        buffer = akvcam_list_next(self->buffers, &it);
+        akvcam_buffer_t buffer = akvcam_list_next(self->buffers, &it);
 
         if (!it)
             break;
@@ -579,10 +578,7 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
 {
     akvcam_buffer_t akbuffer;
     struct v4l2_buffer v4l2_buff;
-    struct v4l2_plane *planes;
-    size_t n_planes;
     size_t i;
-    void *data;
     int result = 0;
 
     akpr_function();
@@ -632,10 +628,12 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
                     v4l2_buff.flags &= (__u32) ~(V4L2_BUF_FLAG_DONE
                                                  | V4L2_BUF_FLAG_QUEUED);
                     if (self->multiplanar) {
-                        n_planes = akvcam_min(buffer->length, akvcam_format_planes(self->format));
+                        size_t n_planes =
+                                akvcam_min(buffer->length, akvcam_format_planes(self->format));
 
                         if (akvcam_device_type_from_v4l2(self->type) == AKVCAM_DEVICE_TYPE_CAPTURE) {
-                            planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
+                            struct v4l2_plane *planes =
+                                    kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
 
                             if (planes) {
                                 if (!copy_from_user(planes,
@@ -678,18 +676,20 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
                     if (buffer->length > 1
                         && buffer->bytesused > 1
                         && akvcam_device_type_from_v4l2(self->type) == AKVCAM_DEVICE_TYPE_CAPTURE) {
-                        data = vzalloc(buffer->bytesused);
+                        void *data = vzalloc(buffer->bytesused);
 
                         if (data) {
                             if (akvcam_buffer_read_data(akbuffer, data, buffer->bytesused)) {
                                 if (self->multiplanar) {
-                                    planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
+                                    struct v4l2_plane *planes =
+                                            kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
 
                                     if (!copy_from_user(planes,
                                                         (char __user *) buffer->m.planes,
                                                         buffer->length * sizeof(struct v4l2_plane))) {
-                                        n_planes = akvcam_min(buffer->length,
-                                                              akvcam_format_planes(self->format));
+                                        size_t n_planes =
+                                                akvcam_min(buffer->length,
+                                                           akvcam_format_planes(self->format));
 
                                         for (i = 0; i < n_planes; i++)
                                             if (copy_to_user((char __user *) planes[i].m.userptr,
@@ -835,7 +835,6 @@ ssize_t akvcam_buffers_read(akvcam_buffers_t self,
                             void __user *data,
                             size_t size)
 {
-    void *vdata;
     ssize_t data_size;
 
     akpr_function();
@@ -856,7 +855,7 @@ ssize_t akvcam_buffers_read(akvcam_buffers_t self,
                                       AKVCAM_WAIT_TIMEOUT_MSECS);
 
         if (data_size > 0) {
-            vdata = vmalloc(size);
+            void *vdata = vmalloc(size);
 
             if (vdata) {
                 akvcam_rbuffer_dequeue_bytes(self->rw_buffers,
@@ -881,7 +880,7 @@ ssize_t akvcam_buffers_read(akvcam_buffers_t self,
         size = akvcam_min(akvcam_rbuffer_data_size(self->rw_buffers), size);
 
         if (size > 0) {
-            vdata = vmalloc(size);
+            void *vdata = vmalloc(size);
 
             if (vdata) {
                 akvcam_rbuffer_dequeue_bytes(self->rw_buffers,
@@ -989,13 +988,12 @@ ssize_t akvcam_buffers_write(akvcam_buffers_t self,
 static akvcam_buffer_t akvcam_buffers_next_read_buffer(akvcam_buffers_ct self)
 {
     akvcam_list_element_t it = NULL;
-    akvcam_buffer_t buffer;
     akvcam_buffer_t next_buffer = NULL;
     struct v4l2_buffer v4l2_buff;
     __u32 sequence = UINT_MAX;
 
     for (;;) {
-        buffer = akvcam_list_next(self->buffers, &it);
+        akvcam_buffer_t buffer = akvcam_list_next(self->buffers, &it);
 
         if (!it)
             break;
@@ -1014,16 +1012,16 @@ static akvcam_buffer_t akvcam_buffers_next_read_buffer(akvcam_buffers_ct self)
 
 akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
 {
-    akvcam_buffer_t buffer;
     struct v4l2_buffer v4l2_buff;
     size_t length;
     akvcam_frame_t frame = NULL;
     size_t frame_size;
-    int condition_result;
 
     akpr_function();
 
     if (mutex_lock_interruptible(&self->buffers_mutex) == 0) {
+        int condition_result;
+
         if (!akvcam_list_empty(self->buffers)) {
             condition_result =
                     akvcam_wait_condition(self->buffers_not_empty,
@@ -1046,7 +1044,7 @@ akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
         }
 
         if (!akvcam_list_empty(self->buffers)) {
-            buffer = akvcam_buffers_next_read_buffer(self);
+            akvcam_buffer_t buffer = akvcam_buffers_next_read_buffer(self);
 
             if (buffer && akvcam_buffer_read(buffer, &v4l2_buff)) {
                 if (v4l2_buff.memory == V4L2_MEMORY_MMAP
@@ -1080,13 +1078,12 @@ akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
 static akvcam_buffer_t akvcam_buffers_next_write_buffer(akvcam_buffers_ct self)
 {
     akvcam_list_element_t it = NULL;
-    akvcam_buffer_t buffer;
     akvcam_buffer_t next_buffer = NULL;
     struct v4l2_buffer v4l2_buff;
     __u32 sequence = UINT_MAX;
 
     for (;;) {
-        buffer = akvcam_list_next(self->buffers, &it);
+        akvcam_buffer_t buffer = akvcam_list_next(self->buffers, &it);
 
         if (!it)
             break;
@@ -1106,9 +1103,8 @@ int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame)
 {
     akvcam_buffer_t buffer;
     struct v4l2_buffer v4l2_buff;
-    char *data;
     size_t length;
-    int condition_result = -ENOTTY;
+    int condition_result;
     int result = 0;
 
     akpr_function();
@@ -1142,7 +1138,7 @@ int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame)
                                                               akvcam_frame_data(frame),
                                                               length)? 0: -EIO;
                         } else {
-                            data = vzalloc(v4l2_buff.length);
+                            char *data = vzalloc(v4l2_buff.length);
                             result = akvcam_buffer_write_data(buffer,
                                                               data,
                                                               v4l2_buff.length)? 0: -EIO;

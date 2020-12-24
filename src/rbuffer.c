@@ -110,7 +110,6 @@ void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
     char *new_data;
     size_t new_size = n_elements * element_size;
     size_t data_size = akvcam_min(self->data_size, new_size);
-    size_t left_size;
 
     if (new_size == self->size)
         return;
@@ -133,7 +132,7 @@ void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
     new_data = akvcam_rbuffer_alloc_data(memory_type, new_size);
 
     if (self->data) {
-        left_size = akvcam_min(self->size - self->read, data_size);
+        size_t left_size = akvcam_min(self->size - self->read, data_size);
 
         if (left_size > 0)
             memcpy(new_data, self->data + self->read, left_size);
@@ -218,7 +217,6 @@ void *akvcam_rbuffer_queue_bytes(akvcam_rbuffer_t self,
                                  const void *data,
                                  size_t size)
 {
-    size_t right_size;
     void *output_data;
     bool move_read;
 
@@ -229,7 +227,7 @@ void *akvcam_rbuffer_queue_bytes(akvcam_rbuffer_t self,
     output_data = self->data + self->write;
 
     if (data) {
-        right_size = akvcam_min(self->size - self->write, size);
+        size_t right_size = akvcam_min(self->size - self->write, size);
 
         if (right_size > 0)
             memcpy(output_data, data, right_size);
@@ -267,7 +265,6 @@ void *akvcam_rbuffer_dequeue_bytes(akvcam_rbuffer_t self,
                                    bool keep)
 {
     void *input_data;
-    size_t left_size;
 
     if (self->data_size < 1)
         return NULL;
@@ -276,7 +273,7 @@ void *akvcam_rbuffer_dequeue_bytes(akvcam_rbuffer_t self,
     input_data = self->data + self->read;
 
     if (data) {
-        left_size = akvcam_min(self->size - self->read, *size);
+        size_t left_size = akvcam_min(self->size - self->read, *size);
 
         if (left_size > 0)
             memcpy(data, input_data, left_size);
@@ -340,13 +337,12 @@ void *akvcam_rbuffer_find(akvcam_rbuffer_ct self,
                           ssize_t *offset)
 {
     size_t i;
-    size_t ioffset;
 
     if (offset)
         *offset = 0;
 
     for (i = 0; i < self->data_size; i += self->step) {
-        ioffset = (self->read + i) % self->size;
+        size_t ioffset = (self->read + i) % self->size;
 
         if (equals) {
             if (equals(self->data + ioffset, data))

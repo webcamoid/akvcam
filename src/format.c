@@ -320,17 +320,17 @@ akvcam_format_t akvcam_format_nearest(akvcam_formats_list_ct formats,
 {
     akvcam_list_element_t element = NULL;
     akvcam_format_t nearest_format = NULL;
-    akvcam_format_t temp_format;
-    ssize_t diff_fourcc;
-    ssize_t diff_width;
-    ssize_t diff_height;
-    ssize_t diff_fps;
-    size_t r;
     size_t s;
+
     memset(&s, 0xff, sizeof(size_t));
 
     for (;;) {
-        temp_format = akvcam_list_next(formats, &element);
+        ssize_t diff_fourcc;
+        ssize_t diff_width;
+        ssize_t diff_height;
+        ssize_t diff_fps;
+        size_t r;
+        akvcam_format_t temp_format = akvcam_list_next(formats, &element);
 
         if (!element)
             break;
@@ -375,14 +375,13 @@ akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_ct f
     akvcam_list_element_t element = NULL;
     akvcam_list_element_t it;
     akvcam_pixel_formats_list_t supported_formats = akvcam_list_new();
-    akvcam_format_t format = NULL;
-    __u32 fourcc;
 
     if (!formats)
         return supported_formats;
 
     for (;;) {
-        format = akvcam_list_next(formats, &element);
+        __u32 fourcc;
+        akvcam_format_t format = akvcam_list_next(formats, &element);
 
         if (!element)
             break;
@@ -421,11 +420,10 @@ akvcam_resolutions_list_t akvcam_format_resolutions(akvcam_formats_list_t format
     akvcam_list_element_t element = NULL;
     akvcam_list_element_t it;
     akvcam_resolutions_list_t supported_resolutions = akvcam_list_new();
-    akvcam_format_t format = NULL;
-    struct v4l2_frmsize_discrete resolution;
 
     for (;;) {
-        format = akvcam_list_next(formats, &element);
+        struct v4l2_frmsize_discrete resolution;
+        akvcam_format_t format = akvcam_list_next(formats, &element);
 
         if (!element)
             break;
@@ -468,11 +466,10 @@ akvcam_fps_list_t akvcam_format_frame_rates(akvcam_formats_list_ct formats,
     akvcam_list_element_t element = NULL;
     akvcam_list_element_t it;
     akvcam_fps_list_t supported_frame_rates = akvcam_list_new();
-    akvcam_format_t format = NULL;
-    struct v4l2_fract frame_rate;
 
     for (;;) {
-        format = akvcam_list_next(formats, &element);
+        struct v4l2_fract frame_rate;
+        akvcam_format_t format = akvcam_list_next(formats, &element);
 
         if (!element)
             break;
@@ -501,13 +498,10 @@ akvcam_format_ct akvcam_format_from_v4l2_nr(akvcam_formats_list_ct formats,
                                             const struct v4l2_format *format)
 {
     akvcam_list_element_t element = NULL;
-    akvcam_format_t akformat = NULL;
     size_t i;
-    size_t bypl;
-    bool is_valid;
 
     for (;;) {
-        akformat = akvcam_list_next(formats, &element);
+        akvcam_format_t akformat = akvcam_list_next(formats, &element);
 
         if (!element)
             break;
@@ -530,10 +524,10 @@ akvcam_format_ct akvcam_format_from_v4l2_nr(akvcam_formats_list_ct formats,
                 && format->fmt.pix_mp.field == V4L2_FIELD_NONE
                 && format->fmt.pix_mp.colorspace == DEFAULT_COLORSPACE
                 && format->fmt.pix_mp.num_planes == akvcam_format_planes(akformat)) {
-                is_valid = true;
+                bool is_valid = true;
 
                 for (i = 0; i < format->fmt.pix_mp.num_planes; i++) {
-                    bypl = akvcam_format_bypl(akformat, i);
+                    size_t bypl = akvcam_format_bypl(akformat, i);
 
                     if (format->fmt.pix_mp.plane_fmt[i].bytesperline != bypl) {
                         is_valid = false;
@@ -565,12 +559,10 @@ akvcam_format_t akvcam_format_from_v4l2(akvcam_formats_list_ct formats,
 bool akvcam_format_have_multiplanar(akvcam_formats_list_ct formats)
 {
     akvcam_list_element_t it = NULL;
-    akvcam_format_t format;
 
     for (;;) {
         akvcam_format_globals_ct vf;
-
-        format = akvcam_list_next(formats, &it);
+        akvcam_format_t format = akvcam_list_next(formats, &it);
 
         if (!it)
             break;
