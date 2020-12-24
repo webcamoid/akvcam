@@ -566,9 +566,10 @@ bool akvcam_format_have_multiplanar(akvcam_formats_list_ct formats)
 {
     akvcam_list_element_t it = NULL;
     akvcam_format_t format;
-    akvcam_format_globals_ct vf;
 
     for (;;) {
+        akvcam_format_globals_ct vf;
+
         format = akvcam_list_next(formats, &it);
 
         if (!it)

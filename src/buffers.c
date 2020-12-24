@@ -429,10 +429,8 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
 {
     akvcam_buffer_t akbuffer;
     struct v4l2_buffer v4l2_buff;
-    struct v4l2_plane *planes;
     size_t n_planes;
     size_t i;
-    void *data;
     int result = 0;
 
     akpr_function();
@@ -477,11 +475,12 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
                     if (buffer->length > 1
                         && buffer->bytesused > 1
                         && akvcam_device_type_from_v4l2(self->type) == AKVCAM_DEVICE_TYPE_OUTPUT) {
-                        data = vzalloc(buffer->bytesused);
+                        void *data = vzalloc(buffer->bytesused);
 
                         if (data) {
                             if (self->multiplanar) {
-                                planes = kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
+                                struct v4l2_plane *planes =
+                                        kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
 
                                 if (!copy_from_user(planes,
                                                     (char __user *) buffer->m.planes,

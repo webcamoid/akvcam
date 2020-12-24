@@ -326,7 +326,6 @@ int akvcam_controls_get_ext(akvcam_controls_ct self,
     size_t i;
     struct v4l2_ext_control *control = NULL;
     akvcam_control_value_ct _control;
-    akvcam_control_params_ct control_params;
     __u32 buffer_size;
     __kernel_size_t str_len;
     bool kernel = flags & AKVCAM_CONTROLS_FLAG_KERNEL;
@@ -343,6 +342,8 @@ int akvcam_controls_get_ext(akvcam_controls_ct self,
         control = kzalloc(sizeof(struct v4l2_ext_control), GFP_KERNEL);
 
     for (i = 0; i < controls->count; i++) {
+        akvcam_control_params_ct control_params;
+
         if (kernel) {
             control = controls->controls + i;
         } else {
@@ -361,7 +362,7 @@ int akvcam_controls_get_ext(akvcam_controls_ct self,
 
         if (control_params->type == V4L2_CTRL_TYPE_STRING) {
             buffer_size = akvcam_min(control->size, AKVCAM_MAX_STRING_SIZE);
-            str_len = strnlen(_control->value_str, AKVCAM_MAX_STRING_SIZE);
+            str_len = akvcam_strlen(_control->value_str);
 
             if (buffer_size < str_len) {
                 result = -ENOSPC;

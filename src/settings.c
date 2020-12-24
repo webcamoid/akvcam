@@ -104,8 +104,7 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
     memset(&element, 0, sizeof(akvcam_settings_element));
     akvcam_settings_clear(self);
 
-    if (!file_name
-        || strnlen(file_name, AKVCAM_MAX_STRING_SIZE) < 1) {
+    if (akvcam_strlen(file_name) < 1) {
         akpr_err("Settings file name not valid\n");
 
         return false;
@@ -131,8 +130,7 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
         }
 
         if (!akvcam_settings_element_empty(&element)) {
-            if (element.group
-                && strnlen(element.group, AKVCAM_MAX_STRING_SIZE) > 0) {
+            if (akvcam_strlen(element.group) > 0) {
                 if (current_group)
                     vfree(current_group);
 
@@ -148,10 +146,8 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
                                          (akvcam_delete_t) akvcam_map_delete);
                     akvcam_map_delete(tmp_map);
                 }
-            } else if (element.key
-                       && element.value
-                       && strlen(element.key) > 0
-                       && strlen(element.value) > 0) {
+            } else if (akvcam_strlen(element.key) > 0
+                       && akvcam_strlen(element.value) > 0) {
                 if (!current_group) {
                     current_group = akvcam_strdup("General",
                                                   AKVCAM_MEMORY_TYPE_VMALLOC);
@@ -197,12 +193,11 @@ akvcam_settings_load_failed:
 
 void akvcam_settings_begin_group(akvcam_settings_t self, const char *prefix)
 {
-    size_t len;
+    size_t len = akvcam_strlen(prefix);
 
     akvcam_settings_end_group(self);
 
-    if (prefix) {
-        len = strlen(prefix);
+    if (len > 0) {
         self->current_group = vmalloc(len + 1);
         self->current_group[len] = 0;
         memcpy(self->current_group, prefix, len);
@@ -227,13 +222,13 @@ size_t akvcam_settings_begin_array(akvcam_settings_t self, const char *prefix)
     size_t array_size = 0;
 
     akvcam_settings_end_array(self);
+    len = akvcam_strlen(prefix);
 
-    if (!group_configs || !prefix)
+    if (!group_configs || len < 1)
         return 0;
 
     // Read array size.
-    len = strlen(prefix);
-    array_key_size = len + strlen("/size") + 1;
+    array_key_size = len + akvcam_strlen("/size") + 1;
     array_key = vmalloc(array_key_size);
     snprintf(array_key, array_key_size, "%s/size", prefix);
     array_size_str = akvcam_map_value(group_configs, array_key);
@@ -312,12 +307,12 @@ bool akvcam_settings_contains(akvcam_settings_ct self, const char *key)
     bool contains;
     size_t array_key_size;
 
-    if (!group_configs || !key || strlen(key) < 1)
+    if (!group_configs || akvcam_strlen(key) < 1)
         return false;
 
     if (self->current_array) {
-        array_key_size = strlen(self->current_array)
-                       + strlen(key) + 23;
+        array_key_size = akvcam_strlen(self->current_array)
+                       + akvcam_strlen(key) + 23;
         array_key = vzalloc(array_key_size);
         snprintf(array_key,
                  array_key_size,
@@ -337,12 +332,12 @@ char *akvcam_settings_value(akvcam_settings_ct self, const char *key)
     char *value;
     size_t array_key_size;
 
-    if (!group_configs || !key || strlen(key) < 1)
+    if (!group_configs || akvcam_strlen(key) < 1)
         return NULL;
 
     if (self->current_array) {
-        array_key_size = strlen(self->current_array)
-                       + strlen(key) + 23;
+        array_key_size = akvcam_strlen(self->current_array)
+                       + akvcam_strlen(key) + 23;
         array_key = vzalloc(array_key_size);
         snprintf(array_key,
                  array_key_size,
@@ -509,7 +504,7 @@ void akvcam_settings_set_file(const char *file_name)
 bool akvcam_settings_parse(const char *line, akvcam_settings_element_t element)
 {
     char *pair_sep;
-    size_t len = strlen(line);
+    size_t len = akvcam_strlen(line);
     size_t offset;
     memset(element, 0, sizeof(akvcam_settings_element));
 
@@ -517,13 +512,13 @@ bool akvcam_settings_parse(const char *line, akvcam_settings_element_t element)
         return true;
 
     if (line[0] == '[') {
-        if (line[len - 1] != ']' || strlen(line) < 3)
+        if (line[len - 1] != ']' || akvcam_strlen(line) < 3)
             return false;
 
         element->group =
                 akvcam_strip_str_sub(line,
                                      1,
-                                     strlen(line) - 2,
+                                     akvcam_strlen(line) - 2,
                                      AKVCAM_MEMORY_TYPE_VMALLOC);
 
         return true;
@@ -540,7 +535,7 @@ bool akvcam_settings_parse(const char *line, akvcam_settings_element_t element)
                                         AKVCAM_MEMORY_TYPE_VMALLOC);
     akvcam_replace(element->key, '\\', '/');
 
-    if (strlen(element->key) < 1) {
+    if (akvcam_strlen(element->key) < 1) {
         akvcam_settings_element_free(element);
 
         return false;
@@ -571,7 +566,7 @@ char *akvcam_settings_parse_string(char *str, bool move)
     char c;
     size_t i;
     size_t j;
-    size_t len = strlen(str);
+    size_t len = akvcam_strlen(str);
     size_t start;
     size_t end;
     char escape_k[] = "'\"?\\abfnrtv0";
@@ -624,7 +619,7 @@ char *akvcam_settings_parse_string(char *str, bool move)
         j++;
     }
 
-    len = strlen(str_tmp);
+    len = akvcam_strlen(str_tmp);
     str_parsed = vmalloc(len + 1);
 
     str_parsed[len] = 0;

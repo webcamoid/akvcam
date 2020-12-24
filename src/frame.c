@@ -418,8 +418,7 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
 
     akvcam_frame_clear(self);
 
-    if (!file_name
-        || strnlen(file_name, AKVCAM_MAX_STRING_SIZE) < 1) {
+    if (akvcam_strlen(file_name) < 1) {
         akpr_err("Bitmap file name not valid\n");
 
         return false;

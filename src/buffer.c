@@ -31,7 +31,7 @@ struct akvcam_buffer
     struct kref ref;
     struct mutex mtx;
     struct v4l2_buffer buffer;
-    __u8 *data;
+    void *data;
 };
 
 akvcam_buffer_t akvcam_buffer_new(size_t size)
@@ -137,7 +137,7 @@ bool akvcam_buffer_write_data(akvcam_buffer_t self,
 int akvcam_buffer_map_data(akvcam_buffer_t self, struct vm_area_struct *vma)
 {
     struct page *page;
-    void *data = self->data;
+    __u8 *data = self->data;
     unsigned long start = vma->vm_start;
     unsigned long size = vma->vm_end - vma->vm_start;
     int result = 0;

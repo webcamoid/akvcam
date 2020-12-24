@@ -663,8 +663,6 @@ int akvcam_ioctl_g_fmt(akvcam_node_t node, struct v4l2_format *format)
     akvcam_device_t device;
     akvcam_format_t current_format;
     size_t i;
-    size_t bypl;
-    size_t plane_size;
     int32_t device_num;
 
     akpr_function();
@@ -699,8 +697,9 @@ int akvcam_ioctl_g_fmt(akvcam_node_t node, struct v4l2_format *format)
         format->fmt.pix_mp.num_planes = (__u8) akvcam_format_planes(current_format);
 
         for (i = 0; i < format->fmt.pix_mp.num_planes; i++) {
-            bypl = akvcam_format_bypl(current_format, i);
-            plane_size = akvcam_format_plane_size(current_format, i);
+            size_t bypl = akvcam_format_bypl(current_format, i);
+            size_t plane_size = akvcam_format_plane_size(current_format, i);
+
             format->fmt.pix_mp.plane_fmt[i].bytesperline = (__u32) bypl;
             format->fmt.pix_mp.plane_fmt[i].sizeimage = (__u32) plane_size;
         }

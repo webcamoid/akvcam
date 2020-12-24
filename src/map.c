@@ -240,10 +240,9 @@ void akvcam_map_erase(akvcam_map_t self, akvcam_map_element_ct element)
 void akvcam_map_clear(akvcam_map_t self)
 {
     akvcam_list_element_t it = NULL;
-    akvcam_map_element_t element;
 
     for (;;) {
-        element = akvcam_list_next(self->elements, &it);
+        akvcam_map_element_t element = akvcam_list_next(self->elements, &it);
 
         if (!it)
             break;

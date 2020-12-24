@@ -143,8 +143,7 @@ bool akvcam_file_exists(akvcam_file_ct self)
     mm_segment_t oldfs;
     int result;
 
-    if (!self->file_name
-        || strnlen(self->file_name, AKVCAM_MAX_STRING_SIZE) < 1)
+    if (akvcam_strlen(self->file_name) < 1)
         return 0;
 
     oldfs = get_fs();
@@ -161,8 +160,7 @@ size_t akvcam_file_size(akvcam_file_ct self)
     mm_segment_t oldfs;
     int result;
 
-    if (!self->file_name
-        || strnlen(self->file_name, AKVCAM_MAX_STRING_SIZE) < 1)
+    if (akvcam_strlen(self->file_name) < 1)
         return 0;
 
     oldfs = get_fs();

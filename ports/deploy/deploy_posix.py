@@ -18,13 +18,11 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import configparser
 import math
 import os
 import platform
 import subprocess # nosec
 import sys
-import tarfile
 import threading
 
 from WebcamoidDeployTools import DTDeployBase

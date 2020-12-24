@@ -528,7 +528,6 @@ void akvcam_device_controls_changed(akvcam_device_t self,
                                     struct v4l2_event *event)
 {
     akvcam_list_element_t it = NULL;
-    akvcam_device_t capture_device;
 
     switch (event->id) {
     case V4L2_CID_BRIGHTNESS:
@@ -585,7 +584,8 @@ void akvcam_device_controls_changed(akvcam_device_t self,
         return;
 
     for (;;) {
-        capture_device = akvcam_list_next(self->connected_devices, &it);
+        akvcam_device_t capture_device
+                = akvcam_list_next(self->connected_devices, &it);
 
         if (!it)
             break;
@@ -647,13 +647,14 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
     akvcam_device_t capture_device;
     akvcam_device_t output_device;
     akvcam_frame_t frame = NULL;
-    akvcam_frame_t adjusted_frame;
     akvcam_frame_t default_frame = akvcam_default_frame();
     int result;
 
     akpr_function();
 
     if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
+        akvcam_frame_t adjusted_frame;
+
         output_device = akvcam_list_front(self->connected_devices);
 
         if (!mutex_lock_interruptible(&self->mtx)) {
@@ -847,7 +848,6 @@ akvcam_frame_t akvcam_default_frame(void)
 {
     static akvcam_frame_t frame = NULL;
     akvcam_settings_t settings;
-    char *file_name;
     bool loaded = false;
 
     if (frame)
@@ -856,6 +856,8 @@ akvcam_frame_t akvcam_default_frame(void)
     settings = akvcam_settings_new();
 
     if (akvcam_settings_load(settings, akvcam_settings_file())) {
+        char *file_name;
+
         akvcam_settings_begin_group(settings, "General");
         file_name = akvcam_settings_value(settings, "default_frame");
         frame = akvcam_frame_new(NULL, NULL, 0);

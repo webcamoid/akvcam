@@ -98,6 +98,16 @@
     result; \
 })
 
+#define akvcam_strlen(str) \
+({ \
+    size_t len = 0; \
+    \
+    if (str) \
+        len = strnlen(str, AKVCAM_MAX_STRING_SIZE); \
+    \
+    len; \
+})
+
 typedef enum
 {
     AKVCAM_MEMORY_TYPE_KMALLOC,
@@ -139,7 +149,9 @@ const char *akvcam_string_from_v4l2_buffer(const struct v4l2_buffer *buffer);
 const char *akvcam_string_from_v4l2_buffer_flags(__u32 flags);
 const char *akvcam_string_from_v4l2_field(enum v4l2_field field);
 const char *akvcam_string_from_v4l2_requestbuffers(const struct v4l2_requestbuffers *reqbuffs);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0)
 const char *akvcam_string_from_v4l2_buffer_capabilities(__u32 flags);
+#endif
 const char *akvcam_string_from_v4l2_create_buffers(const struct v4l2_create_buffers *buffers);
 const char *akvcam_string_from_v4l2_pixelformat(__u32 pixelformat);
 const char *akvcam_string_from_v4l2_colorspace(enum v4l2_colorspace colorspace);

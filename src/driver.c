@@ -379,7 +379,7 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
                                   AKVCAM_DEVICE_TYPE_CAPTURE;
     description = akvcam_settings_value(settings, "description");
 
-    if (!description || strnlen(description, AKVCAM_MAX_STRING_SIZE) < 1) {
+    if (akvcam_strlen(description) < 1) {
         pr_err("Device description is empty\n");
 
         return NULL;
@@ -488,7 +488,6 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
     akvcam_device_t device;
     akvcam_device_t output;
     size_t n_connections;
-    size_t n_nodes;
     u32 *connections_index;
     char *index_str;
     u32 index;
@@ -499,6 +498,8 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
     n_connections = akvcam_settings_begin_array(settings, "connections");
 
     for (i = 0; i < n_connections; i++) {
+        size_t n_nodes;
+
         akvcam_settings_set_array_index(settings, i);
         connections = akvcam_settings_value_list(settings, "connection", ":");
         n_nodes = akvcam_list_size(connections);
@@ -691,11 +692,8 @@ void akvcam_driver_print_formats(akvcam_device_ct device)
 
 void akvcam_driver_print_connections(akvcam_device_ct device)
 {
-    akvcam_devices_list_t devices;
-    akvcam_device_t connected_device;
+    akvcam_devices_list_t devices = akvcam_device_connected_devices_nr(device);
     akvcam_list_element_t it = NULL;
-
-    devices = akvcam_device_connected_devices_nr(device);
 
     if (akvcam_list_empty(devices)) {
         akpr_warning("No devices connected\n");
@@ -706,7 +704,7 @@ void akvcam_driver_print_connections(akvcam_device_ct device)
     akpr_info("\tConnections:\n");
 
     for (;;) {
-        connected_device = akvcam_list_next(devices, &it);
+        akvcam_device_t connected_device = akvcam_list_next(devices, &it);
 
         if (!it)
             break;

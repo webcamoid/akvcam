@@ -131,7 +131,6 @@ static ssize_t akvcam_attributes_connected_devices_show(struct device *dev,
     akvcam_devices_list_t devices;
     akvcam_list_element_t it = NULL;
     size_t space_left = PAGE_SIZE;
-    int bytes_written;
     size_t i;
 
     UNUSED(attribute);
@@ -139,6 +138,8 @@ static ssize_t akvcam_attributes_connected_devices_show(struct device *dev,
     memset(buffer, 0, PAGE_SIZE);
 
     for (i = 0; i < 64 && space_left > 0; i++) {
+        int bytes_written;
+
         device = akvcam_list_next(devices, &it);
 
         if (!it)
