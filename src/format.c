@@ -373,7 +373,6 @@ static __u32 *akvcam_format_fourcc_copy(__u32 *fourcc)
 akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_ct formats)
 {
     akvcam_list_element_t element = NULL;
-    akvcam_list_element_t it;
     akvcam_pixel_formats_list_t supported_formats = akvcam_list_new();
 
     if (!formats)
@@ -381,6 +380,7 @@ akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_ct f
 
     for (;;) {
         __u32 fourcc;
+        akvcam_list_element_t it;
         akvcam_format_t format = akvcam_list_next(formats, &element);
 
         if (!element)
@@ -581,12 +581,14 @@ bool akvcam_format_have_multiplanar(akvcam_formats_list_ct formats)
 
 size_t akvcam_formats_count(void)
 {
-    size_t i;
     static size_t count = 0;
 
-    if (count < 1)
+    if (count < 1) {
+        size_t i;
+
         for (i = 0; akvcam_format_globals_formats[i].fourcc; i++)
             count++;
+    }
 
     return count;
 }

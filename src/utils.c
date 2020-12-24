@@ -775,11 +775,9 @@ char *akvcam_strip_str_sub(const char *str,
     ssize_t i;
     size_t len;
     size_t left;
-    size_t right;
     size_t stripped_len;
 
     len = akvcam_min(akvcam_strlen(str), from + size);
-    stripped_len = len;
 
     for (i = (ssize_t) from; i < (ssize_t) len; i++)
         if (!isspace(str[i]))
@@ -790,6 +788,8 @@ char *akvcam_strip_str_sub(const char *str,
     if (left == len) {
         stripped_len = 0;
     } else {
+        size_t right;
+
         for (i = (ssize_t) len - 1; i >= (ssize_t) from; i--)
             if (!isspace(str[i]))
                 break;

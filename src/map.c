@@ -169,11 +169,11 @@ static char *akvcam_map_key_copy(const char *str)
 akvcam_list_t akvcam_map_keys(akvcam_map_ct self)
 {
     akvcam_list_element_t element = NULL;
-    akvcam_map_element_t map_element;
     akvcam_list_t keys = akvcam_list_new();
 
     for (;;) {
-        map_element = akvcam_list_next(self->elements, &element);
+        akvcam_map_element_t map_element =
+                akvcam_list_next(self->elements, &element);
 
         if (!element)
             break;
@@ -190,11 +190,11 @@ akvcam_list_t akvcam_map_keys(akvcam_map_ct self)
 akvcam_list_t akvcam_map_values(akvcam_map_ct self)
 {
     akvcam_list_element_t element = NULL;
-    akvcam_map_element_t map_element;
     akvcam_list_t values = akvcam_list_new();
 
     for (;;) {
-        map_element = akvcam_list_next(self->elements, &element);
+        akvcam_map_element_t map_element =
+                akvcam_list_next(self->elements, &element);
 
         if (!element)
             break;
@@ -211,10 +211,10 @@ akvcam_list_t akvcam_map_values(akvcam_map_ct self)
 akvcam_map_element_t akvcam_map_it(akvcam_map_ct self, const char *key)
 {
     akvcam_list_element_t element = NULL;
-    akvcam_map_element_t map_element;
 
     for (;;) {
-        map_element = akvcam_list_next(self->elements, &element);
+        akvcam_map_element_t map_element =
+                akvcam_list_next(self->elements, &element);
 
         if (!element)
             break;

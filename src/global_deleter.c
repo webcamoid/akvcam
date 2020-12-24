@@ -55,7 +55,6 @@ void akvcam_global_deleter_add(void *user_data, akvcam_delete_t deleter)
 void akvcam_global_deleter_run(void)
 {
     akvcam_list_element_t it = NULL;
-    akvcam_deleters_callback_t callback;
 
     akpr_function();
 
@@ -63,7 +62,8 @@ void akvcam_global_deleter_run(void)
         return;
 
     for (;;) {
-        callback = akvcam_list_next(akvcam_global_deleter, &it);
+        akvcam_deleters_callback_t callback =
+                akvcam_list_next(akvcam_global_deleter, &it);
 
         if (!it)
             break;

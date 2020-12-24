@@ -659,12 +659,14 @@ void akvcam_controls_set_changed_callback(akvcam_controls_t self,
 
 size_t akvcam_controls_capture_count(void)
 {
-    size_t i;
     static size_t count = 0;
 
-    if (count < 1)
+    if (count < 1) {
+        size_t i;
+
         for (i = 0; akvcam_controls_capture[i].id; i++)
             count++;
+    }
 
     return count;
 }

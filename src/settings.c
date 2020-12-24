@@ -419,7 +419,6 @@ akvcam_string_list_t akvcam_settings_to_list(const char *value,
 {
     char *value_tmp;
     char *value_tmp_ptr;
-    char *stripped_element;
     akvcam_string_list_t result = akvcam_list_new();
 
     if (!value)
@@ -429,6 +428,7 @@ akvcam_string_list_t akvcam_settings_to_list(const char *value,
             akvcam_strdup(value, AKVCAM_MEMORY_TYPE_VMALLOC);
 
     for (;;) {
+        char *stripped_element;
         char *element = strsep(&value_tmp_ptr, separators);
 
         if (!element)

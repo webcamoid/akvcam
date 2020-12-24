@@ -642,11 +642,11 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
     akvcam_list_element_t it = NULL;
     akvcam_frame_t frame = NULL;
     akvcam_frame_t default_frame = akvcam_default_frame();
-    int result;
 
     akpr_function();
 
     if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
+        int result;
         akvcam_frame_t adjusted_frame;
         akvcam_device_t output_device =
                 akvcam_list_front(self->connected_devices);

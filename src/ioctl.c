@@ -660,7 +660,6 @@ int akvcam_ioctl_g_fmt(akvcam_node_t node, struct v4l2_format *format)
 {
     akvcam_device_t device;
     akvcam_format_t current_format;
-    size_t i;
     int32_t device_num;
 
     akpr_function();
@@ -687,6 +686,7 @@ int akvcam_ioctl_g_fmt(akvcam_node_t node, struct v4l2_format *format)
         format->fmt.pix.sizeimage = (__u32) akvcam_format_size(current_format);
         format->fmt.pix.colorspace = DEFAULT_COLORSPACE;
     } else {
+        size_t i;
         format->fmt.pix_mp.width = (__u32) akvcam_format_width(current_format);
         format->fmt.pix_mp.height = (__u32) akvcam_format_height(current_format);
         format->fmt.pix_mp.pixelformat = akvcam_format_fourcc(current_format);
@@ -710,7 +710,6 @@ int akvcam_ioctl_g_fmt(akvcam_node_t node, struct v4l2_format *format)
 int akvcam_ioctl_s_fmt(akvcam_node_t node, struct v4l2_format *format)
 {
     akvcam_device_t device;
-    akvcam_buffers_t buffers;
     int32_t device_num;
     int result;
 
@@ -725,6 +724,7 @@ int akvcam_ioctl_s_fmt(akvcam_node_t node, struct v4l2_format *format)
     result = akvcam_ioctl_try_fmt(node, format);
 
     if (result == 0) {
+        akvcam_buffers_t buffers;
         akvcam_format_t current_format = akvcam_device_format(device);
         akvcam_format_set_fourcc(current_format, format->fmt.pix.pixelformat);
         akvcam_format_set_width(current_format, format->fmt.pix.width);

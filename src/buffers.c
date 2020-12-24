@@ -340,8 +340,6 @@ int akvcam_buffers_query(akvcam_buffers_t self,
 {
     akvcam_buffer_t akbuffer;
     struct v4l2_buffer v4l2_buff;
-    size_t n_planes;
-    size_t i;
     int result;
 
     akpr_function();
@@ -370,6 +368,8 @@ int akvcam_buffers_query(akvcam_buffers_t self,
         }
 
         if (!result && self->multiplanar) {
+            size_t i;
+            size_t n_planes;
             struct v4l2_plane *planes =
                     kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
 
@@ -1013,7 +1013,6 @@ static akvcam_buffer_t akvcam_buffers_next_read_buffer(akvcam_buffers_ct self)
 akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
 {
     struct v4l2_buffer v4l2_buff;
-    size_t length;
     akvcam_frame_t frame = NULL;
     size_t frame_size;
 
@@ -1040,7 +1039,7 @@ akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
             if (condition_result != -EINTR)
                 mutex_unlock(&self->buffers_mutex);
 
-            return frame;
+            return NULL;
         }
 
         if (!akvcam_list_empty(self->buffers)) {
@@ -1049,6 +1048,8 @@ akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
             if (buffer && akvcam_buffer_read(buffer, &v4l2_buff)) {
                 if (v4l2_buff.memory == V4L2_MEMORY_MMAP
                     || v4l2_buff.memory == V4L2_MEMORY_USERPTR) {
+                    size_t length;
+
                     frame = akvcam_frame_new(self->format, NULL, 0);
                     length = akvcam_min((size_t) v4l2_buff.length,
                                         akvcam_frame_size(frame));
@@ -1101,10 +1102,8 @@ static akvcam_buffer_t akvcam_buffers_next_write_buffer(akvcam_buffers_ct self)
 
 int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame)
 {
-    akvcam_buffer_t buffer;
     struct v4l2_buffer v4l2_buff;
     size_t length;
-    int condition_result;
     int result = 0;
 
     akpr_function();
@@ -1112,6 +1111,9 @@ int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame)
     if (mutex_lock_interruptible(&self->buffers_mutex) == 0) {
         if (self->rw_mode & (AKVCAM_RW_MODE_MMAP | AKVCAM_RW_MODE_USERPTR)
             && !akvcam_list_empty(self->buffers)) {
+            akvcam_buffer_t buffer;
+            int condition_result;
+
             akpr_debug("Writting streaming buffers\n");
             condition_result =
                     akvcam_wait_condition(self->buffers_not_full,
@@ -1165,6 +1167,8 @@ int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame)
         } else if (frame
                    && self->rw_mode & AKVCAM_RW_MODE_READWRITE
                    && akvcam_list_empty(self->buffers)) {
+            int condition_result;
+
             akpr_debug("Writting RW buffers\n");
             condition_result =
                     akvcam_wait_condition(self->buffers_not_full,

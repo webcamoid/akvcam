@@ -163,11 +163,11 @@ akvcam_device_t akvcam_driver_device_from_num(int32_t num)
 bool akvcam_driver_register(void)
 {
     akvcam_list_element_t element = NULL;
-    akvcam_device_t device;
 
     // Register numbered devices first.
     for (;;) {
-        device = akvcam_list_next(akvcam_driver_global->devices, &element);
+        akvcam_device_t device =
+                akvcam_list_next(akvcam_driver_global->devices, &element);
 
         if (!element)
             break;
@@ -180,7 +180,8 @@ bool akvcam_driver_register(void)
     element = NULL;
 
     for (;;) {
-        device = akvcam_list_next(akvcam_driver_global->devices, &element);
+        akvcam_device_t device =
+                akvcam_list_next(akvcam_driver_global->devices, &element);
 
         if (!element)
             break;
@@ -203,10 +204,10 @@ bool akvcam_driver_register(void)
 void akvcam_driver_unregister(void)
 {
     akvcam_list_element_t element = NULL;
-    akvcam_device_t device;
 
     for (;;) {
-        device = akvcam_list_next(akvcam_driver_global->devices, &element);
+        akvcam_device_t device =
+                akvcam_list_next(akvcam_driver_global->devices, &element);
 
         if (!element)
             break;
@@ -450,13 +451,12 @@ akvcam_formats_list_t akvcam_driver_read_device_formats(akvcam_settings_t settin
     akvcam_formats_list_t formats = akvcam_list_new();
     akvcam_formats_list_t format_list;
     akvcam_list_element_t it = NULL;
-    char *index_str;
     u32 index;
 
     formats_index = akvcam_settings_value_list(settings, "formats", ",");
 
     for (;;) {
-        index_str = akvcam_list_next(formats_index, &it);
+        char *index_str = akvcam_list_next(formats_index, &it);
 
         if (!it)
             break;
@@ -667,7 +667,6 @@ void akvcam_driver_print_devices(void)
 void akvcam_driver_print_formats(akvcam_device_ct device)
 {
     akvcam_formats_list_t formats;
-    akvcam_format_t format;
     akvcam_list_element_t it = NULL;
 
     formats = akvcam_device_formats(device);
@@ -678,7 +677,7 @@ void akvcam_driver_print_formats(akvcam_device_ct device)
         akpr_info("\tFormats:\n");
 
         for (;;) {
-            format = akvcam_list_next(formats, &it);
+            akvcam_format_t format = akvcam_list_next(formats, &it);
 
             if (!it)
                 break;

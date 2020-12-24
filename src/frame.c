@@ -518,8 +518,6 @@ void akvcam_frame_mirror(akvcam_frame_t self,
     __u32 fourcc;
     size_t width;
     size_t height;
-    size_t x;
-    size_t y;
 
     if (!horizontalMirror && !verticalMirror)
         return;
@@ -532,8 +530,11 @@ void akvcam_frame_mirror(akvcam_frame_t self,
     width = akvcam_format_width(self->format);
     height = akvcam_format_height(self->format);
 
-    if (horizontalMirror)
+    if (horizontalMirror) {
+        size_t y;
+
         for (y = 0; y < height; y++) {
+            size_t x;
             akvcam_RGB24_t src_line = akvcam_frame_line(self, 0, y);
 
             for (x = 0; x < width / 2; x++) {
@@ -542,8 +543,10 @@ void akvcam_frame_mirror(akvcam_frame_t self,
                 src_line[width - x - 1] = tmp_pixel;
             }
         }
+    }
 
     if (verticalMirror) {
+        size_t y;
         size_t line_size = akvcam_format_bypl(self->format, 0);
         akvcam_RGB24_t tmp_line = vmalloc(line_size);
 
@@ -567,10 +570,6 @@ bool akvcam_frame_scaled(akvcam_frame_t self,
 {
     __u32 fourcc;
     akvcam_format_t format;
-    akvcam_extrapolate_t extrapolate_x;
-    akvcam_extrapolate_t extrapolate_y;
-    akvcam_RGB24_t src_line;
-    akvcam_RGB24_t dst_line;
     size_t x_dst_min;
     size_t y_dst_min;
     size_t x_dst_max;
@@ -587,14 +586,6 @@ bool akvcam_frame_scaled(akvcam_frame_t self,
     size_t ys;
     size_t x;
     size_t y;
-    size_t x_min;
-    size_t x_max;
-    size_t k_num_x;
-    size_t k_den_x;
-    size_t y_min;
-    size_t y_max;
-    size_t k_num_y;
-    size_t k_den_y;
     void *data;
 
     if (akvcam_format_width(self->format) == width
@@ -674,8 +665,8 @@ bool akvcam_frame_scaled(akvcam_frame_t self,
         case AKVCAM_SCALING_FAST:
             for (y = y_dst_min; y < y_dst_max; y++) {
                 size_t srcY = (y_num * (y - y_dst_min) + ys) / y_den;
-                src_line = akvcam_frame_line(self, 0, srcY);
-                dst_line = (akvcam_RGB24_t)
+                akvcam_RGB24_t src_line = akvcam_frame_line(self, 0, srcY);
+                akvcam_RGB24_t dst_line = (akvcam_RGB24_t)
                            ((char *) data + y * akvcam_format_bypl(format, 0));
 
                 for (x = x_dst_min; x < x_dst_max; x++) {
@@ -687,22 +678,34 @@ bool akvcam_frame_scaled(akvcam_frame_t self,
             break;
 
         case AKVCAM_SCALING_LINEAR: {
-            extrapolate_x = akvcam_format_width(self->format) < width?
-                                &akvcam_extrapolate_up:
-                                &akvcam_extrapolate_down;
-            extrapolate_y = akvcam_format_height(self->format) < height?
-                                &akvcam_extrapolate_up:
-                                &akvcam_extrapolate_down;
+            akvcam_extrapolate_t extrapolate_x =
+                    akvcam_format_width(self->format) < width?
+                        &akvcam_extrapolate_up:
+                        &akvcam_extrapolate_down;
+            akvcam_extrapolate_t extrapolate_y =
+                    akvcam_format_height(self->format) < height?
+                        &akvcam_extrapolate_up:
+                        &akvcam_extrapolate_down;
 
             for (y = y_dst_min; y < y_dst_max; y++) {
-                dst_line = (akvcam_RGB24_t)
-                           ((char *) data + y * akvcam_format_bypl(format, 0));
+                akvcam_RGB24_t dst_line =
+                        (akvcam_RGB24_t) ((char *) data + y * akvcam_format_bypl(format, 0));
+                size_t y_min;
+                size_t y_max;
+                size_t k_num_y;
+                size_t k_den_y;
+
                 extrapolate_y(y - y_dst_min,
                               y_num, y_den, ys,
                               &y_min, &y_max,
                               &k_num_y, &k_den_y);
 
                 for (x = x_dst_min; x < x_dst_max; x++) {
+                    size_t x_min;
+                    size_t x_max;
+                    size_t k_num_x;
+                    size_t k_den_x;
+
                     extrapolate_x(x - x_dst_min,
                                   x_num, x_den, xs,
                                   &x_min, &x_max,
@@ -1822,8 +1825,6 @@ bool akvcam_frame_adjust_format_supported(__u32 fourcc)
 const uint8_t *akvcam_contrast_table(void)
 {
     static uint8_t *contrast_table = NULL;
-    size_t i;
-    size_t j = 0;
     ssize_t contrast;
 
     if (contrast_table)
@@ -1832,6 +1833,8 @@ const uint8_t *akvcam_contrast_table(void)
     contrast_table = vmalloc(511 * 256);
 
     for (contrast = -255; contrast < 256; contrast++) {
+        size_t i;
+        size_t j = 0;
         ssize_t f_num = 259 * (255 + contrast);
         ssize_t f_den = 255 * (259 - contrast);
 
@@ -1900,13 +1903,7 @@ const uint8_t *akvcam_contrast_table(void)
 const uint8_t *akvcam_gamma_table(void)
 {
     static uint8_t *gamma_table = NULL;
-    ssize_t i;
-    size_t j = 0;
     ssize_t gamma;
-    ssize_t f_num;
-    ssize_t f_den;
-    ssize_t g;
-    ssize_t ig;
 
     if (gamma_table)
         return gamma_table;
@@ -1914,11 +1911,15 @@ const uint8_t *akvcam_gamma_table(void)
     gamma_table = vmalloc(511 * 256);
 
     for (gamma = -255; gamma < 256; gamma++) {
-        g = (255 + gamma) >> 1;
-        f_num = 2 * g - 255;
-        f_den = g * (g - 255);
+        ssize_t i;
+        size_t j = 0;
+        ssize_t g = (255 + gamma) >> 1;
+        ssize_t f_num = 2 * g - 255;
+        ssize_t f_den = g * (g - 255);
 
         for (i = 0; i < 256; i++, j++) {
+            ssize_t ig;
+
             if (g > 0 && g != 255) {
                 ig = (f_num * i * i + (f_den - f_num * 255) * i) / f_den;
                 ig = akvcam_bound(0, ig, 255);
