@@ -747,7 +747,6 @@ int akvcam_ioctl_try_fmt(akvcam_node_t node, struct v4l2_format *format)
     akvcam_format_t temp_format;
     akvcam_formats_list_t formats;
     struct v4l2_fract frame_rate = {0, 0};
-    size_t i;
     int32_t device_num;
 
     akpr_function();
@@ -788,6 +787,8 @@ int akvcam_ioctl_try_fmt(akvcam_node_t node, struct v4l2_format *format)
         format->fmt.pix.sizeimage = (__u32) akvcam_format_size(nearest_format);
         format->fmt.pix.colorspace = DEFAULT_COLORSPACE;
     } else {
+        size_t i;
+
         format->fmt.pix_mp.width = (__u32) akvcam_format_width(nearest_format);
         format->fmt.pix_mp.height = (__u32) akvcam_format_height(nearest_format);
         format->fmt.pix_mp.pixelformat = akvcam_format_fourcc(nearest_format);
@@ -812,7 +813,6 @@ int akvcam_ioctl_g_parm(akvcam_node_t node, struct v4l2_streamparm *param)
 {
     akvcam_device_t device;
     akvcam_format_t format;
-    akvcam_buffers_t buffers;
     __u32 *n_buffers;
     int32_t device_num;
 
@@ -850,7 +850,7 @@ int akvcam_ioctl_g_parm(akvcam_node_t node, struct v4l2_streamparm *param)
     akvcam_format_delete(format);
 
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE) {
-        buffers = akvcam_device_buffers_nr(device);
+        akvcam_buffers_t buffers = akvcam_device_buffers_nr(device);
         *n_buffers = (__u32) akvcam_buffers_size_rw(buffers);
     }
 

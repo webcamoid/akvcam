@@ -331,7 +331,6 @@ akvcam_devices_list_t akvcam_driver_read_devices(akvcam_settings_t settings,
                                                  akvcam_matrix_t available_formats)
 {
     akvcam_devices_list_t devices = akvcam_list_new();
-    akvcam_device_t device;
     size_t n_cameras;
     size_t i;
 
@@ -339,6 +338,7 @@ akvcam_devices_list_t akvcam_driver_read_devices(akvcam_settings_t settings,
     n_cameras = akvcam_settings_begin_array(settings, "cameras");
 
     for (i = 0; i < n_cameras; i++) {
+        akvcam_device_t device;
         akvcam_settings_set_array_index(settings, i);
         device = akvcam_driver_read_device(settings, available_formats);
 

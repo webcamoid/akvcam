@@ -49,7 +49,7 @@ if [[ ( ! -z "${DAILY_BUILD}" || ! -z "$RELEASE_BUILD" ) && "$TRAVIS_BRANCH" == 
 
         ./jfrog bt upload \
             --user=hipersayanx \
-            --key=$BT_KEY \
+            --key="$BT_KEY" \
             --override=true \
             --publish=$publish \
             "$f" \
@@ -60,7 +60,7 @@ if [[ ( ! -z "${DAILY_BUILD}" || ! -z "$RELEASE_BUILD" ) && "$TRAVIS_BRANCH" == 
     # Upload to Github Releases
     upload=false
 
-    if [[ ! -z "$DAILY_BUILD" && "$TRAVIS_BRANCH" == master && "$upload" == true ]]; then
+    if [[ ! -z "$DAILY_BUILD" ]] && [[ "$TRAVIS_BRANCH" == master ]] && [[ "$upload" == true ]]; then
         hub=''
 
         if [ "${TRAVIS_OS_NAME}" = linux ]; then
@@ -69,7 +69,7 @@ if [[ ( ! -z "${DAILY_BUILD}" || ! -z "$RELEASE_BUILD" ) && "$TRAVIS_BRANCH" == 
             hub=hub-darwin-amd64-${GITHUB_HUBVER}
         fi
 
-        cd ${TRAVIS_BUILD_DIR}
+        cd "${TRAVIS_BUILD_DIR}"
         "${DOWNLOAD_CMD}" "https://github.com/github/hub/releases/download/v${GITHUB_HUBVER}/${hub}.tgz" || true
         tar xzf "${hub}.tgz"
         mkdir -p .local

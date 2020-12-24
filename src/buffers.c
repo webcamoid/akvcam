@@ -429,7 +429,6 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
 {
     akvcam_buffer_t akbuffer;
     struct v4l2_buffer v4l2_buff;
-    size_t i;
     int result = 0;
 
     akpr_function();
@@ -487,6 +486,7 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
                                     size_t n_planes =
                                             akvcam_min(buffer->length,
                                                        akvcam_format_planes(self->format));
+                                    size_t i;
 
                                     for (i = 0; i < n_planes; i++)
                                         if (copy_from_user((char *) data + akvcam_format_offset(self->format, i),
@@ -1103,7 +1103,6 @@ static akvcam_buffer_t akvcam_buffers_next_write_buffer(akvcam_buffers_ct self)
 int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame)
 {
     struct v4l2_buffer v4l2_buff;
-    size_t length;
     int result = 0;
 
     akpr_function();
@@ -1135,7 +1134,7 @@ int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame)
                     if (v4l2_buff.memory == V4L2_MEMORY_MMAP
                         || v4l2_buff.memory == V4L2_MEMORY_USERPTR) {
                         if (frame) {
-                            length = akvcam_frame_size(frame);
+                            size_t length = akvcam_frame_size(frame);
                             result = akvcam_buffer_write_data(buffer,
                                                               akvcam_frame_data(frame),
                                                               length)? 0: -EIO;
@@ -1167,6 +1166,7 @@ int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame)
         } else if (frame
                    && self->rw_mode & AKVCAM_RW_MODE_READWRITE
                    && akvcam_list_empty(self->buffers)) {
+            size_t length;
             int condition_result;
 
             akpr_debug("Writting RW buffers\n");
