@@ -57,7 +57,7 @@ akvcam_map_t akvcam_map_new_copy(akvcam_map_ct other)
     return self;
 }
 
-void akvcam_map_free(struct kref *ref)
+static void akvcam_map_free(struct kref *ref)
 {
     akvcam_map_t self = container_of(ref, struct akvcam_map, ref);
     akvcam_map_clear(self);
@@ -124,7 +124,7 @@ static bool akvcam_map_equals_keys(akvcam_map_element_ct element,
     return strcmp(element->key, key) == 0;
 }
 
-akvcam_map_element_t akvcam_map_element_copy(akvcam_map_element_ct element)
+static akvcam_map_element_t akvcam_map_element_copy(akvcam_map_element_ct element)
 {
     return kmemdup(element, sizeof(akvcam_map_element), GFP_KERNEL);
 }
@@ -161,7 +161,7 @@ bool akvcam_map_contains(akvcam_map_ct self, const char *key)
     return akvcam_map_value(self, key) != NULL;
 }
 
-char *akvcam_map_key_copy(char *str)
+static char *akvcam_map_key_copy(const char *str)
 {
     return kstrdup(str, GFP_KERNEL);
 }

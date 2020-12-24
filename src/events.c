@@ -57,7 +57,7 @@ akvcam_events_t akvcam_events_new(void)
     return self;
 }
 
-void akvcam_events_free(struct kref *ref)
+static void akvcam_events_free(struct kref *ref)
 {
     akvcam_events_t self = container_of(ref, struct akvcam_events, ref);
     akvcam_rbuffer_delete(self->events);
@@ -79,15 +79,15 @@ akvcam_events_t akvcam_events_ref(akvcam_events_t self)
     return self;
 }
 
-bool akvcam_events_subscriptions_are_equals(const struct v4l2_event_subscription *subscription1,
-                                            const struct v4l2_event_subscription *subscription2)
+static bool akvcam_events_subscriptions_are_equals(const struct v4l2_event_subscription *subscription1,
+                                                   const struct v4l2_event_subscription *subscription2)
 {
     return !memcmp(subscription1,
                    subscription2,
                    sizeof(struct v4l2_event_subscription));
 }
 
-struct v4l2_event_subscription *akvcam_events_subscription_copy(const struct v4l2_event_subscription *subscription)
+static struct v4l2_event_subscription *akvcam_events_subscription_copy(const struct v4l2_event_subscription *subscription)
 {
     return kmemdup(subscription, sizeof(struct v4l2_event_subscription), GFP_KERNEL);
 }

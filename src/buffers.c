@@ -74,7 +74,7 @@ akvcam_buffers_t akvcam_buffers_new(AKVCAM_RW_MODE rw_mode,
     return self;
 }
 
-void akvcam_buffers_free(struct kref *ref)
+static void akvcam_buffers_free(struct kref *ref)
 {
     akvcam_buffers_t self = container_of(ref, struct akvcam_buffers, ref);
     akvcam_format_delete(self->format);

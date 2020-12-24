@@ -60,7 +60,7 @@ akvcam_list_t akvcam_list_new_copy(akvcam_list_ct other)
     return self;
 }
 
-void akvcam_list_free(struct kref *ref)
+static void akvcam_list_free(struct kref *ref)
 {
     akvcam_list_t self = container_of(ref, struct akvcam_list, ref);
     akvcam_list_clear(self);

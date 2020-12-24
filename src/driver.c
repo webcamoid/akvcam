@@ -356,7 +356,7 @@ akvcam_devices_list_t akvcam_driver_read_devices(akvcam_settings_t settings,
     return devices;
 }
 
-bool akvcam_driver_strings_are_equals(const char *str1, const char *str2)
+static bool akvcam_driver_strings_are_equals(const char *str1, const char *str2)
 {
     return strcmp(str1, str2) == 0;
 }
@@ -379,7 +379,7 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
                                   AKVCAM_DEVICE_TYPE_CAPTURE;
     description = akvcam_settings_value(settings, "description");
 
-    if (strlen(description) < 1) {
+    if (!description || strnlen(description, AKVCAM_MAX_STRING_SIZE) < 1) {
         pr_err("Device description is empty\n");
 
         return NULL;

@@ -203,7 +203,7 @@ akvcam_ioctl_t akvcam_ioctl_new(void)
     return self;
 }
 
-void akvcam_ioctl_free(struct kref *ref)
+static void akvcam_ioctl_free(struct kref *ref)
 {
     akvcam_ioctl_t self = container_of(ref, struct akvcam_ioctl, ref);
     kfree(self);
@@ -625,7 +625,6 @@ int akvcam_ioctl_enum_fmt(akvcam_node_t node, struct v4l2_fmtdesc *format)
     akvcam_formats_list_t formats;
     akvcam_pixel_formats_list_t pixel_formats = NULL;
     __u32 *fourcc;
-    const char *description;
     int32_t device_num;
 
     akpr_function();
@@ -645,6 +644,8 @@ int akvcam_ioctl_enum_fmt(akvcam_node_t node, struct v4l2_fmtdesc *format)
     fourcc = akvcam_list_at(pixel_formats, format->index);
 
     if (fourcc) {
+        const char *description;
+
         format->flags = 0;
         format->pixelformat = *fourcc;
         description = akvcam_format_string_from_fourcc(format->pixelformat);

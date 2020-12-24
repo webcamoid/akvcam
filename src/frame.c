@@ -306,7 +306,7 @@ akvcam_frame_t akvcam_frame_new_copy(akvcam_frame_ct other)
     return self;
 }
 
-void akvcam_frame_free(struct kref *ref)
+static void akvcam_frame_free(struct kref *ref)
 {
     akvcam_frame_t self = container_of(ref, struct akvcam_frame, ref);
 
@@ -418,7 +418,8 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
 
     akvcam_frame_clear(self);
 
-    if (!file_name || strlen(file_name) < 1) {
+    if (!file_name
+        || strnlen(file_name, AKVCAM_MAX_STRING_SIZE) < 1) {
         akpr_err("Bitmap file name not valid\n");
 
         return false;

@@ -64,7 +64,7 @@ akvcam_rbuffer_t akvcam_rbuffer_new_copy(akvcam_rbuffer_ct other)
     return self;
 }
 
-void akvcam_rbuffer_free(struct kref *ref)
+static void akvcam_rbuffer_free(struct kref *ref)
 {
     akvcam_rbuffer_t self = container_of(ref, struct akvcam_rbuffer, ref);
 

@@ -102,7 +102,7 @@ akvcam_format_t akvcam_format_new_copy(akvcam_format_ct other)
     return self;
 }
 
-void akvcam_format_free(struct kref *ref)
+static void akvcam_format_free(struct kref *ref)
 {
     akvcam_format_t self = container_of(ref, struct akvcam_format, ref);
     kfree(self);
@@ -360,12 +360,12 @@ akvcam_format_t akvcam_format_nearest(akvcam_formats_list_ct formats,
     return akvcam_format_new_copy(nearest_format);
 }
 
-bool akvcam_format_fourcc_are_equal(__u32 *fourcc1, __u32 *fourcc2)
+static bool akvcam_format_fourcc_are_equal(__u32 *fourcc1, __u32 *fourcc2)
 {
     return *fourcc1 == *fourcc2;
 }
 
-__u32 *akvcam_format_fourcc_copy(__u32 *fourcc)
+static __u32 *akvcam_format_fourcc_copy(__u32 *fourcc)
 {
     return kmemdup(fourcc, sizeof(__u32), GFP_KERNEL);
 }
@@ -402,15 +402,15 @@ akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_ct f
     return supported_formats;
 }
 
-bool akvcam_format_resolutions_are_equal(struct v4l2_frmsize_discrete *resolution1,
-                                         struct v4l2_frmsize_discrete *resolution2)
+static bool akvcam_format_resolutions_are_equal(struct v4l2_frmsize_discrete *resolution1,
+                                                struct v4l2_frmsize_discrete *resolution2)
 {
     return !memcmp(resolution1,
                    resolution2,
                    sizeof(struct v4l2_frmsize_discrete));
 }
 
-struct v4l2_frmsize_discrete *akvcam_format_resolution_copy(struct v4l2_frmsize_discrete *resolution)
+static struct v4l2_frmsize_discrete *akvcam_format_resolution_copy(const struct v4l2_frmsize_discrete *resolution)
 {
     return kmemdup(resolution, sizeof(struct v4l2_frmsize_discrete), GFP_KERNEL);
 }
@@ -449,13 +449,13 @@ akvcam_resolutions_list_t akvcam_format_resolutions(akvcam_formats_list_t format
     return supported_resolutions;
 }
 
-bool akvcam_format_frame_rates_are_equal(struct v4l2_fract *fps1,
-                                         struct v4l2_fract *fps2)
+static bool akvcam_format_frame_rates_are_equal(struct v4l2_fract *fps1,
+                                                struct v4l2_fract *fps2)
 {
     return !memcmp(fps1, fps2, sizeof(struct v4l2_fract));
 }
 
-struct v4l2_fract *akvcam_format_frame_rate_copy(struct v4l2_fract *fps)
+static struct v4l2_fract *akvcam_format_frame_rate_copy(struct v4l2_fract *fps)
 {
     return kmemdup(fps, sizeof(struct v4l2_fract), GFP_KERNEL);
 }

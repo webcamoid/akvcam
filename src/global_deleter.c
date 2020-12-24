@@ -32,7 +32,7 @@ typedef akvcam_list_tt(akvcam_deleters_callback_t) akvcam_deleters_list_t;
 
 static akvcam_deleters_list_t akvcam_global_deleter = NULL;
 
-akvcam_deleters_callback_t akvcam_global_callback_copy(akvcam_deleters_callback_t callback)
+static akvcam_deleters_callback_t akvcam_global_callback_copy(akvcam_deleters_callback_t callback)
 {
     return kmemdup(callback, sizeof(akvcam_deleters_callback), GFP_KERNEL);
 }

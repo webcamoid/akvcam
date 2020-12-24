@@ -69,7 +69,7 @@ akvcam_settings_t akvcam_settings_new(void)
     return self;
 }
 
-void akvcam_settings_free(struct kref *ref)
+static void akvcam_settings_free(struct kref *ref)
 {
     akvcam_settings_t self = container_of(ref, struct akvcam_settings, ref);
     akvcam_settings_end_array(self);
@@ -104,7 +104,8 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
     memset(&element, 0, sizeof(akvcam_settings_element));
     akvcam_settings_clear(self);
 
-    if (!file_name || strlen(file_name) < 1) {
+    if (!file_name
+        || strnlen(file_name, AKVCAM_MAX_STRING_SIZE) < 1) {
         akpr_err("Settings file name not valid\n");
 
         return false;
@@ -130,7 +131,8 @@ bool akvcam_settings_load(akvcam_settings_t self, const char *file_name)
         }
 
         if (!akvcam_settings_element_empty(&element)) {
-            if (element.group && strlen(element.group) > 0) {
+            if (element.group
+                && strnlen(element.group, AKVCAM_MAX_STRING_SIZE) > 0) {
                 if (current_group)
                     vfree(current_group);
 
@@ -195,11 +197,12 @@ akvcam_settings_load_failed:
 
 void akvcam_settings_begin_group(akvcam_settings_t self, const char *prefix)
 {
-    size_t len = strlen(prefix);
+    size_t len;
 
     akvcam_settings_end_group(self);
 
     if (prefix) {
+        len = strlen(prefix);
         self->current_group = vmalloc(len + 1);
         self->current_group[len] = 0;
         memcpy(self->current_group, prefix, len);
@@ -217,7 +220,7 @@ void akvcam_settings_end_group(akvcam_settings_t self)
 size_t akvcam_settings_begin_array(akvcam_settings_t self, const char *prefix)
 {
     akvcam_string_map_t group_configs = akvcam_settings_group_configs(self);
-    size_t len = strlen(prefix);
+    size_t len;
     char *array_key;
     char *array_size_str;
     size_t array_key_size;
@@ -225,22 +228,20 @@ size_t akvcam_settings_begin_array(akvcam_settings_t self, const char *prefix)
 
     akvcam_settings_end_array(self);
 
-    if (!group_configs)
+    if (!group_configs || !prefix)
         return 0;
 
     // Read array size.
-    array_key_size = strlen(prefix) + strlen("/size") + 1;
+    len = strlen(prefix);
+    array_key_size = len + strlen("/size") + 1;
     array_key = vmalloc(array_key_size);
     snprintf(array_key, array_key_size, "%s/size", prefix);
     array_size_str = akvcam_map_value(group_configs, array_key);
     vfree(array_key);
     kstrtou32(array_size_str, 10, (u32 *) &array_size);
-
-    if (prefix) {
-        self->current_array = vmalloc(len + 1);
-        self->current_array[len] = 0;
-        memcpy(self->current_array, prefix, len);
-    }
+    self->current_array = vmalloc(len + 1);
+    self->current_array[len] = 0;
+    memcpy(self->current_array, prefix, len);
 
     return array_size;
 }
@@ -598,7 +599,7 @@ char *akvcam_settings_parse_string(char *str, bool move)
     j = 0;
 
     for (i = start; i < end; i++) {
-        if (str[i] == '\\' && i < len - 2) {
+        if (i < len - 2 && str[i] == '\\') {
             key = strchr(escape_k, str[i + 1]);
 
             if (key) {

@@ -50,7 +50,7 @@ akvcam_file_t akvcam_file_new(const char *file_name)
     return self;
 }
 
-void akvcam_file_free(struct kref *ref)
+static void akvcam_file_free(struct kref *ref)
 {
     akvcam_file_t self = container_of(ref, struct akvcam_file, ref);
     akvcam_file_close(self);
@@ -143,7 +143,8 @@ bool akvcam_file_exists(akvcam_file_ct self)
     mm_segment_t oldfs;
     int result;
 
-    if (strlen(self->file_name) < 1)
+    if (!self->file_name
+        || strnlen(self->file_name, AKVCAM_MAX_STRING_SIZE) < 1)
         return 0;
 
     oldfs = get_fs();
@@ -160,7 +161,8 @@ size_t akvcam_file_size(akvcam_file_ct self)
     mm_segment_t oldfs;
     int result;
 
-    if (strlen(self->file_name) < 1)
+    if (!self->file_name
+        || strnlen(self->file_name, AKVCAM_MAX_STRING_SIZE) < 1)
         return 0;
 
     oldfs = get_fs();

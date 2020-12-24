@@ -152,7 +152,7 @@ akvcam_device_t akvcam_device_new(const char *name,
     return self;
 }
 
-void akvcam_device_free(struct kref *ref)
+static void akvcam_device_free(struct kref *ref)
 {
     akvcam_device_t self = container_of(ref, struct akvcam_device, ref);
 

@@ -31,7 +31,7 @@ struct akvcam_buffer
     struct kref ref;
     struct mutex mtx;
     struct v4l2_buffer buffer;
-    void *data;
+    __u8 *data;
 };
 
 akvcam_buffer_t akvcam_buffer_new(size_t size)
@@ -46,7 +46,7 @@ akvcam_buffer_t akvcam_buffer_new(size_t size)
     return self;
 }
 
-void akvcam_buffer_free(struct kref *ref)
+static void akvcam_buffer_free(struct kref *ref)
 {
     akvcam_buffer_t self = container_of(ref, struct akvcam_buffer, ref);
     vfree(self->data);

@@ -16,6 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/mm.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <media/v4l2-dev.h>
@@ -55,7 +56,7 @@ akvcam_node_t akvcam_node_new(int32_t device_num)
     return self;
 }
 
-void akvcam_node_free(struct kref *ref)
+static void akvcam_node_free(struct kref *ref)
 {
     akvcam_buffers_t buffers;
     akvcam_node_t priority_node;
@@ -323,7 +324,8 @@ static int akvcam_node_mmap(struct file *filp, struct vm_area_struct *vma)
     return result;
 }
 
-bool akvcam_node_nodes_are_equals(akvcam_node_ct node1, akvcam_node_ct node2)
+static bool akvcam_node_nodes_are_equals(akvcam_node_ct node1,
+                                         akvcam_node_ct node2)
 {
     return node1 == node2;
 }

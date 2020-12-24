@@ -68,7 +68,7 @@ akvcam_attributes_t akvcam_attributes_new(AKVCAM_DEVICE_TYPE device_type)
     return self;
 }
 
-void akvcam_attributes_free(struct kref *ref)
+static void akvcam_attributes_free(struct kref *ref)
 {
     akvcam_attributes_t self = container_of(ref, struct akvcam_attributes, ref);
     kfree(self);
@@ -97,12 +97,14 @@ void akvcam_attributes_set(akvcam_attributes_t self, struct device *dev)
 
 size_t akvcam_attributes_controls_count(void)
 {
-    size_t i;
     static size_t count = 0;
 
-    if (count < 1)
+    if (count < 1) {
+        size_t i;
+
         for (i = 0; akvcam_attributes_controls[i].name; i++)
             count++;
+    }
 
     return count;
 }

@@ -642,12 +642,12 @@ const char *akvcam_string_from_v4l2_create_buffers(const struct v4l2_create_buff
 
 const char *akvcam_string_from_v4l2_pixelformat(__u32 pixelformat)
 {
+    __le32 fmt = cpu_to_le32(pixelformat);
     static char pixelformat_str[AKVCAM_MAX_STRING_SIZE];
     char str[5];
     size_t n;
 
-    pixelformat = cpu_to_le32(pixelformat);
-    memcpy(str, &pixelformat, sizeof(__u32));
+    memcpy(str, &fmt, sizeof(__le32));
     str[4] = 0;
     n = snprintf(pixelformat_str, AKVCAM_MAX_STRING_SIZE, "V4L2_PIX_FMT(");
     n += snprintf(pixelformat_str + n, AKVCAM_MAX_STRING_SIZE - n, "%s", str);
@@ -712,7 +712,7 @@ size_t akvcam_line_size(const char *buffer, size_t size, bool *found)
 char *akvcam_strdup(const char *str, AKVCAM_MEMORY_TYPE type)
 {
     char *str_dup;
-    size_t len = str? strlen(str): 0;
+    size_t len = str? strnlen(str, AKVCAM_MAX_STRING_SIZE): 0;
 
     if (type == AKVCAM_MEMORY_TYPE_KMALLOC)
         str_dup = kmalloc(len + 1, GFP_KERNEL);
@@ -729,7 +729,13 @@ char *akvcam_strdup(const char *str, AKVCAM_MEMORY_TYPE type)
 
 char *akvcam_strip_str(const char *str, AKVCAM_MEMORY_TYPE type)
 {
-    return akvcam_strip_str_sub(str, 0, strlen(str), type);
+    if (!str)
+        return NULL;
+
+    return akvcam_strip_str_sub(str,
+                                0,
+                                strnlen(str, AKVCAM_MAX_STRING_SIZE),
+                                type);
 }
 
 char *akvcam_strip_str_sub(const char *str,
@@ -739,10 +745,18 @@ char *akvcam_strip_str_sub(const char *str,
 {
     char *stripped_str;
     ssize_t i;
-    size_t len = akvcam_min(str? strlen(str): 0, from + size);
+    size_t len;
     size_t left;
     size_t right;
-    size_t stripped_len = len;
+    size_t stripped_len;
+
+    if (str)
+        len = akvcam_min(strnlen(str, AKVCAM_MAX_STRING_SIZE),
+                         from + size);
+    else
+        len = 0;
+
+    stripped_len = len;
 
     for (i = (ssize_t) from; i < (ssize_t) len; i++)
         if (!isspace(str[i]))
@@ -791,7 +805,10 @@ size_t akvcam_str_count(const char *str, char c)
     size_t count = 0;
     size_t i;
 
-    for (i = 0; i < strlen(str); i++)
+    if (!str)
+        return 0;
+
+    for (i = 0; i < strnlen(str, AKVCAM_MAX_STRING_SIZE); i++)
         if (str[i] == c)
             count++;
 

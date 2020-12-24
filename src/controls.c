@@ -140,7 +140,7 @@ akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE device_type)
     return self;
 }
 
-void akvcam_controls_free(struct kref *ref)
+static void akvcam_controls_free(struct kref *ref)
 {
     akvcam_controls_t self = container_of(ref, struct akvcam_controls, ref);
     kfree(self->values);
