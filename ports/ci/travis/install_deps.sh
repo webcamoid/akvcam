@@ -89,7 +89,7 @@ for package in ${image} ${headers} ${headers_generic} ${modules}; do
 done
 
 if [ ! -z "${USE_QEMU}" ]; then
-    "${EXEC}" update-initramfs -c -k "${KERNEL_VERSION}-generic"
+    ${EXEC} update-initramfs -c -k "${KERNEL_VERSION}-generic"
 fi
 
 
@@ -97,7 +97,7 @@ fi
 
 mkdir -p .local/bin
 qtIFW=QtInstallerFramework-linux-x64.run
-"${DOWNLOAD_CMD}" "http://download.qt.io/official_releases/qt-installer-framework/${QTIFWVER}/${qtIFW}" || true
+${DOWNLOAD_CMD} "http://download.qt.io/official_releases/qt-installer-framework/${QTIFWVER}/${qtIFW}" || true
 
 if [ -e ${qtIFW} ]; then
     chmod +x ${qtIFW}

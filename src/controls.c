@@ -223,7 +223,6 @@ int akvcam_controls_fill_menu(akvcam_controls_ct self,
 int akvcam_controls_fill_ext(akvcam_controls_ct self,
                              struct v4l2_query_ext_ctrl *control)
 {
-    size_t i;
     __u32 id = control->id
              & ~(V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND);
     bool next = control->id
@@ -236,6 +235,7 @@ int akvcam_controls_fill_ext(akvcam_controls_ct self,
     if (!id && next) {
         _control = self->control_params;
     } else {
+        size_t i;
         __u32 priv_id = V4L2_CID_PRIVATE_BASE;
 
         for (i = 0; i < self->n_controls; i++) {

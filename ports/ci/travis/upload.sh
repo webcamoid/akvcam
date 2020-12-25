@@ -23,7 +23,7 @@ else
     export DOWNLOAD_CMD="curl --retry 10 -sS -kLOC -"
 fi
 
-if [[ ( ! -z "${DAILY_BUILD}" || ! -z "$RELEASE_BUILD" ) && "$TRAVIS_BRANCH" == "master" ]]; then
+if ( [[ ! -z "${DAILY_BUILD}" ]] || [[ ! -z "$RELEASE_BUILD" ]] ) && [[ "$TRAVIS_BRANCH" == "master" ]]; then
     if [ -z "$DAILY_BUILD" ]; then
         version=$(grep -re '^PACKAGE_VERSION[[:space:]]*=[[:space:]]*' src/dkms.conf | awk -F= '{print $2}' | tr -d '"')
         publish=false
@@ -70,7 +70,7 @@ if [[ ( ! -z "${DAILY_BUILD}" || ! -z "$RELEASE_BUILD" ) && "$TRAVIS_BRANCH" == 
         fi
 
         cd "${TRAVIS_BUILD_DIR}"
-        "${DOWNLOAD_CMD}" "https://github.com/github/hub/releases/download/v${GITHUB_HUBVER}/${hub}.tgz" || true
+        ${DOWNLOAD_CMD} "https://github.com/github/hub/releases/download/v${GITHUB_HUBVER}/${hub}.tgz" || true
         tar xzf "${hub}.tgz"
         mkdir -p .local
         cp -rf "${hub}"/* .local/

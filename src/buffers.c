@@ -578,7 +578,6 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
 {
     akvcam_buffer_t akbuffer;
     struct v4l2_buffer v4l2_buff;
-    size_t i;
     int result = 0;
 
     akpr_function();
@@ -639,6 +638,8 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
                                 if (!copy_from_user(planes,
                                                     (char __user *) buffer->m.planes,
                                                     buffer->length * sizeof(struct v4l2_plane))) {
+                                    size_t i;
+
                                     for (i = 0; i < n_planes; i++)
                                         planes[i].m.mem_offset =
                                                 buffer->index
@@ -687,6 +688,7 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
                                     if (!copy_from_user(planes,
                                                         (char __user *) buffer->m.planes,
                                                         buffer->length * sizeof(struct v4l2_plane))) {
+                                        size_t i;
                                         size_t n_planes =
                                                 akvcam_min(buffer->length,
                                                            akvcam_format_planes(self->format));

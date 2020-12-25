@@ -863,7 +863,6 @@ int akvcam_ioctl_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
     akvcam_formats_list_t formats;
     akvcam_format_t format;
     akvcam_format_t nearest_format = NULL;
-    akvcam_buffers_t buffers;
     struct v4l2_fract frame_rate;
     __u32 total_buffers = 0;
     __u32 *n_buffers;
@@ -928,7 +927,7 @@ int akvcam_ioctl_s_parm(akvcam_node_t node, struct v4l2_streamparm *param)
     akvcam_format_delete(nearest_format);
 
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE) {
-        buffers = akvcam_device_buffers_nr(device);
+        akvcam_buffers_t buffers = akvcam_device_buffers_nr(device);
 
         if (total_buffers) {
             if (akvcam_buffers_resize_rw(buffers, total_buffers))

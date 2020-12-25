@@ -610,7 +610,6 @@ bool akvcam_driver_contains_node(const u32 *connections,
 
 void akvcam_driver_print_devices(void)
 {
-    akvcam_device_t device;
     akvcam_list_element_t it = NULL;
     AKVCAM_RW_MODE mode;
 
@@ -626,7 +625,8 @@ void akvcam_driver_print_devices(void)
     akpr_info("\n");
 
     for (;;) {
-        device = akvcam_list_next(akvcam_driver_global->devices, &it);
+        akvcam_device_t device =
+                akvcam_list_next(akvcam_driver_global->devices, &it);
 
         if (!it)
             break;
