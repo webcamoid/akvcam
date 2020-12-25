@@ -108,6 +108,6 @@ if [ -e ${qtIFW} ]; then
         --no-force-installations
 
     cd .local
-    cp -rvf "~/Qt/QtIFW-${QTIFWVER/-*/}"/* .
+    cp -rvf ~/Qt/QtIFW-"${QTIFWVER/-*/}"/* .
     cd ..
 fi
