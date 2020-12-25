@@ -42,8 +42,6 @@ void akvcam_file_set_file_name(akvcam_file_t self, const char *file_name);
 bool akvcam_file_open(akvcam_file_t self);
 void akvcam_file_close(akvcam_file_t self);
 bool akvcam_file_is_open(akvcam_file_ct self);
-bool akvcam_file_exists(akvcam_file_ct self);
-size_t akvcam_file_size(akvcam_file_ct self);
 bool akvcam_file_eof(akvcam_file_ct self);
 bool akvcam_file_seek(akvcam_file_t self, ssize_t offset, AKVCAM_FILE_SEEK pos);
 size_t akvcam_file_read(akvcam_file_t self, void *data, size_t size);

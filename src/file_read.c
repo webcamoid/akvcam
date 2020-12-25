@@ -23,6 +23,7 @@
 #include <linux/vmalloc.h>
 
 #include "file_read.h"
+#include "log.h"
 #include "rbuffer.h"
 #include "utils.h"
 
@@ -93,15 +94,19 @@ bool akvcam_file_open(akvcam_file_t self)
 {
     akvcam_file_close(self);
 
-    if (!akvcam_file_exists(self))
+    if (akvcam_strlen(self->file_name) < 1)
         return false;
 
     self->filp = filp_open(self->file_name, O_RDONLY, 0);
 
-    if (IS_ERR(self->filp))
-        return false;
+    if (IS_ERR(self->filp)) {
+        int error = PTR_ERR(self->filp);
+        akpr_err("%s\n", akvcam_string_from_error(error));
 
-    self->size = akvcam_file_size(self);
+        return false;
+    }
+
+    self->size = i_size_read(self->filp->f_inode);
     akvcam_rbuffer_resize(self->buffer,
                           self->size,
                           sizeof(char),
@@ -135,40 +140,6 @@ void akvcam_file_close(akvcam_file_t self)
 bool akvcam_file_is_open(akvcam_file_ct self)
 {
     return self->is_open;
-}
-
-bool akvcam_file_exists(akvcam_file_ct self)
-{
-    struct kstat stats;
-    mm_segment_t oldfs;
-    int result;
-
-    if (akvcam_strlen(self->file_name) < 1)
-        return 0;
-
-    oldfs = get_fs();
-    set_fs(KERNEL_DS);
-    result = vfs_stat((const char __user *) self->file_name, &stats);
-    set_fs(oldfs);
-
-    return result == 0;
-}
-
-size_t akvcam_file_size(akvcam_file_ct self)
-{
-    struct kstat stats;
-    mm_segment_t oldfs;
-    int result;
-
-    if (akvcam_strlen(self->file_name) < 1)
-        return 0;
-
-    oldfs = get_fs();
-    set_fs(KERNEL_DS);
-    result = vfs_stat((const char __user *) self->file_name, &stats);
-    set_fs(oldfs);
-
-    return result? 0: (size_t) stats.size;
 }
 
 bool akvcam_file_eof(akvcam_file_ct self)
@@ -228,16 +199,16 @@ size_t akvcam_file_read(akvcam_file_t self, void *data, size_t size)
            && akvcam_rbuffer_data_size(self->buffer) < size) {
         offset = (loff_t) self->file_bytes_read;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
-        bytes_read = kernel_read(self->filp,
-                                 offset,
-                                 read_block,
-                                 AKVCAM_READ_BLOCK);
-#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
         bytes_read = kernel_read(self->filp,
                                  read_block,
                                  AKVCAM_READ_BLOCK,
                                  &offset);
+#else
+        bytes_read = kernel_read(self->filp,
+                                 offset,
+                                 read_block,
+                                 AKVCAM_READ_BLOCK);
 #endif
 
         if (bytes_read < 1)
@@ -296,16 +267,16 @@ char *akvcam_file_read_line(akvcam_file_t self)
 
         offset = (loff_t) self->file_bytes_read;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
-        bytes_read = kernel_read(self->filp,
-                                 offset,
-                                 read_block,
-                                 (size_t) bytes_read);
-#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
         bytes_read = kernel_read(self->filp,
                                  read_block,
                                  (size_t) bytes_read,
                                  &offset);
+#else
+        bytes_read = kernel_read(self->filp,
+                                 offset,
+                                 read_block,
+                                 (size_t) bytes_read);
 #endif
 
         akvcam_rbuffer_queue_bytes(self->buffer, read_block, (size_t) bytes_read);

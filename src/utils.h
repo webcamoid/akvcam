@@ -60,19 +60,19 @@
         akvcam_##name##_proc callback; \
     } akvcam_##name##_callback, *akvcam_##name##_callback_t;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 16, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0)
+    #define AK_EPOLLIN     EPOLLIN
+    #define AK_EPOLLPRI    EPOLLPRI
+    #define AK_EPOLLOUT    EPOLLOUT
+    #define AK_EPOLLRDNORM EPOLLRDNORM
+    #define AK_EPOLLWRNORM EPOLLWRNORM
+#else
     #define __poll_t       unsigned int
     #define AK_EPOLLIN     POLLIN
     #define AK_EPOLLPRI    POLLPRI
     #define AK_EPOLLOUT    POLLOUT
     #define AK_EPOLLRDNORM POLLRDNORM
     #define AK_EPOLLWRNORM POLLWRNORM
-#else
-    #define AK_EPOLLIN     EPOLLIN
-    #define AK_EPOLLPRI    EPOLLPRI
-    #define AK_EPOLLOUT    EPOLLOUT
-    #define AK_EPOLLRDNORM EPOLLRDNORM
-    #define AK_EPOLLWRNORM EPOLLWRNORM
 #endif
 
 #define akvcam_init_field(v4l2_struct, field) \
@@ -114,12 +114,12 @@ typedef enum
     AKVCAM_MEMORY_TYPE_VMALLOC,
 } AKVCAM_MEMORY_TYPE;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
-struct timespec;
-struct timeval;
-#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
 struct __kernel_timespec;
 struct __kernel_v4l2_timeval;
+#else
+struct timespec;
+struct timeval;
 #endif
 
 enum v4l2_buf_type;
@@ -149,9 +149,11 @@ const char *akvcam_string_from_v4l2_buffer(const struct v4l2_buffer *buffer);
 const char *akvcam_string_from_v4l2_buffer_flags(__u32 flags);
 const char *akvcam_string_from_v4l2_field(enum v4l2_field field);
 const char *akvcam_string_from_v4l2_requestbuffers(const struct v4l2_requestbuffers *reqbuffs);
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0)
 const char *akvcam_string_from_v4l2_buffer_capabilities(__u32 flags);
 #endif
+
 const char *akvcam_string_from_v4l2_create_buffers(const struct v4l2_create_buffers *buffers);
 const char *akvcam_string_from_v4l2_pixelformat(__u32 pixelformat);
 const char *akvcam_string_from_v4l2_colorspace(enum v4l2_colorspace colorspace);
@@ -165,16 +167,17 @@ char *akvcam_strip_str_sub(const char *str,
 char *akvcam_strip_move_str(char *str, AKVCAM_MEMORY_TYPE type);
 size_t akvcam_str_count(const char *str, char c);
 void akvcam_replace(char *str, char from, char to);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
-void akvcam_get_timespec(struct timespec *tv);
-#else
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
 void akvcam_get_timespec(struct __kernel_timespec *tv);
+#else
+void akvcam_get_timespec(struct timespec *tv);
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
-void akvcam_get_timestamp(struct timeval *tv);
-#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
 void akvcam_get_timestamp(struct __kernel_v4l2_timeval *tv);
+#else
+void akvcam_get_timestamp(struct timeval *tv);
 #endif
 
 #endif // AKVCAM_UTILS_H
