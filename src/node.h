@@ -38,6 +38,6 @@ bool akvcam_node_blocking(akvcam_node_ct self);
 void akvcam_node_set_blocking(akvcam_node_t self, bool blocking);
 
 // public static
-struct v4l2_file_operations *akvcam_node_fops(void);
+const struct v4l2_file_operations *akvcam_node_fops(void);
 
 #endif // AKVCAM_NODE_H

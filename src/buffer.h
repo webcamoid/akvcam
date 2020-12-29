@@ -40,5 +40,6 @@ bool akvcam_buffer_write_data(akvcam_buffer_t self,
                               const void *data,
                               size_t size);
 int akvcam_buffer_map_data(akvcam_buffer_t self, struct vm_area_struct *vma);
+bool akvcam_buffer_mapped(akvcam_buffer_t self);
 
 #endif // AKVCAM_BUFFER_H

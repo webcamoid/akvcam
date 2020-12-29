@@ -61,7 +61,7 @@ int akvcam_buffers_data_map(akvcam_buffers_t self,
                             struct vm_area_struct *vma);
 bool akvcam_buffers_allocated(akvcam_buffers_ct self);
 size_t akvcam_buffers_size_rw(akvcam_buffers_t self);
-bool akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size);
+int akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size);
 ssize_t akvcam_buffers_read(akvcam_buffers_t self,
                             void __user *data,
                             size_t size);
@@ -72,5 +72,6 @@ akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self);
 int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame);
 __u32 akvcam_buffers_sequence(akvcam_buffers_ct self);
 void akvcam_buffers_reset_sequence(akvcam_buffers_t self);
+void akvcam_buffers_reset_flags(akvcam_buffers_t self);
 
 #endif // AKVCAM_BUFFERS_H

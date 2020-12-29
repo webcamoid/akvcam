@@ -41,7 +41,7 @@ struct akvcam_node
     bool blocking;
 };
 
-static struct v4l2_file_operations akvcam_fops;
+static const struct v4l2_file_operations akvcam_fops;
 
 akvcam_node_t akvcam_node_new(int32_t device_num)
 {
@@ -69,6 +69,7 @@ static void akvcam_node_free(struct kref *ref)
         if (controlling_node && self->id == controlling_node->id) {
             akvcam_buffers_t buffers = akvcam_device_buffers_nr(device);
             akvcam_buffers_deallocate(buffers);
+            akvcam_device_set_controlling_node(device, NULL);
             akvcam_buffers_set_blocking(buffers, false);
         }
 
@@ -129,7 +130,7 @@ void akvcam_node_set_blocking(akvcam_node_t self, bool blocking)
     self->blocking = blocking;
 }
 
-struct v4l2_file_operations *akvcam_node_fops(void)
+const struct v4l2_file_operations *akvcam_node_fops(void)
 {
     return &akvcam_fops;
 }
@@ -147,6 +148,7 @@ static int akvcam_node_open(struct file *filp)
 
     akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device));
     filp->private_data = akvcam_node_new(akvcam_device_num(device));
+    akpr_debug("Node: %d\n", (int) akvcam_node_id(filp->private_data));
     akvcam_node_set_blocking(filp->private_data, !(filp->f_flags & O_NONBLOCK));
     nodes = akvcam_device_nodes_nr(device);
     akvcam_list_push_back(nodes,
@@ -171,6 +173,7 @@ static ssize_t akvcam_node_read(struct file *filp,
     akpr_function();
     device = akvcam_device_from_file_nr(filp);
     akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device));
+    akpr_debug("Node: %d\n", (int) akvcam_node_id(filp->private_data));
 
     if (akvcam_device_type(device) != AKVCAM_DEVICE_TYPE_CAPTURE
         || !(akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE))
@@ -218,6 +221,7 @@ static ssize_t akvcam_node_write(struct file *filp,
     akpr_function();
     device = akvcam_device_from_file_nr(filp);
     akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device));
+    akpr_debug("Node: %d\n", (int) akvcam_node_id(filp->private_data));
 
     if (akvcam_device_type(device) != AKVCAM_DEVICE_TYPE_OUTPUT
         || !(akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE))
@@ -276,6 +280,8 @@ static __poll_t akvcam_node_poll(struct file *filp,
     __poll_t result = 0;
 
     akpr_function();
+    akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device));
+    akpr_debug("Node: %d\n", (int) akvcam_node_id(filp->private_data));
 
     if (akvcam_device_rw_mode(device) & AKVCAM_RW_MODE_READWRITE
         && !akvcam_buffers_allocated(buffers)) {
@@ -306,6 +312,8 @@ static int akvcam_node_mmap(struct file *filp, struct vm_area_struct *vma)
     if (!device)
         return -EIO;
 
+    akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device));
+    akpr_debug("Node: %d\n", (int) akvcam_node_id(filp->private_data));
     buffers = akvcam_device_buffers_nr(device);
 
     if (!buffers)
@@ -329,7 +337,6 @@ static bool akvcam_node_nodes_are_equals(akvcam_node_ct node1,
 
 static int akvcam_node_release(struct file *filp)
 {
-    akvcam_node_t node;
     akvcam_nodes_list_t nodes;
     akvcam_list_element_t it;
     akvcam_device_t device;
@@ -341,19 +348,16 @@ static int akvcam_node_release(struct file *filp)
         return -ENOTTY;
 
     akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device));
-    node = filp->private_data;
+    akpr_debug("Node: %d\n", (int) akvcam_node_id(filp->private_data));
 
-    if (!node)
-        return -ENOTTY;
-
-    if (akvcam_node_id(node) == akvcam_device_broadcasting_node(device)) {
+    if (akvcam_node_id(filp->private_data) == akvcam_device_broadcasting_node(device)) {
         akvcam_device_stop_streaming(device);
         akvcam_device_stop_streaming_rw(device);
     }
 
     nodes = akvcam_device_nodes_nr(device);
     it = akvcam_list_find(nodes,
-                          node,
+                          filp->private_data,
                           (akvcam_are_equals_t) akvcam_node_nodes_are_equals);
 
     if (it) {
@@ -364,7 +368,7 @@ static int akvcam_node_release(struct file *filp)
     return 0;
 }
 
-static struct v4l2_file_operations akvcam_fops = {
+static const struct v4l2_file_operations akvcam_fops = {
     .owner          = THIS_MODULE        ,
     .open           = akvcam_node_open   ,
     .read           = akvcam_node_read   ,

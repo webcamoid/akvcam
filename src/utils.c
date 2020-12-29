@@ -331,7 +331,7 @@ const char *akvcam_string_from_v4l2_buf_type(enum v4l2_buf_type type)
             return buf_type_str;
         }
 
-    snprintf(buf_type_str, AKVCAM_MAX_STRING_SIZE, "v4l2_buf_type(%d)", type);
+    snprintf(buf_type_str, AKVCAM_MAX_STRING_SIZE, "v4l2_buf_type(%d)", (int) type);
 
     return buf_type_str;
 }
@@ -389,7 +389,7 @@ const char *akvcam_string_from_v4l2_memory(enum v4l2_memory memory)
             return memory_str;
         }
 
-    snprintf(memory_str, AKVCAM_MAX_STRING_SIZE, "v4l2_memory(%d)", memory);
+    snprintf(memory_str, AKVCAM_MAX_STRING_SIZE, "v4l2_memory(%d)", (int) memory);
 
     return memory_str;
 }
@@ -500,7 +500,7 @@ const char *akvcam_string_from_v4l2_buffer_flags(__u32 flags)
         {V4L2_BUF_FLAG_KEYFRAME            , "keyframe"            },
         {V4L2_BUF_FLAG_PFRAME              , "pframe"              },
         {V4L2_BUF_FLAG_BFRAME              , "bframe"              },
-        {V4L2_BUF_FLAG_ERROR               , "error"               },    
+        {V4L2_BUF_FLAG_ERROR               , "error"               },
         {V4L2_BUF_FLAG_TIMECODE            , "timecode"            },
         {V4L2_BUF_FLAG_PREPARED            , "prepared"            },
         {V4L2_BUF_FLAG_NO_CACHE_INVALIDATE , "no_cache_invalidate" },
@@ -569,7 +569,7 @@ const char *akvcam_string_from_v4l2_field(enum v4l2_field field)
             return field_str;
         }
 
-    snprintf(field_str, AKVCAM_MAX_STRING_SIZE, "v4l2_field(%d)", field);
+    snprintf(field_str, AKVCAM_MAX_STRING_SIZE, "v4l2_field(%d)", (int) field);
 
     return field_str;
 }
@@ -717,7 +717,7 @@ const char *akvcam_string_from_v4l2_colorspace(enum v4l2_colorspace colorspace)
             return colorspace_str;
         }
 
-    snprintf(colorspace_str, AKVCAM_MAX_STRING_SIZE, "v4l2_colorspace(%d)", colorspace);
+    snprintf(colorspace_str, AKVCAM_MAX_STRING_SIZE, "v4l2_colorspace(%d)", (int) colorspace);
 
     return colorspace_str;
 }

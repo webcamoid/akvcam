@@ -200,27 +200,28 @@ static ssize_t akvcam_attributes_device_modes_show(struct device *dev,
     struct video_device *vdev = to_video_device(dev);
     akvcam_device_t device = video_get_drvdata(vdev);
     AKVCAM_RW_MODE mode = akvcam_device_rw_mode(device);
+    char *data = buffer;
     size_t space_left = PAGE_SIZE;
     int bytes_written;
 
     UNUSED(attribute);
-    memset(buffer, 0, PAGE_SIZE);
+    memset(data, 0, PAGE_SIZE);
 
     if (mode & AKVCAM_RW_MODE_READWRITE) {
-        bytes_written = snprintf(buffer, space_left, "rw\n");
-        buffer += bytes_written;
+        bytes_written = snprintf(data, space_left, "rw\n");
+        data += bytes_written;
         space_left -= (size_t) bytes_written;
     }
 
     if (mode & AKVCAM_RW_MODE_MMAP) {
-        bytes_written = snprintf(buffer, space_left, "mmap\n");
-        buffer += bytes_written;
+        bytes_written = snprintf(data, space_left, "mmap\n");
+        data += bytes_written;
         space_left -= (size_t) bytes_written;
     }
 
     if (mode & AKVCAM_RW_MODE_USERPTR) {
-        bytes_written = snprintf(buffer, space_left, "usrptr\n");
-        buffer += bytes_written;
+        bytes_written = snprintf(data, space_left, "usrptr\n");
+        data += bytes_written;
         space_left -= (size_t) bytes_written;
     }
 

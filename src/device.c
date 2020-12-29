@@ -140,7 +140,7 @@ akvcam_device_t akvcam_device_new(const char *name,
     memset(&self->v4l2_dev, 0, sizeof(struct v4l2_device));
     snprintf(self->v4l2_dev.name,
              V4L2_DEVICE_NAME_SIZE,
-             "akvcam-device-%llu", akvcam_id());
+             "akvcam-device-%u", (uint) akvcam_id());
     controls_changed.user_data = self;
     controls_changed.callback =
             (akvcam_controls_changed_proc) akvcam_device_controls_changed;

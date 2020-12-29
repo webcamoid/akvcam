@@ -32,7 +32,12 @@ struct akvcam_buffer
     struct mutex mtx;
     struct v4l2_buffer buffer;
     void *data;
+    bool mapped;
 };
+
+static const struct vm_operations_struct akvcam_buffer_vmops;
+
+void akvcam_buffer_vmops_close(struct vm_area_struct *vma);
 
 akvcam_buffer_t akvcam_buffer_new(size_t size)
 {
@@ -136,15 +141,27 @@ bool akvcam_buffer_write_data(akvcam_buffer_t self,
 
 int akvcam_buffer_map_data(akvcam_buffer_t self, struct vm_area_struct *vma)
 {
-    __u8 *data = self->data;
+    __u8 *data;
     unsigned long start = vma->vm_start;
     unsigned long size = vma->vm_end - vma->vm_start;
     int result = 0;
 
     akpr_function();
+    akpr_debug("Buffer: %s\n", akvcam_string_from_v4l2_buffer(&self->buffer));
 
     if (mutex_lock_interruptible(&self->mtx))
         return -EIO;
+
+    if (self->buffer.memory != V4L2_MEMORY_MMAP) {
+        akpr_err("This is not a MMAP buffer.\n");
+        mutex_unlock(&self->mtx);
+
+        return -EPERM;
+    }
+
+    data = self->data;
+    vma->vm_private_data = self;
+    vma->vm_ops = &akvcam_buffer_vmops;
 
     if (data) {
         while (size > 0) {
@@ -170,7 +187,27 @@ int akvcam_buffer_map_data(akvcam_buffer_t self, struct vm_area_struct *vma)
         result = -EINVAL;
     }
 
+    if (result == 0)
+        self->mapped = true;
+
     mutex_unlock(&self->mtx);
 
     return result;
 }
+
+bool akvcam_buffer_mapped(akvcam_buffer_t self)
+{
+    return self->mapped;
+}
+
+void akvcam_buffer_vmops_close(struct vm_area_struct *vma)
+{
+    akvcam_buffer_t self = vma->vm_private_data;
+
+    akpr_function();
+    self->mapped = false;
+}
+
+static const struct vm_operations_struct akvcam_buffer_vmops = {
+    .close = akvcam_buffer_vmops_close,
+};

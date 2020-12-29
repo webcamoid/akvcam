@@ -102,12 +102,12 @@ if [ ! -z "${USE_QEMU}" ]; then
     if [ -z "${DEFERRED_LOG}" ]; then
         echo 'insmod ${DRIVER_FILE} loglevel=7' >> ${system_mount_point}/root/driver_test.sh
         echo 'v4l2-ctl -d /dev/video0 --all -L' >> ${system_mount_point}/root/driver_test.sh
-        echo 'v4l2-compliance -d /dev/video0 -f' >> ${system_mount_point}/root/driver_test.sh
+        echo 'v4l2-compliance -d /dev/video0 -s -f' >> ${system_mount_point}/root/driver_test.sh
         echo 'rmmod ${DRIVER_FILE}' >> ${system_mount_point}/root/driver_test.sh
     else
         echo 'insmod ${DRIVER_FILE} loglevel=7 >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
         echo 'v4l2-ctl -d /dev/video0 --all -L >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
-        echo 'v4l2-compliance -d /dev/video0 -f >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
+        echo 'v4l2-compliance -d /dev/video0 -s -f >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
         echo 'rmmod ${DRIVER_FILE} >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
     fi
 
