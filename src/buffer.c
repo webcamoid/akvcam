@@ -240,7 +240,7 @@ int akvcam_buffer_write_userptr(akvcam_buffer_t self,
 
     mutex_unlock(&self->mtx);
 
-    return 0;
+    return result;
 }
 
 bool akvcam_buffer_read_data(akvcam_buffer_t self, void *data, size_t size)
