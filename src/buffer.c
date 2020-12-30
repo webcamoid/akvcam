@@ -19,6 +19,7 @@
 #include <linux/kref.h>
 #include <linux/mm.h>
 #include <linux/slab.h>
+#include <linux/uaccess.h>
 #include <linux/videodev2.h>
 #include <linux/vmalloc.h>
 
