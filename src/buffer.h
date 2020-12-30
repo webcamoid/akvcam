@@ -32,9 +32,13 @@ akvcam_buffer_t akvcam_buffer_new(size_t size);
 void akvcam_buffer_delete(akvcam_buffer_t self);
 akvcam_buffer_t akvcam_buffer_ref(akvcam_buffer_t self);
 
-bool akvcam_buffer_read(akvcam_buffer_t self, struct v4l2_buffer *v4l2_buff);
-bool akvcam_buffer_write(akvcam_buffer_t self,
-                         const struct v4l2_buffer *v4l2_buff);
+int akvcam_buffer_read(akvcam_buffer_t self, struct v4l2_buffer *v4l2_buff);
+int akvcam_buffer_read_userptr(akvcam_buffer_t self,
+                               struct v4l2_buffer *v4l2_buff);
+int akvcam_buffer_write(akvcam_buffer_t self,
+                        const struct v4l2_buffer *v4l2_buff);
+int akvcam_buffer_write_userptr(akvcam_buffer_t self,
+                                const struct v4l2_buffer *v4l2_buff);
 bool akvcam_buffer_read_data(akvcam_buffer_t self, void *data, size_t size);
 bool akvcam_buffer_write_data(akvcam_buffer_t self,
                               const void *data,

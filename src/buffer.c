@@ -72,33 +72,175 @@ akvcam_buffer_t akvcam_buffer_ref(akvcam_buffer_t self)
     return self;
 }
 
-bool akvcam_buffer_read(akvcam_buffer_t self, struct v4l2_buffer *v4l2_buff)
+int akvcam_buffer_read(akvcam_buffer_t self, struct v4l2_buffer *v4l2_buff)
 {
-    if (!v4l2_buff)
-        return false;
+    int result;
 
-    if (mutex_lock_interruptible(&self->mtx))
-        return false;
+    akpr_function();
+
+    if (!v4l2_buff)
+        return -EIO;
+
+    result = mutex_lock_interruptible(&self->mtx);
+
+    if (result)
+        return result;
 
     memcpy(v4l2_buff, &self->buffer, sizeof(struct v4l2_buffer));
     mutex_unlock(&self->mtx);
 
-    return true;
+    return 0;
 }
 
-bool akvcam_buffer_write(akvcam_buffer_t self,
-                         const struct v4l2_buffer *v4l2_buff)
+int akvcam_buffer_read_userptr(akvcam_buffer_t self,
+                               struct v4l2_buffer *v4l2_buff)
 {
-    if (!v4l2_buff)
-        return false;
+    int result;
 
-    if (mutex_lock_interruptible(&self->mtx))
-        return false;
+    akpr_function();
+
+    if (!v4l2_buff)
+        return -EIO;
+
+    if (v4l2_buff->length < 1 && v4l2_buff->bytesused < 1)
+        return -EINVAL;
+
+    result = mutex_lock_interruptible(&self->mtx);
+
+    if (result)
+        return result;
+
+    memcpy(v4l2_buff, &self->buffer, sizeof(struct v4l2_buffer));
+    result = 0;
+
+    if (akvcam_v4l2_buf_type_is_mutiplanar(self->buffer.type)) {
+        struct v4l2_plane *planes =
+                kmalloc(v4l2_buff->length * sizeof(struct v4l2_plane), GFP_KERNEL);
+
+        if (!copy_from_user(planes,
+                            (char __user *) v4l2_buff->m.planes,
+                            v4l2_buff->length * sizeof(struct v4l2_plane))) {
+            size_t i;
+            size_t offset = 0;
+
+            for (i = 0; i < v4l2_buff->length; i++) {
+                if (copy_to_user((char __user *) planes[i].m.userptr,
+                                 (char *) self->data + offset,
+                                 planes[i].bytesused)) {
+                    akpr_err("Failed copying data to user space.\n");
+                    result = -EIO;
+
+                    break;
+                }
+
+                offset += planes[i].bytesused;
+            }
+        } else {
+            akpr_err("Failed copying data from user space.\n");
+            result = -EIO;
+        }
+
+        kfree(planes);
+    } else {
+        akpr_debug("Copying buffer data to user space.\n");
+
+        if (copy_to_user((char __user *) v4l2_buff->m.userptr,
+                         self->data,
+                         self->buffer.bytesused)) {
+            akpr_err("Failed copying data to user space.\n");
+            result = -EIO;
+        }
+    }
+
+    mutex_unlock(&self->mtx);
+
+    return result;
+}
+
+int akvcam_buffer_write(akvcam_buffer_t self,
+                        const struct v4l2_buffer *v4l2_buff)
+{
+    int result;
+
+    akpr_function();
+
+    if (!v4l2_buff)
+        return -EIO;
+
+    result = mutex_lock_interruptible(&self->mtx);
+
+    if (result)
+        return result;
 
     memcpy(&self->buffer, v4l2_buff, sizeof(struct v4l2_buffer));
     mutex_unlock(&self->mtx);
 
-    return true;
+    return 0;
+}
+
+int akvcam_buffer_write_userptr(akvcam_buffer_t self,
+                                const struct v4l2_buffer *v4l2_buff)
+{
+    int result;
+
+    akpr_function();
+
+    if (!v4l2_buff)
+        return -EIO;
+
+    if (v4l2_buff->length < 1 && v4l2_buff->bytesused < 1)
+        return -EINVAL;
+
+    result = mutex_lock_interruptible(&self->mtx);
+
+    if (result)
+        return result;
+
+    memcpy(&self->buffer, v4l2_buff, sizeof(struct v4l2_buffer));
+    result = 0;
+
+    if (akvcam_v4l2_buf_type_is_mutiplanar(self->buffer.type)) {
+        struct v4l2_plane *planes =
+                kmalloc(v4l2_buff->length * sizeof(struct v4l2_plane), GFP_KERNEL);
+
+        if (!copy_from_user(planes,
+                            (char __user *) v4l2_buff->m.planes,
+                            v4l2_buff->length * sizeof(struct v4l2_plane))) {
+            size_t i;
+            size_t offset = 0;
+
+            for (i = 0; i < v4l2_buff->length; i++) {
+                if (copy_from_user((char *) self->data + offset,
+                                   (char __user *) planes[i].m.userptr,
+                                   planes[i].bytesused)) {
+                    akpr_err("Failed copying data from user space.\n");
+                    result = -EIO;
+
+                    break;
+                }
+
+                offset += planes[i].bytesused;
+            }
+        } else {
+            akpr_err("Failed copying data from user space.\n");
+            result = -EIO;
+        }
+
+        kfree(planes);
+    } else {
+        akpr_debug("Copying buffer data from user space.\n");
+
+        if (copy_from_user(self->data,
+                           (char __user *) v4l2_buff->m.userptr,
+                           v4l2_buff->bytesused)) {
+            akpr_err("Failed copying data from user space.\n");
+            result = -EIO;
+        }
+    }
+
+    mutex_unlock(&self->mtx);
+
+    return 0;
 }
 
 bool akvcam_buffer_read_data(akvcam_buffer_t self, void *data, size_t size)

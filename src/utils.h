@@ -108,6 +108,25 @@
     len; \
 })
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
+    #define akvcam_userptr_is_valid(ptr, len) \
+    ({ \
+        uint64_t d = 0; \
+        bool result = access_ok((ptr), (len)) && !get_user(d, (ptr)); \
+        \
+        result; \
+    })
+#else
+    #define akvcam_userptr_is_valid(ptr, len) \
+    ({ \
+    uint64_t d = 0; \
+    bool result = access_ok(VERIFY_WRITE, (ptr), (len)) \
+                  && !get_user(d, (ptr)); \
+    \
+    result; \
+    })
+#endif
+
 typedef enum
 {
     AKVCAM_MEMORY_TYPE_KMALLOC,
@@ -157,6 +176,7 @@ const char *akvcam_string_from_v4l2_buffer_capabilities(__u32 flags);
 const char *akvcam_string_from_v4l2_create_buffers(const struct v4l2_create_buffers *buffers);
 const char *akvcam_string_from_v4l2_pixelformat(__u32 pixelformat);
 const char *akvcam_string_from_v4l2_colorspace(enum v4l2_colorspace colorspace);
+bool akvcam_v4l2_buf_type_is_mutiplanar(enum v4l2_buf_type type);
 size_t akvcam_line_size(const char *buffer, size_t size, bool *found);
 char *akvcam_strdup(const char *str, AKVCAM_MEMORY_TYPE type);
 char *akvcam_strip_str(const char *str, AKVCAM_MEMORY_TYPE type);

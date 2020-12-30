@@ -722,6 +722,18 @@ const char *akvcam_string_from_v4l2_colorspace(enum v4l2_colorspace colorspace)
     return colorspace_str;
 }
 
+bool akvcam_v4l2_buf_type_is_mutiplanar(enum v4l2_buf_type type)
+{
+    switch (type) {
+    case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
+    case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
 size_t akvcam_line_size(const char *buffer, size_t size, bool *found)
 {
     size_t i;

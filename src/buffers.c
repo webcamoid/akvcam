@@ -188,12 +188,10 @@ int akvcam_buffers_allocate(akvcam_buffers_t self,
 
         for (i = 0; i < params->count; i++) {
             buffer = akvcam_buffer_new(buffer_length);
+            result = akvcam_buffer_read(buffer, &v4l2_buff);
 
-            if (!akvcam_buffer_read(buffer, &v4l2_buff)) {
-                result = -EIO;
-
+            if (result != 0)
                 break;
-            }
 
             v4l2_buff.index = (__u32) i;
             v4l2_buff.type = params->type;
@@ -211,9 +209,10 @@ int akvcam_buffers_allocate(akvcam_buffers_t self,
                 v4l2_buff.m.offset = (__u32) i * buffer_size;
             }
 
-            if (!akvcam_buffer_write(buffer, &v4l2_buff)) {
+            result = akvcam_buffer_write(buffer, &v4l2_buff);
+
+            if (result != 0) {
                 akvcam_buffer_delete(buffer);
-                result = -EIO;
 
                 break;
             }
@@ -306,17 +305,15 @@ int akvcam_buffers_create(akvcam_buffers_t self,
         buffer_size = (__u32) PAGE_ALIGN(buffer_length);
         last_buffer = akvcam_list_back(self->buffers);
 
-        if (last_buffer && akvcam_buffer_read(last_buffer, &v4l2_buff))
+        if (last_buffer && akvcam_buffer_read(last_buffer, &v4l2_buff) == 0)
             offset = v4l2_buff.m.offset + PAGE_ALIGN(v4l2_buff.length);
 
         for (i = 0; i < buffers->count; i++) {
             buffer = akvcam_buffer_new(buffer_length);
+            result = akvcam_buffer_read(buffer, &v4l2_buff);
 
-            if (!akvcam_buffer_read(buffer, &v4l2_buff)) {
-                result = -EIO;
-
+            if (result != 0)
                 break;
-            }
 
             v4l2_buff.index = buffers->index + (__u32) i;
             v4l2_buff.type = self->type;
@@ -334,9 +331,10 @@ int akvcam_buffers_create(akvcam_buffers_t self,
                 v4l2_buff.m.offset = offset + (__u32) i * buffer_size;
             }
 
-            if (!akvcam_buffer_write(buffer, &v4l2_buff)) {
+            result = akvcam_buffer_write(buffer, &v4l2_buff);
+
+            if (result != 0) {
                 akvcam_buffer_delete(buffer);
-                result = -EIO;
 
                 break;
             }
@@ -376,15 +374,13 @@ int akvcam_buffers_query(akvcam_buffers_t self,
     akbuffer = akvcam_list_at(self->buffers, buffer->index);
 
     if (akbuffer
-        && akvcam_buffer_read(akbuffer, &v4l2_buff)
+        && akvcam_buffer_read(akbuffer, &v4l2_buff) == 0
         && v4l2_buff.type == buffer->type) {
         if (buffer->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
             || buffer->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
             v4l2_buff.length = buffer->length;
             v4l2_buff.m.planes = buffer->m.planes;
-
-            if (akvcam_buffer_write(akbuffer, &v4l2_buff))
-                result = -EIO;
+            result = akvcam_buffer_write(akbuffer, &v4l2_buff);
         }
 
         if (!result && self->multiplanar) {
@@ -458,16 +454,14 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
         return -EINVAL;
 
     if (buffer->memory == V4L2_MEMORY_USERPTR && !self->multiplanar) {
-        uint64_t d = 0;
-
         if (!buffer->m.userptr) {
             akpr_err("The pointer is NULL.\n");
 
             return -EINVAL;
         }
 
-        if (!access_ok((char __user *) buffer->m.userptr, buffer->length)
-            || get_user(d, (char __user *) buffer->m.userptr)) {
+        if (!akvcam_userptr_is_valid((char __user *) buffer->m.userptr,
+                                     buffer->length)) {
             akpr_err("Invalid memory address.\n");
 
             return -EFAULT;
@@ -482,7 +476,9 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
     akbuffer = akvcam_list_at(self->buffers, buffer->index);
 
     if (akbuffer) {
-        if (akvcam_buffer_read(akbuffer, &v4l2_buff)) {
+        result = akvcam_buffer_read(akbuffer, &v4l2_buff);
+
+        if (result == 0) {
             if (v4l2_buff.flags & V4L2_BUF_FLAG_QUEUED) {
                 mutex_unlock(&self->buffers_mutex);
                 akpr_err("Buffer is already queued.\n");
@@ -506,62 +502,17 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
                     break;
 
                 case V4L2_MEMORY_USERPTR:
-                    if (!self->multiplanar)
-                        v4l2_buff.m.userptr = buffer->m.userptr;
+                        if (!self->multiplanar)
+                            v4l2_buff.m.userptr = buffer->m.userptr;
 
-                    v4l2_buff.flags = buffer->flags;
-                    v4l2_buff.flags |= V4L2_BUF_FLAG_QUEUED;
-                    v4l2_buff.flags &= (__u32) ~(V4L2_BUF_FLAG_MAPPED
-                                                 | V4L2_BUF_FLAG_DONE);
+                        v4l2_buff.flags = buffer->flags;
+                        v4l2_buff.flags |= V4L2_BUF_FLAG_QUEUED;
+                        v4l2_buff.flags &= (__u32) ~(V4L2_BUF_FLAG_MAPPED
+                                                     | V4L2_BUF_FLAG_DONE);
+                        result = akvcam_buffer_write_userptr(akbuffer, &v4l2_buff);
 
-                    if (buffer->length > 1
-                        && buffer->bytesused > 1
-                        && akvcam_device_type_from_v4l2(self->type) == AKVCAM_DEVICE_TYPE_OUTPUT) {
-                        void *data = vzalloc(buffer->bytesused);
-
-                        if (data) {
-                            if (self->multiplanar) {
-                                struct v4l2_plane *planes =
-                                        kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
-
-                                if (!copy_from_user(planes,
-                                                    (char __user *) buffer->m.planes,
-                                                    buffer->length * sizeof(struct v4l2_plane))) {
-                                    size_t n_planes =
-                                            akvcam_min(buffer->length,
-                                                       akvcam_format_planes(self->format));
-                                    size_t i;
-
-                                    for (i = 0; i < n_planes; i++)
-                                        if (copy_from_user((char *) data + akvcam_format_offset(self->format, i),
-                                                           (char __user *) planes[i].m.userptr,
-                                                           planes[i].length)) {
-                                            akpr_err("Failed copying data from user space.\n");
-                                            result = -EIO;
-
-                                            break;
-                                        }
-
-                                    if (!akvcam_buffer_write_data(akbuffer, data, buffer->bytesused))
-                                        result = -EIO;
-                                } else {
-                                    akpr_err("Failed copying data from user space.\n");
-                                    result = -EIO;
-                                }
-
-                                kfree(planes);
-                            } else {
-                                if (copy_from_user(data,
-                                                   (char __user *) buffer->m.userptr,
-                                                   buffer->length)) {
-                                    akpr_err("Failed copying data from user space.\n");
-                                    result = -EIO;
-                                }
-                            }
-
-                            vfree(data);
-                        }
-                    }
+                        if (result != 0)
+                            akpr_err("Can't write buffer data.\n");
 
                     break;
 
@@ -569,11 +520,12 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
                     break;
                 }
 
-                memcpy(buffer, &v4l2_buff, sizeof(struct v4l2_buffer));
+                if (result == 0) {
+                    memcpy(buffer, &v4l2_buff, sizeof(struct v4l2_buffer));
+                    result = akvcam_buffer_write(akbuffer, &v4l2_buff);
 
-                if (!akvcam_buffer_write(akbuffer, &v4l2_buff)) {
-                    akpr_err("Failed writing buffer.\n");
-                    result = -EIO;
+                    if (result != 0)
+                        akpr_err("Failed writing buffer.\n");
                 }
             } else {
                 akpr_err("Buffers types differs.\n");
@@ -581,7 +533,6 @@ int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
             }
         } else {
             akpr_err("Can't read buffer.\n");
-            result = -EIO;
         }
     } else {
         akpr_err("Buffer is empty.\n");
@@ -607,7 +558,7 @@ static akvcam_buffer_t akvcam_buffers_next_buffer(akvcam_buffers_ct self)
         if (!it)
             break;
 
-        if (akvcam_buffer_read(buffer, &v4l2_buff)
+        if (akvcam_buffer_read(buffer, &v4l2_buff) == 0
             && v4l2_buff.flags & V4L2_BUF_FLAG_DONE
             && v4l2_buff.sequence < sequence) {
             next_buffer = buffer;
@@ -666,7 +617,7 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
     result = 0;
 
     if (akbuffer) {
-        if (akvcam_buffer_read(akbuffer, &v4l2_buff)) {
+        if (akvcam_buffer_read(akbuffer, &v4l2_buff) == 0) {
             if (v4l2_buff.type == buffer->type) {
                 if (buffer->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
                     || buffer->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
@@ -721,60 +672,14 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
                     break;
 
                 case V4L2_MEMORY_USERPTR:
-                    if (buffer->m.userptr && !self->multiplanar)
-                        v4l2_buff.m.userptr = buffer->m.userptr;
+                    result = akvcam_buffer_read_userptr(akbuffer, &v4l2_buff);
 
-                    v4l2_buff.flags &= (__u32) ~(V4L2_BUF_FLAG_MAPPED
-                                                 | V4L2_BUF_FLAG_DONE
-                                                 | V4L2_BUF_FLAG_QUEUED);
-                    if (buffer->length > 1
-                        && buffer->bytesused > 1
-                        && akvcam_device_type_from_v4l2(self->type) == AKVCAM_DEVICE_TYPE_CAPTURE) {
-                        void *data = vzalloc(buffer->bytesused);
-
-                        if (data) {
-                            if (akvcam_buffer_read_data(akbuffer, data, buffer->bytesused)) {
-                                if (self->multiplanar) {
-                                    struct v4l2_plane *planes =
-                                            kmalloc(buffer->length * sizeof(struct v4l2_plane), GFP_KERNEL);
-
-                                    if (!copy_from_user(planes,
-                                                        (char __user *) buffer->m.planes,
-                                                        buffer->length * sizeof(struct v4l2_plane))) {
-                                        size_t i;
-                                        size_t n_planes =
-                                                akvcam_min(buffer->length,
-                                                           akvcam_format_planes(self->format));
-
-                                        for (i = 0; i < n_planes; i++)
-                                            if (copy_to_user((char __user *) planes[i].m.userptr,
-                                                             (char *) data + akvcam_format_offset(self->format, i),
-                                                             planes[i].length)) {
-                                                akpr_err("Failed copying data to user space.\n");
-                                                result = -EIO;
-
-                                                break;
-                                            }
-                                    } else {
-                                        akpr_err("Failed copying data from user space.\n");
-                                        result = -EIO;
-                                    }
-
-                                    kfree(planes);
-                                } else if (copy_to_user((char __user *) buffer->m.userptr,
-                                                        data,
-                                                        buffer->length)) {
-                                    akpr_err("Failed copying data to user space.\n");
-                                    result = -EIO;
-                                }
-                            } else {
-                                akpr_err("Can't read buffer data.\n");
-                                result = -EIO;
-                            }
-
-                            vfree(data);
-                        }
-                    }
+                    if (result == 0)
+                        v4l2_buff.flags &= (__u32) ~(V4L2_BUF_FLAG_MAPPED
+                                                     | V4L2_BUF_FLAG_DONE
+                                                     | V4L2_BUF_FLAG_QUEUED);
+                    else
+                        akpr_err("Can't read buffer data.\n");
 
                     break;
 
@@ -782,11 +687,12 @@ int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer)
                     break;
                 }
 
-                memcpy(buffer, &v4l2_buff, sizeof(struct v4l2_buffer));
+                if (result == 0) {
+                    memcpy(buffer, &v4l2_buff, sizeof(struct v4l2_buffer));
+                    result = akvcam_buffer_write(akbuffer, &v4l2_buff);
 
-                if (!akvcam_buffer_write(akbuffer, &v4l2_buff)) {
-                    akpr_err("Failed writing buffer.\n");
-                    result = -EIO;
+                    if (result != 0)
+                        akpr_err("Failed writing buffer.\n");
                 }
             } else {
                 akpr_err("Buffers types differs.\n");
@@ -812,7 +718,7 @@ static bool akvcam_buffers_equals_offset(akvcam_buffer_t buffer,
 {
     struct v4l2_buffer v4l2_buff;
 
-    if (!akvcam_buffer_read(buffer, &v4l2_buff))
+    if (akvcam_buffer_read(buffer, &v4l2_buff) != 0)
         return false;
 
     return akvcam_between(v4l2_buff.m.offset,
@@ -1059,7 +965,7 @@ static akvcam_buffer_t akvcam_buffers_next_read_buffer(akvcam_buffers_ct self)
         if (!it)
             break;
 
-        if (akvcam_buffer_read(buffer, &v4l2_buff)
+        if (akvcam_buffer_read(buffer, &v4l2_buff) == 0
             && v4l2_buff.flags & V4L2_BUF_FLAG_QUEUED
             && !(v4l2_buff.flags & V4L2_BUF_FLAG_DONE)
             && v4l2_buff.sequence < sequence) {
@@ -1106,7 +1012,7 @@ akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
         if (!akvcam_list_empty(self->buffers)) {
             akvcam_buffer_t buffer = akvcam_buffers_next_read_buffer(self);
 
-            if (buffer && akvcam_buffer_read(buffer, &v4l2_buff)) {
+            if (buffer && akvcam_buffer_read(buffer, &v4l2_buff) == 0) {
                 if (v4l2_buff.memory == V4L2_MEMORY_MMAP
                     || v4l2_buff.memory == V4L2_MEMORY_USERPTR) {
                     size_t length;
@@ -1150,7 +1056,7 @@ static akvcam_buffer_t akvcam_buffers_next_write_buffer(akvcam_buffers_ct self)
         if (!it)
             break;
 
-        if (akvcam_buffer_read(buffer, &v4l2_buff)
+        if (akvcam_buffer_read(buffer, &v4l2_buff) == 0
             && v4l2_buff.flags & (V4L2_BUF_FLAG_DONE | V4L2_BUF_FLAG_QUEUED)
             && v4l2_buff.sequence < sequence) {
             next_buffer = buffer;
@@ -1207,10 +1113,10 @@ void akvcam_buffers_reset_flags(akvcam_buffers_t self)
         if (!it)
             break;
 
-        if (akvcam_buffer_read(buffer, &v4l2_buff)) {
+        if (akvcam_buffer_read(buffer, &v4l2_buff) == 0) {
             v4l2_buff.flags &= ~(V4L2_BUF_FLAG_DONE | V4L2_BUF_FLAG_QUEUED);
 
-            if (!akvcam_buffer_write(buffer, &v4l2_buff))
+            if (akvcam_buffer_write(buffer, &v4l2_buff) != 0)
                 akpr_err("Failed writing buffer.\n");
         } else {
             akpr_err("Can't read buffer.\n");
@@ -1268,7 +1174,9 @@ int akvcam_buffers_write_frame_to_buffers(akvcam_buffers_t self,
     buffer = akvcam_buffers_next_write_buffer(self);
 
     if (buffer) {
-        if (akvcam_buffer_read(buffer, &v4l2_buff)) {
+        result = akvcam_buffer_read(buffer, &v4l2_buff);
+
+        if (result == 0) {
             if (v4l2_buff.memory == V4L2_MEMORY_MMAP
                 || v4l2_buff.memory == V4L2_MEMORY_USERPTR) {
                 if (frame) {
@@ -1289,14 +1197,12 @@ int akvcam_buffers_write_frame_to_buffers(akvcam_buffers_t self,
                     v4l2_buff.sequence = self->sequence;
                     v4l2_buff.flags |= V4L2_BUF_FLAG_DONE;
 
-                    if (akvcam_buffer_write(buffer, &v4l2_buff))
+                    result = akvcam_buffer_write(buffer, &v4l2_buff);
+
+                    if (result == 0)
                         self->sequence++;
-                    else
-                        result = -EIO;
                 }
             }
-        } else {
-            result = -EIO;
         }
     } else {
         result = -EAGAIN;
