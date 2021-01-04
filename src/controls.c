@@ -689,7 +689,7 @@ bool akvcam_controls_generate_event(akvcam_controls_ct self,
     control_params = akvcam_controls_params_by_id(self, id);
     control_value = akvcam_controls_value_by_id(self, id);
 
-    if (!control_value || !control_value)
+    if (!control_params || !control_value)
         return false;
 
     if (control_params->type == V4L2_CTRL_TYPE_CTRL_CLASS)
