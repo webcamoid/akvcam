@@ -57,6 +57,12 @@ typedef struct
 
 typedef struct
 {
+    enum v4l2_frmsizetypes type;
+    char  str[AKVCAM_MAX_STRING_SIZE];
+} akvcam_utils_frmsize_type_strings, *akvcam_utils_frmsize_type_strings_t;
+
+typedef struct
+{
     __u32 pixelformat;
     char  str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_pixelformat_strings, *akvcam_utils_pixelformat_strings_t;
@@ -91,6 +97,12 @@ typedef struct
     char  str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_buffer_capabilities_strings, *akvcam_utils_buffer_capabilities_strings_t;
 
+typedef struct
+{
+    __s32 ctrl_which;
+    char  str[AKVCAM_MAX_STRING_SIZE];
+} akvcam_utils_ctrl_which_class_strings, *akvcam_utils_ctrl_which_class_strings_t;
+
 uint64_t akvcam_id(void)
 {
     return akvcam_utils_private.id++;
@@ -116,7 +128,7 @@ const char *akvcam_string_from_ioctl(uint cmd)
         {UVCIOC_CTRL_MAP           , "UVCIOC_CTRL_MAP"           },
         {UVCIOC_CTRL_QUERY         , "UVCIOC_CTRL_QUERY"         },
         {VIDIOC_QUERYCAP           , "VIDIOC_QUERYCAP"           },
-#ifdef VIDIOC_RESERVED
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
         {VIDIOC_RESERVED           , "VIDIOC_RESERVED"           },
 #endif
         {VIDIOC_ENUM_FMT           , "VIDIOC_ENUM_FMT"           },
@@ -199,13 +211,11 @@ const char *akvcam_string_from_ioctl(uint cmd)
         {VIDIOC_DV_TIMINGS_CAP     , "VIDIOC_DV_TIMINGS_CAP"     },
         {VIDIOC_ENUM_FREQ_BANDS    , "VIDIOC_ENUM_FREQ_BANDS"    },
         {VIDIOC_DBG_G_CHIP_INFO    , "VIDIOC_DBG_G_CHIP_INFO"    },
-#ifdef VIDIOC_QUERY_EXT_CTRL
         {VIDIOC_QUERY_EXT_CTRL     , "VIDIOC_QUERY_EXT_CTRL"     },
-#endif
         {0                         , ""                          },
     };
 
-    for (i = 0; ioctl_strings[i].cmd; i++)
+    for (i = 0; akvcam_strlen(ioctl_strings[i].str) > 0; i++)
         if (ioctl_strings[i].cmd == cmd)
             return ioctl_strings[i].str;
 
@@ -261,7 +271,7 @@ const char *akvcam_string_from_error(int error)
     if (error >= 0)
         return errorstr;
 
-    for (i = 0; error_strings[i].error; i++)
+    for (i = 0; akvcam_strlen(error_strings[i].str) > 0; i++)
         if (error_strings[i].error == -error) {
             snprintf(errorstr,
                      AKVCAM_MAX_STRING_SIZE,
@@ -309,7 +319,6 @@ const char *akvcam_string_from_v4l2_buf_type(enum v4l2_buf_type type)
         {V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE , "V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE" },
         {V4L2_BUF_TYPE_SDR_CAPTURE         , "V4L2_BUF_TYPE_SDR_CAPTURE "        },
         {V4L2_BUF_TYPE_SDR_OUTPUT          , "V4L2_BUF_TYPE_SDR_OUTPUT  "        },
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
         {V4L2_BUF_TYPE_META_CAPTURE        , "V4L2_BUF_TYPE_META_CAPTURE"        },
 #endif
@@ -321,7 +330,7 @@ const char *akvcam_string_from_v4l2_buf_type(enum v4l2_buf_type type)
 
     memset(buf_type_str, 0, AKVCAM_MAX_STRING_SIZE);
 
-    for (i = 0; buf_type_strings[i].type; i++)
+    for (i = 0; akvcam_strlen(buf_type_strings[i].str) > 0; i++)
         if (buf_type_strings[i].type == type) {
             snprintf(buf_type_str,
                      AKVCAM_MAX_STRING_SIZE,
@@ -351,7 +360,7 @@ const char *akvcam_string_from_rw_mode(AKVCAM_RW_MODE rw_mode)
 
     n = snprintf(rw_mode_str, AKVCAM_MAX_STRING_SIZE, "AKVCAM_RW_MODE(");
 
-    for (i = 0; rw_mode_strings[i].rw_mode; i++)
+    for (i = 0; akvcam_strlen(rw_mode_strings[i].str) > 0; i++)
         if (rw_mode_strings[i].rw_mode & rw_mode) {
             if (j > 0)
                 n += snprintf(rw_mode_str + n, AKVCAM_MAX_STRING_SIZE - n, ", ");
@@ -379,7 +388,7 @@ const char *akvcam_string_from_v4l2_memory(enum v4l2_memory memory)
 
     memset(memory_str, 0, AKVCAM_MAX_STRING_SIZE);
 
-    for (i = 0; memory_strings[i].memory; i++)
+    for (i = 0; akvcam_strlen(memory_strings[i].str) > 0; i++)
         if (memory_strings[i].memory == memory) {
             snprintf(memory_str,
                      AKVCAM_MAX_STRING_SIZE,
@@ -523,9 +532,10 @@ const char *akvcam_string_from_v4l2_buffer_flags(__u32 flags)
         {0                                 , ""                    },
     };
 
+    memset(flags_str, 0, AKVCAM_MAX_STRING_SIZE);
     n = snprintf(flags_str, AKVCAM_MAX_STRING_SIZE, "V4L2_BUF_FLAG(");
 
-    for (i = 0; flags_strings[i].flag; i++)
+    for (i = 0; akvcam_strlen(flags_strings[i].str) > 0; i++)
         if (flags_strings[i].flag & flags) {
             if (j > 0)
                 n += snprintf(flags_str + n, AKVCAM_MAX_STRING_SIZE - n, ", ");
@@ -559,7 +569,7 @@ const char *akvcam_string_from_v4l2_field(enum v4l2_field field)
 
     memset(field_str, 0, AKVCAM_MAX_STRING_SIZE);
 
-    for (i = 0; field_strings[i].field >= 0; i++)
+    for (i = 0; akvcam_strlen(field_strings[i].str) > 0; i++)
         if (field_strings[i].field == field) {
             snprintf(field_str,
                      AKVCAM_MAX_STRING_SIZE,
@@ -623,7 +633,7 @@ const char *akvcam_string_from_v4l2_buffer_capabilities(__u32 flags)
 
     n = snprintf(capabilities_str, AKVCAM_MAX_STRING_SIZE, "V4L2_BUF_FLAG(");
 
-    for (i = 0; capabilities_strings[i].flag; i++)
+    for (i = 0; akvcam_strlen(capabilities_strings[i].str) > 0; i++)
         if (capabilities_strings[i].flag & flags) {
             if (j > 0)
                 n += snprintf(capabilities_str + n, AKVCAM_MAX_STRING_SIZE - n, ", ");
@@ -707,7 +717,7 @@ const char *akvcam_string_from_v4l2_colorspace(enum v4l2_colorspace colorspace)
 
     memset(colorspace_str, 0, AKVCAM_MAX_STRING_SIZE);
 
-    for (i = 0; colorspace_strings[i].colorspace >= 0; i++)
+    for (i = 0; akvcam_strlen(colorspace_strings[i].str) > 0; i++)
         if (colorspace_strings[i].colorspace == colorspace) {
             snprintf(colorspace_str,
                      AKVCAM_MAX_STRING_SIZE,
@@ -721,6 +731,115 @@ const char *akvcam_string_from_v4l2_colorspace(enum v4l2_colorspace colorspace)
 
     return colorspace_str;
 }
+
+const char *akvcam_string_from_v4l2_frmsizeenum(const struct v4l2_frmsizeenum *frame_sizes)
+{
+    static char frame_sizes_str[AKVCAM_MAX_STRING_SIZE];
+    size_t n;
+    const char *format;
+    const char *type;
+
+    n = snprintf(frame_sizes_str, AKVCAM_MAX_STRING_SIZE, "struct v4l2_frmsizeenum {\n");
+    n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tindex: %u\n", frame_sizes->index);
+    format = akvcam_string_from_v4l2_pixelformat(frame_sizes->pixel_format);
+    n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tformat: %s\n", format);
+    type = akvcam_string_from_v4l2_frmsizetypes(frame_sizes->type);
+    n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\ttype: %s\n", type);
+
+    if (frame_sizes->type == V4L2_FRMSIZE_TYPE_DISCRETE) {
+        n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tdiscrete.width: %u\n", frame_sizes->discrete.width);
+        n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tdiscrete.height: %u\n", frame_sizes->discrete.height);
+    } else {
+        n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tstepwise.min_width: %u\n", frame_sizes->stepwise.min_width);
+        n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tstepwise.max_width: %u\n", frame_sizes->stepwise.max_width);
+        n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tstepwise.step_width: %u\n", frame_sizes->stepwise.step_width);
+        n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tstepwise.min_height: %u\n", frame_sizes->stepwise.min_height);
+        n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tstepwise.max_height: %u\n", frame_sizes->stepwise.max_height);
+        n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tstepwise.step_height: %u\n", frame_sizes->stepwise.step_height);
+    }
+
+    snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "}");
+
+    return frame_sizes_str;
+}
+
+const char *akvcam_string_from_v4l2_frmsizetypes(enum v4l2_frmsizetypes type)
+{
+    size_t i;
+    static char frmsize_type_str[AKVCAM_MAX_STRING_SIZE];
+    static const akvcam_utils_frmsize_type_strings frmsize_type_strings[] = {
+        {V4L2_FRMSIZE_TYPE_DISCRETE  , "V4L2_FRMSIZE_TYPE_DISCRETE"  },
+        {V4L2_FRMSIZE_TYPE_CONTINUOUS, "V4L2_FRMSIZE_TYPE_CONTINUOUS"},
+        {V4L2_FRMSIZE_TYPE_STEPWISE  , "V4L2_FRMSIZE_TYPE_STEPWISE"  },
+        {-1                          , ""                            },
+    };
+
+    memset(frmsize_type_str, 0, AKVCAM_MAX_STRING_SIZE);
+
+    for (i = 0; akvcam_strlen(frmsize_type_strings[i].str) > 0; i++)
+        if (frmsize_type_strings[i].type == type) {
+            snprintf(frmsize_type_str,
+                     AKVCAM_MAX_STRING_SIZE,
+                     "%s",
+                     frmsize_type_strings[i].str);
+
+            return frmsize_type_str;
+        }
+
+    snprintf(frmsize_type_str, AKVCAM_MAX_STRING_SIZE, "v4l2_frmsizetypes(%d)", (int) type);
+
+    return frmsize_type_str;
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)
+const char *akvcam_string_from_ext_controls(const struct v4l2_ext_controls *ext_controls)
+{
+    static char frame_sizes_str[AKVCAM_MAX_STRING_SIZE];
+    size_t n;
+    const char *ctrl_which;
+
+    n = snprintf(frame_sizes_str, AKVCAM_MAX_STRING_SIZE, "struct v4l2_ext_controls {\n");
+    ctrl_which = akvcam_string_from_v4l2_ctrl_which(V4L2_CTRL_ID2WHICH(ext_controls->which));
+    n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\twhich: %s\n", ctrl_which);
+    n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tcount: %u\n", ext_controls->count);
+    n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\terror_idx: %u\n", ext_controls->error_idx);
+    n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\trequest_fd: %d\n", ext_controls->request_fd);
+    n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tcontrols: %p\n", ext_controls->controls);
+    snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "}");
+
+    return frame_sizes_str;
+}
+
+const char *akvcam_string_from_v4l2_ctrl_which(__s32 ctrl_which)
+{
+    size_t i;
+    static char ctrl_which_str[AKVCAM_MAX_STRING_SIZE];
+    static const akvcam_utils_ctrl_which_class_strings ctrl_which_strings[] = {
+        {V4L2_CTRL_WHICH_CUR_VAL    , "V4L2_CTRL_WHICH_CUR_VAL"    },
+        {V4L2_CTRL_WHICH_DEF_VAL    , "V4L2_CTRL_WHICH_DEF_VAL"    },
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0)
+        {V4L2_CTRL_WHICH_REQUEST_VAL, "V4L2_CTRL_WHICH_REQUEST_VAL"},
+#endif
+        {-1                         , ""                           },
+    };
+
+    memset(ctrl_which_str, 0, AKVCAM_MAX_STRING_SIZE);
+
+    for (i = 0; ctrl_which_strings[i].ctrl_which >= 0; i++)
+        if (ctrl_which_strings[i].ctrl_which == ctrl_which) {
+            snprintf(ctrl_which_str,
+                     AKVCAM_MAX_STRING_SIZE,
+                     "%s",
+                     ctrl_which_strings[i].str);
+
+            return ctrl_which_str;
+        }
+
+    snprintf(ctrl_which_str, AKVCAM_MAX_STRING_SIZE, "V4L2_CTRL_WHICH(%d)", (int) ctrl_which);
+
+    return ctrl_which_str;
+}
+#endif
 
 bool akvcam_v4l2_buf_type_is_mutiplanar(enum v4l2_buf_type type)
 {
@@ -865,14 +984,7 @@ void akvcam_get_timespec(struct __kernel_timespec *tv)
     tv->tv_sec = ts.tv_sec;
     tv->tv_nsec = ts.tv_nsec;
 }
-#else
-void akvcam_get_timespec(struct timespec *tv)
-{
-    ktime_get_ts(tv);
-}
-#endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
 void akvcam_get_timestamp(struct __kernel_v4l2_timeval *tv)
 {
     struct timespec64 ts;
@@ -881,6 +993,11 @@ void akvcam_get_timestamp(struct __kernel_v4l2_timeval *tv)
     tv->tv_usec = ts.tv_nsec / NSEC_PER_USEC;
 }
 #else
+void akvcam_get_timespec(struct timespec *tv)
+{
+    ktime_get_ts(tv);
+}
+
 void akvcam_get_timestamp(struct timeval *tv)
 {
     struct timespec ts;

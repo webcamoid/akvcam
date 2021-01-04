@@ -37,10 +37,6 @@
 #include "node.h"
 #include "settings.h"
 
-#ifndef V4L2_CAP_EXT_PIX_FORMAT
-#define V4L2_CAP_EXT_PIX_FORMAT 0x00200000
-#endif
-
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 7, 0)
 #define VFL_TYPE_VIDEO VFL_TYPE_GRABBER
 #endif
