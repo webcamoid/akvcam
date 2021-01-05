@@ -479,8 +479,10 @@ int akvcam_controls_get_ext(akvcam_controls_ct self,
     controls->error_idx = controls->count;
     akvcam_init_reserved(controls);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0)
     if (controls->which == V4L2_CTRL_WHICH_REQUEST_VAL)
         return -ENOTTY;
+#endif
 
     control = kzalloc(sizeof(struct v4l2_ext_control), GFP_KERNEL);
 
