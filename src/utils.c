@@ -803,7 +803,9 @@ const char *akvcam_string_from_ext_controls(const struct v4l2_ext_controls *ext_
     n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\twhich: %s\n", ctrl_which);
     n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tcount: %u\n", ext_controls->count);
     n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\terror_idx: %u\n", ext_controls->error_idx);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0)
     n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\trequest_fd: %d\n", ext_controls->request_fd);
+#endif
     n += snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "\tcontrols: %p\n", ext_controls->controls);
     snprintf(frame_sizes_str + n, AKVCAM_MAX_STRING_SIZE - n, "}");
 
