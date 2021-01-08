@@ -56,11 +56,19 @@ akvcam_signal_define(buffers, streaming_stopped)
 
 enum vb2_io_modes akvcam_buffers_io_modes_from_device_type(enum v4l2_buf_type type,
                                                            AKVCAM_RW_MODE rw_mode);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
 int akvcam_buffers_queue_setup(struct vb2_queue *queue,
                                unsigned int *num_buffers,
                                unsigned int *num_planes,
                                unsigned int sizes[],
                                struct device *alloc_devs[]);
+#else
+int akvcam_buffers_queue_setup(struct vb2_queue *queue,
+                               unsigned int *num_buffers,
+                               unsigned int *num_planes,
+                               unsigned int sizes[],
+                               void *alloc_devs[]);
+#endif
 int akvcam_buffers_buffer_prepare(struct vb2_buffer *buffer);
 void akvcam_buffers_buffer_queue(struct vb2_buffer *buffer);
 int akvcam_buffers_start_streaming(struct vb2_queue *queue, unsigned int count);
@@ -153,7 +161,13 @@ akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
 
     buf = list_entry(self->buffers.next, akvcam_buffers_buffer, list);
     list_del(&buf->list);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)
     buf->vb.vb2_buf.timestamp = ktime_get_ns();
+#else
+    v4l2_get_timestamp(&buf->vb.timestamp);
+#endif
+
     buf->vb.field = V4L2_FIELD_NONE;
     buf->vb.sequence = self->sequence++;
     mutex_unlock(&self->frames_mutex);
@@ -191,7 +205,13 @@ int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame)
 
     buf = list_entry(self->buffers.next, akvcam_buffers_buffer, list);
     list_del(&buf->list);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)
     buf->vb.vb2_buf.timestamp = ktime_get_ns();
+#else
+    v4l2_get_timestamp(&buf->vb.timestamp);
+#endif
+
     buf->vb.field = V4L2_FIELD_NONE;
     buf->vb.sequence = self->sequence++;
     mutex_unlock(&self->frames_mutex);
@@ -236,11 +256,19 @@ enum vb2_io_modes akvcam_buffers_io_modes_from_device_type(enum v4l2_buf_type ty
     return io_modes;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
 int akvcam_buffers_queue_setup(struct vb2_queue *queue,
                                unsigned int *num_buffers,
                                unsigned int *num_planes,
                                unsigned int sizes[],
                                struct device *alloc_devs[])
+#else
+int akvcam_buffers_queue_setup(struct vb2_queue *queue,
+                               unsigned int *num_buffers,
+                               unsigned int *num_planes,
+                               unsigned int sizes[],
+                               void *alloc_devs[])
+#endif
 {
     akvcam_buffers_t self = vb2_get_drv_priv(queue);
     size_t i;
