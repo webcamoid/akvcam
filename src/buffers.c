@@ -19,6 +19,7 @@
 #include <linux/kref.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
+#include <media/v4l2-common.h>
 #include <media/videobuf2-vmalloc.h>
 
 #include "buffers.h"
@@ -62,8 +63,15 @@ int akvcam_buffers_queue_setup(struct vb2_queue *queue,
                                unsigned int *num_planes,
                                unsigned int sizes[],
                                struct device *alloc_devs[]);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)
+int akvcam_buffers_queue_setup(struct vb2_queue *queue,
+                               unsigned int *num_buffers,
+                               unsigned int *num_planes,
+                               unsigned int sizes[],
+                               void *alloc_devs[]);
 #else
 int akvcam_buffers_queue_setup(struct vb2_queue *queue,
+                               const void *parg,
                                unsigned int *num_buffers,
                                unsigned int *num_planes,
                                unsigned int sizes[],
@@ -262,8 +270,15 @@ int akvcam_buffers_queue_setup(struct vb2_queue *queue,
                                unsigned int *num_planes,
                                unsigned int sizes[],
                                struct device *alloc_devs[])
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)
+int akvcam_buffers_queue_setup(struct vb2_queue *queue,
+                               unsigned int *num_buffers,
+                               unsigned int *num_planes,
+                               unsigned int sizes[],
+                               void *alloc_devs[])
 #else
 int akvcam_buffers_queue_setup(struct vb2_queue *queue,
+                               const void *parg,
                                unsigned int *num_buffers,
                                unsigned int *num_planes,
                                unsigned int sizes[],
@@ -273,6 +288,9 @@ int akvcam_buffers_queue_setup(struct vb2_queue *queue,
     akvcam_buffers_t self = vb2_get_drv_priv(queue);
     size_t i;
     UNUSED(alloc_devs);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
+    UNUSED(parg);
+#endif
 
     akpr_function();
 
