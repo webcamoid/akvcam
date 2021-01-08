@@ -29,8 +29,8 @@
         if (akvcam_log_level() >= LOGLEVEL_ERR) { \
             printk(KERN_ERR akpr_log_format fmt, \
                    akpr_file_name, __LINE__, ##__VA_ARGS__); \
-    } \
-} while (false)
+        } \
+    } while (false)
 
 #define akpr_warning(fmt, ...) \
     do { \

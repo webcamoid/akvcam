@@ -19,20 +19,6 @@
 #ifndef AKVCAM_IOCTL_H
 #define AKVCAM_IOCTL_H
 
-#include <linux/types.h>
-
-#include "node_types.h"
-
-struct akvcam_ioctl;
-typedef struct akvcam_ioctl *akvcam_ioctl_t;
-
-akvcam_ioctl_t akvcam_ioctl_new(void);
-void akvcam_ioctl_delete(akvcam_ioctl_t self);
-akvcam_ioctl_t akvcam_ioctl_ref(akvcam_ioctl_t self);
-
-int akvcam_ioctl_do(akvcam_ioctl_t self,
-                    akvcam_node_t node,
-                    unsigned int cmd,
-                    void __user *arg);
+const struct v4l2_ioctl_ops *akvcam_ioctl_ops(void);
 
 #endif // AKVCAM_IOCTL_H

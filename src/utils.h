@@ -51,14 +51,81 @@
 #define akvcam_mod(value, mod) \
     (((value) % (mod) + (mod)) % (mod))
 
-#define akvcam_callback(name, ...) \
-    typedef void (*akvcam_##name##_proc)(void *user_data, __VA_ARGS__); \
+#define akvcam_signal(class, signal, ...) \
+    typedef void (*akvcam_##class##_##signal##_proc)(void *user_data, __VA_ARGS__); \
     \
     typedef struct \
     { \
         void *user_data; \
-        akvcam_##name##_proc callback; \
-    } akvcam_##name##_callback, *akvcam_##name##_callback_t;
+        akvcam_##class##_##signal##_proc callback; \
+    } akvcam_##class##_##signal##_callback, *akvcam_##class##_##signal##_callback_t; \
+    \
+    void akvcam_##class##_set_##signal##_callback(akvcam_##class##_t self, \
+                                                  const akvcam_##class##_##signal##_callback callback)
+
+#define akvcam_signal_no_args(class, signal) \
+    typedef int (*akvcam_##class##_##signal##_proc)(void *user_data); \
+    \
+    typedef struct \
+    { \
+        void *user_data; \
+        akvcam_##class##_##signal##_proc callback; \
+    } akvcam_##class##_##signal##_callback, *akvcam_##class##_##signal##_callback_t; \
+    \
+    void akvcam_##class##_set_##signal##_callback(akvcam_##class##_t self, \
+                                                  const akvcam_##class##_##signal##_callback callback)
+
+#define akvcam_signal_callback(class, signal) \
+    akvcam_##class##_##signal##_callback signal##_callback
+
+#define akvcam_signal_define(class, signal) \
+    void akvcam_##class##_set_##signal##_callback(akvcam_##class##_t self, \
+                                                  const akvcam_##class##_##signal##_callback callback) \
+    { \
+        self->signal##_callback = callback; \
+    }
+
+#define akvcam_connect(class, sender, signal, receiver, method) \
+    do { \
+        akvcam_##class##_##signal##_callback signal_callback; \
+        signal_callback.user_data = receiver; \
+        signal_callback.callback = (akvcam_##class##_##signal##_proc) method; \
+        akvcam_##class##_set_##signal##_callback(sender, signal_callback); \
+    } while (false)
+
+#define akvcam_emit(self, signal, ...) \
+    do { \
+        if ((self)->signal##_callback.callback) \
+            (self)->signal##_callback.callback(self->signal##_callback.user_data, \
+                                               __VA_ARGS__); \
+    } while (false)
+
+#define akvcam_emit_no_args(self, signal) \
+    do { \
+        if ((self)->signal##_callback.callback) \
+            (self)->signal##_callback.callback(self->signal##_callback.user_data); \
+    } while (false)
+
+#define akvcam_call(self, signal, ...) \
+({ \
+    int result = 0; \
+    \
+    if ((self)->signal##_callback.callback) \
+        result = (self)->signal##_callback.callback(self->signal##_callback.user_data, \
+                                                    __VA_ARGS__); \
+    \
+    result; \
+})
+
+#define akvcam_call_no_args(self, signal) \
+({ \
+    int result = 0; \
+    \
+    if ((self)->signal##_callback.callback) \
+        result = (self)->signal##_callback.callback(self->signal##_callback.user_data); \
+    \
+    result; \
+})
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0)
     #define AK_EPOLLIN     EPOLLIN

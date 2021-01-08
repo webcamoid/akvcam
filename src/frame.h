@@ -39,6 +39,8 @@ void *akvcam_frame_line(akvcam_frame_ct self, size_t plane, size_t y);
 const void *akvcam_frame_const_line(akvcam_frame_ct self,
                                     size_t plane,
                                     size_t y);
+void *akvcam_frame_plane_data(akvcam_frame_ct self, size_t plane);
+const void *akvcam_frame_plane_const_data(akvcam_frame_ct self, size_t plane);
 size_t akvcam_frame_size(akvcam_frame_ct self);
 void akvcam_frame_resize(akvcam_frame_t self, size_t size);
 void akvcam_frame_clear(akvcam_frame_t self);

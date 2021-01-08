@@ -23,9 +23,10 @@
 
 #include "list_types.h"
 
-#define AKVCAM_RW_MODE_READWRITE 0x1U
-#define AKVCAM_RW_MODE_MMAP      0x2U
-#define AKVCAM_RW_MODE_USERPTR   0x4U
+#define AKVCAM_RW_MODE_READWRITE BIT(0)
+#define AKVCAM_RW_MODE_MMAP      BIT(1)
+#define AKVCAM_RW_MODE_USERPTR   BIT(2)
+#define AKVCAM_RW_MODE_DMABUF    BIT(3)
 
 struct akvcam_device;
 typedef struct akvcam_device *akvcam_device_t;

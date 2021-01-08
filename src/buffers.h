@@ -25,53 +25,26 @@
 #include "device_types.h"
 #include "format_types.h"
 #include "frame_types.h"
-#include "node_types.h"
-
-#define AKVCAM_BUFFERS_MIN 4
+#include "utils.h"
 
 enum v4l2_buf_type;
-struct v4l2_buffer;
-struct v4l2_requestbuffers;
-struct v4l2_create_buffers;
-struct v4l2_event;
-struct vm_area_struct;
+struct vb2_queue;
 
 akvcam_buffers_t akvcam_buffers_new(AKVCAM_RW_MODE rw_mode,
-                                    enum v4l2_buf_type type,
-                                    bool multiplanar);
+                                    enum v4l2_buf_type type);
 void akvcam_buffers_delete(akvcam_buffers_t self);
 akvcam_buffers_t akvcam_buffers_ref(akvcam_buffers_t self);
 
-bool akvcam_buffers_blocking(akvcam_buffers_ct self);
-void akvcam_buffers_set_blocking(akvcam_buffers_t self, bool blocking);
 akvcam_format_t akvcam_buffers_format(akvcam_buffers_ct self);
 void akvcam_buffers_set_format(akvcam_buffers_t self, akvcam_format_ct format);
-int akvcam_buffers_allocate(akvcam_buffers_t self,
-                            struct v4l2_requestbuffers *params);
-void akvcam_buffers_deallocate(akvcam_buffers_t self);
-int akvcam_buffers_create(akvcam_buffers_t self,
-                          struct v4l2_create_buffers *buffers,
-                          akvcam_format_ct format);
-int akvcam_buffers_query(akvcam_buffers_t self,
-                         struct v4l2_buffer *buffer);
-int akvcam_buffers_queue(akvcam_buffers_t self, struct v4l2_buffer *buffer);
-int akvcam_buffers_dequeue(akvcam_buffers_t self, struct v4l2_buffer *buffer);
-int akvcam_buffers_data_map(akvcam_buffers_t self,
-                            __u32 offset,
-                            struct vm_area_struct *vma);
-bool akvcam_buffers_allocated(akvcam_buffers_ct self);
-size_t akvcam_buffers_size_rw(akvcam_buffers_t self);
-int akvcam_buffers_resize_rw(akvcam_buffers_t self, size_t size);
-ssize_t akvcam_buffers_read(akvcam_buffers_t self,
-                            void __user *data,
-                            size_t size);
-ssize_t akvcam_buffers_write(akvcam_buffers_t self,
-                             const void __user *data,
-                             size_t size);
+size_t akvcam_buffers_count(akvcam_buffers_ct self);
+void akvcam_buffers_set_count(akvcam_buffers_t self, size_t nbuffers);
 akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self);
 int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame);
-__u32 akvcam_buffers_sequence(akvcam_buffers_ct self);
-void akvcam_buffers_reset_sequence(akvcam_buffers_t self);
-void akvcam_buffers_reset_flags(akvcam_buffers_t self);
+struct vb2_queue *akvcam_buffers_vb2_queue(akvcam_buffers_t self);
+
+// signals
+akvcam_signal_no_args(buffers, streaming_started);
+akvcam_signal_no_args(buffers, streaming_stopped);
 
 #endif // AKVCAM_BUFFERS_H

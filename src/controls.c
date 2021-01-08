@@ -62,11 +62,13 @@ struct akvcam_controls
 {
     struct kref ref;
     akvcam_control_value_t values;
-    akvcam_controls_changed_callback controls_changed;
+    akvcam_signal_callback(controls, updated);
     akvcam_control_params_ct control_params;
     size_t n_controls;
     AKVCAM_DEVICE_TYPE type;
 };
+
+akvcam_signal_define(controls, updated)
 
 akvcam_menu_item_ct akvcam_controls_colorfx_menu(akvcam_controls_ct controls,
                                                  size_t *size,
@@ -657,10 +659,8 @@ int akvcam_controls_set_ext(akvcam_controls_t self,
         akpr_info("Control value: %d\n", control->value);
         control_value->value = control->value;
 
-        if (self->controls_changed.callback &&
-            akvcam_controls_generate_event(self, control->id, &event))
-            self->controls_changed.callback(self->controls_changed.user_data,
-                                            &event);
+        if (akvcam_controls_generate_event(self, control->id, &event))
+            akvcam_emit(self, updated, &event);
     }
 
     kfree(control);
@@ -718,12 +718,6 @@ bool akvcam_controls_generate_event(akvcam_controls_ct self,
     event->u.ctrl.default_value = control_params->default_value;
 
     return true;
-}
-
-void akvcam_controls_set_changed_callback(akvcam_controls_t self,
-                                          const akvcam_controls_changed_callback callback)
-{
-    self->controls_changed = callback;
 }
 
 size_t akvcam_controls_capture_count(void)

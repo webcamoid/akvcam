@@ -31,6 +31,12 @@ static const struct attribute_group *akvcam_attributes_output_groups[2];
 
 typedef struct
 {
+    AKVCAM_RW_MODE rw_mode;
+    char  str[AKVCAM_MAX_STRING_SIZE];
+} akvcam_attributes_rw_mode_strings, *akvcam_attributes_rw_mode_strings_t;
+
+typedef struct
+{
     const char *name;
     __u32 id;
 } akvcam_attributes_controls_map, *akvcam_attributes_controls_map_t;
@@ -178,8 +184,7 @@ static ssize_t akvcam_attributes_streaming_devices_show(struct device *dev,
         if (!it)
             break;
 
-        if (akvcam_device_streaming(device)
-            || akvcam_device_streaming_rw(device)) {
+        if (akvcam_device_streaming(device)) {
             bytes_written = snprintf(buffer,
                                      space_left,
                                      "/dev/video%d\n",
@@ -199,33 +204,26 @@ static ssize_t akvcam_attributes_device_modes_show(struct device *dev,
 {
     struct video_device *vdev = to_video_device(dev);
     akvcam_device_t device = video_get_drvdata(vdev);
-    AKVCAM_RW_MODE mode = akvcam_device_rw_mode(device);
+    AKVCAM_RW_MODE rw_mode = akvcam_device_rw_mode(device);
     char *data = buffer;
-    size_t space_left = PAGE_SIZE;
-    int bytes_written;
+    size_t i;
+    size_t n = 0;
+    static const akvcam_attributes_rw_mode_strings rw_mode_strings[] = {
+        {AKVCAM_RW_MODE_READWRITE, "rw"     },
+        {AKVCAM_RW_MODE_MMAP     , "mmap"   },
+        {AKVCAM_RW_MODE_USERPTR  , "userptr"},
+        {AKVCAM_RW_MODE_DMABUF   , "dmabuf" },
+        {0                       , ""       },
+    };
 
     UNUSED(attribute);
     memset(data, 0, PAGE_SIZE);
 
-    if (mode & AKVCAM_RW_MODE_READWRITE) {
-        bytes_written = snprintf(data, space_left, "rw\n");
-        data += bytes_written;
-        space_left -= (size_t) bytes_written;
-    }
+    for (i = 0; akvcam_strlen(rw_mode_strings[i].str) > 0; i++)
+        if (rw_mode_strings[i].rw_mode & rw_mode)
+            n += snprintf(data + n, PAGE_SIZE - n, "%s\n", rw_mode_strings[i].str);
 
-    if (mode & AKVCAM_RW_MODE_MMAP) {
-        bytes_written = snprintf(data, space_left, "mmap\n");
-        data += bytes_written;
-        space_left -= (size_t) bytes_written;
-    }
-
-    if (mode & AKVCAM_RW_MODE_USERPTR) {
-        bytes_written = snprintf(data, space_left, "usrptr\n");
-        data += bytes_written;
-        space_left -= (size_t) bytes_written;
-    }
-
-    return (ssize_t) (PAGE_SIZE - space_left);
+    return (ssize_t) n;
 }
 
 

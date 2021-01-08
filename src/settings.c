@@ -231,7 +231,10 @@ size_t akvcam_settings_begin_array(akvcam_settings_t self, const char *prefix)
     snprintf(array_key, array_key_size, "%s/size", prefix);
     array_size_str = akvcam_map_value(group_configs, array_key);
     vfree(array_key);
-    kstrtou32(array_size_str, 10, (u32 *) &array_size);
+
+    if (kstrtou32(array_size_str, 10, (u32 *) &array_size) != 0)
+        return 0;
+
     self->current_array = vmalloc(len + 1);
     self->current_array[len] = 0;
     memcpy(self->current_array, prefix, len);

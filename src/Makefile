@@ -24,12 +24,10 @@ obj-m += $(MODULE_NAME).o
 akvcam-objs := \
 	module.o \
 	attributes.o \
-	buffer.o \
 	buffers.o \
 	controls.o \
 	device.o \
 	driver.o \
-	events.o \
 	file_read.o \
 	format.o \
 	frame.o \
@@ -38,7 +36,6 @@ akvcam-objs := \
 	list.o \
 	log.o \
 	map.o \
-	node.o \
 	rbuffer.o \
 	settings.o \
 	utils.o

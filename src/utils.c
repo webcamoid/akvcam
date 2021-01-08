@@ -355,6 +355,7 @@ const char *akvcam_string_from_rw_mode(AKVCAM_RW_MODE rw_mode)
         {AKVCAM_RW_MODE_READWRITE, "rw"     },
         {AKVCAM_RW_MODE_MMAP     , "mmap"   },
         {AKVCAM_RW_MODE_USERPTR  , "userptr"},
+        {AKVCAM_RW_MODE_DMABUF   , "dmabuf" },
         {0                       , ""       },
     };
 

@@ -24,7 +24,6 @@ TEMPLATE = lib
 lupdate_only {
     HEADERS += \
         src/attributes.h \
-        src/buffer.h \
         src/buffers.h \
         src/buffers_types.h \
         src/controls.h \
@@ -32,8 +31,6 @@ lupdate_only {
         src/device.h \
         src/device_types.h \
         src/driver.h \
-        src/events.h \
-        src/events_types.h \
         src/file_read.h \
         src/format.h \
         src/format_types.h \
@@ -45,8 +42,6 @@ lupdate_only {
         src/list_types.h \
         src/log.h \
         src/map.h \
-        src/node.h \
-        src/node_types.h \
         src/rbuffer.h \
         src/settings.h \
         src/utils.h
@@ -54,12 +49,10 @@ lupdate_only {
     SOURCES += \
         src/attributes.c \
         src/module.c \
-        src/buffer.c \
         src/buffers.c \
         src/controls.c \
         src/device.c \
         src/driver.c \
-        src/events.c \
         src/file_read.c \
         src/format.c \
         src/frame.c \
@@ -68,7 +61,6 @@ lupdate_only {
         src/list.c \
         src/log.c \
         src/map.c \
-        src/node.c \
         src/rbuffer.c \
         src/settings.c \
         src/utils.c

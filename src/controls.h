@@ -61,8 +61,6 @@ bool akvcam_controls_generate_event(akvcam_controls_ct self,
                                     struct v4l2_event *event);
 
 // signals
-akvcam_callback(controls_changed, const struct v4l2_event *event)
-void akvcam_controls_set_changed_callback(akvcam_controls_t self,
-                                          const akvcam_controls_changed_callback callback);
+akvcam_signal(controls, updated, const struct v4l2_event *event);
 
 #endif // AKVCAM_CONTROLS_H

@@ -30,6 +30,14 @@
 
 typedef struct
 {
+    AKVCAM_RW_MODE rw_mode;
+    char  str[AKVCAM_MAX_STRING_SIZE];
+    char  description[AKVCAM_MAX_STRING_SIZE];
+} akvcam_driver_rw_mode_strings, *akvcam_driver_rw_mode_strings_t;
+typedef const akvcam_driver_rw_mode_strings *akvcam_driver_rw_mode_strings_ct;
+
+typedef struct
+{
     char name[AKVCAM_MAX_STRING_SIZE];
     char description[AKVCAM_MAX_STRING_SIZE];
     akvcam_devices_list_t devices;
@@ -55,6 +63,7 @@ bool akvcam_driver_contains_node(const u32 *connections,
 void akvcam_driver_print_devices(void);
 void akvcam_driver_print_formats(akvcam_device_ct device);
 void akvcam_driver_print_connections(akvcam_device_ct device);
+akvcam_driver_rw_mode_strings_ct akvcam_driver_rw_mode_strs(void);
 
 int akvcam_driver_init(const char *name, const char *description)
 {
@@ -371,7 +380,9 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
     AKVCAM_RW_MODE mode;
     char *description;
     akvcam_formats_list_t formats;
-    akvcam_buffers_t buffers;
+    akvcam_driver_rw_mode_strings_ct rw_mode_strings =
+            akvcam_driver_rw_mode_strs();
+    size_t i;
 
     akpr_info("Reading device\n");
 
@@ -389,23 +400,12 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
     modes = akvcam_settings_value_list(settings, "mode", ",");
     mode = 0;
 
-    if (akvcam_list_contains(modes,
-                             "mmap",
-                             (akvcam_are_equals_t) akvcam_driver_strings_are_equals)) {
-        mode |= AKVCAM_RW_MODE_MMAP;
-    }
-
-    if (akvcam_list_contains(modes,
-                             "userptr",
-                             (akvcam_are_equals_t) akvcam_driver_strings_are_equals)) {
-        mode |= AKVCAM_RW_MODE_USERPTR;
-    }
-
-    if (akvcam_list_contains(modes,
-                             "rw",
-                             (akvcam_are_equals_t) akvcam_driver_strings_are_equals)) {
-        mode |= AKVCAM_RW_MODE_READWRITE;
-    }
+    for (i = 0; akvcam_strlen(rw_mode_strings[i].str) > 0; i++)
+        if (akvcam_list_contains(modes,
+                                 rw_mode_strings[i].str,
+                                 (akvcam_are_equals_t) akvcam_driver_strings_are_equals)) {
+            mode |= rw_mode_strings[i].rw_mode;
+        }
 
     akvcam_list_delete(modes);
 
@@ -432,9 +432,6 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
     if (akvcam_settings_contains(settings, "videonr"))
         akvcam_device_set_num(device,
                               akvcam_settings_value_int32(settings, "videonr"));
-
-    buffers = akvcam_device_buffers_nr(device);
-    akvcam_buffers_resize_rw(buffers, AKVCAM_BUFFERS_MIN);
 
     if (!akvcam_device_v4l2_type(device)) {
         akvcam_device_delete(device);
@@ -611,7 +608,10 @@ bool akvcam_driver_contains_node(const u32 *connections,
 void akvcam_driver_print_devices(void)
 {
     akvcam_list_element_t it = NULL;
-    AKVCAM_RW_MODE mode;
+    AKVCAM_RW_MODE rw_mode;
+    akvcam_driver_rw_mode_strings_ct rw_mode_strings =
+            akvcam_driver_rw_mode_strs();
+    size_t i;
 
     if (!akvcam_driver_global
         || !akvcam_driver_global->devices
@@ -641,18 +641,13 @@ void akvcam_driver_print_devices(void)
         }
 
         akpr_info("\tModes:\n");
-        mode = akvcam_device_rw_mode(device);
+        rw_mode = akvcam_device_rw_mode(device);
 
-        if (mode & AKVCAM_RW_MODE_READWRITE)
-            akpr_info("\t\tReadWrite\n");
+        for (i = 0; akvcam_strlen(rw_mode_strings[i].str) > 0; i++)
+            if (rw_mode_strings[i].rw_mode & rw_mode)
+                akpr_info("\t\t%s\n", rw_mode_strings[i].description);
 
-        if (mode & AKVCAM_RW_MODE_MMAP)
-            akpr_info("\t\tMMap\n");
-
-        if (mode & AKVCAM_RW_MODE_USERPTR)
-            akpr_info("\t\tUserPtr\n");
-
-        if (mode & AKVCAM_RW_MODE_READWRITE) {
+        if (rw_mode & AKVCAM_RW_MODE_READWRITE) {
             akpr_info("\tUser Controls: No\n");
         } else {
             akpr_info("\tUser Controls: Yes\n");
@@ -710,4 +705,17 @@ void akvcam_driver_print_connections(akvcam_device_ct device)
 
         akpr_info("\t\t/dev/video%d\n", akvcam_device_num(connected_device));
     }
+}
+
+akvcam_driver_rw_mode_strings_ct akvcam_driver_rw_mode_strs(void)
+{
+    static const akvcam_driver_rw_mode_strings rw_mode_strings[] = {
+        {AKVCAM_RW_MODE_READWRITE, "rw"     , "ReadWrite"},
+        {AKVCAM_RW_MODE_MMAP     , "mmap"   , "MMap"     },
+        {AKVCAM_RW_MODE_USERPTR  , "userptr", "UserPtr"  },
+        {AKVCAM_RW_MODE_DMABUF   , "dmabuf" , "DMABuf"   },
+        {0                       , ""       , ""         },
+    };
+
+    return rw_mode_strings;
 }
