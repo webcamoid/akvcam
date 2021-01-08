@@ -273,13 +273,12 @@ int akvcam_buffers_buffer_prepare(struct vb2_buffer *buffer)
 {
     akvcam_buffers_t self = vb2_get_drv_priv(buffer->vb2_queue);
     struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(buffer);
-    size_t plane_size;
     size_t i;
 
     akpr_function();
 
     for (i = 0; i < buffer->num_planes; i++) {
-        plane_size = akvcam_format_plane_size(self->format, i);
+        size_t plane_size = akvcam_format_plane_size(self->format, i);
 
         if (vb2_plane_size(buffer, i) < plane_size)
             return -EINVAL;
@@ -321,14 +320,15 @@ int akvcam_buffers_start_streaming(struct vb2_queue *queue, unsigned int count)
 void akvcam_buffers_stop_streaming(struct vb2_queue *queue)
 {
     akvcam_buffers_t self = vb2_get_drv_priv(queue);
-    akvcam_buffers_buffer_t buf;
-    akvcam_buffers_buffer_t node;
 
     akpr_function();
 
     akvcam_emit_no_args(self, streaming_stopped);
 
     if (!mutex_lock_interruptible(&self->frames_mutex)) {
+        akvcam_buffers_buffer_t buf;
+        akvcam_buffers_buffer_t node;
+
         list_for_each_entry_safe(buf, node, &self->buffers, list) {
             vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_ERROR);
             list_del(&buf->list);
