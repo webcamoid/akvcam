@@ -18,6 +18,7 @@
 
 #include <linux/kref.h>
 #include <linux/mutex.h>
+#include <linux/slab.h>
 #include <media/videobuf2-vmalloc.h>
 
 #include "buffers.h"
