@@ -51,7 +51,7 @@
     (((value) % (mod) + (mod)) % (mod))
 
 #define akvcam_signal(class, signal, ...) \
-    typedef void (*akvcam_##class##_##signal##_proc)(void *user_data, __VA_ARGS__); \
+    typedef int (*akvcam_##class##_##signal##_proc)(void *user_data, __VA_ARGS__); \
     \
     typedef struct \
     { \

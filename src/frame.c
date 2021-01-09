@@ -1835,22 +1835,25 @@ bool akvcam_frame_adjust_format_supported(__u32 fourcc)
 const uint8_t *akvcam_contrast_table(void)
 {
     static uint8_t *contrast_table = NULL;
-    ssize_t contrast;
+    static const int64_t min_contrast = -255;
+    static const int64_t max_contrast = 255;
+    static const int64_t max_color = 255;
+    int64_t contrast;
 
     if (contrast_table)
         return contrast_table;
 
-    contrast_table = vmalloc(511 * 256);
+    contrast_table = vmalloc((max_color + 1) * (max_contrast - min_contrast + 1));
 
-    for (contrast = -255; contrast < 256; contrast++) {
-        size_t i;
-        size_t j = 0;
-        ssize_t f_num = 259 * (255 + contrast);
-        ssize_t f_den = 255 * (259 - contrast);
+    for (contrast = min_contrast; contrast <= max_contrast; contrast++) {
+        uint64_t i;
+        int64_t f_num = 259 * (255 + contrast);
+        int64_t f_den = 255 * (259 - contrast);
+        size_t offset = (size_t) (contrast + 255) << 8;
 
-        for (i = 0; i < 256; i++, j++) {
-            ssize_t ic = (f_num * ((ssize_t) i - 128) + 128 * f_den) / f_den;
-            contrast_table[j] = (uint8_t) akvcam_bound(0, ic, 255);
+        for (i = 0; i <= max_color; i++) {
+            int64_t ic = (f_num * ((ssize_t) i - 128) + 128 * f_den) / f_den;
+            contrast_table[offset | i] = (uint8_t) akvcam_bound(0, ic, 255);
         }
     }
 
@@ -1913,22 +1916,25 @@ const uint8_t *akvcam_contrast_table(void)
 const uint8_t *akvcam_gamma_table(void)
 {
     static uint8_t *gamma_table = NULL;
-    ssize_t gamma;
+    static const int64_t min_gamma = -255;
+    static const int64_t max_gamma = 255;
+    static const int64_t max_color = 255;
+    int64_t gamma;
 
     if (gamma_table)
         return gamma_table;
 
-    gamma_table = vmalloc(511 * 256);
+    gamma_table = vmalloc((max_color + 1) * (max_gamma - min_gamma + 1));
 
-    for (gamma = -255; gamma < 256; gamma++) {
-        ssize_t i;
-        size_t j = 0;
-        ssize_t g = (255 + gamma) >> 1;
-        ssize_t f_num = 2 * g - 255;
-        ssize_t f_den = g * (g - 255);
+    for (gamma = min_gamma; gamma <= max_gamma; gamma++) {
+        int64_t i;
+        int64_t g = (255 + gamma) >> 1;
+        int64_t f_num = 2 * g - 255;
+        int64_t f_den = g * (g - 255);
+        size_t offset = (size_t) (gamma + 255) << 8;
 
-        for (i = 0; i < 256; i++, j++) {
-            ssize_t ig;
+        for (i = 0; i <= max_color; i++) {
+            int64_t ig;
 
             if (g > 0 && g != 255) {
                 ig = (f_num * i * i + (f_den - f_num * 255) * i) / f_den;
@@ -1939,7 +1945,7 @@ const uint8_t *akvcam_gamma_table(void)
                 ig = 255;
             }
 
-            gamma_table[j] = (uint8_t) ig;
+            gamma_table[offset | i] = (uint8_t) ig;
         }
     }
 

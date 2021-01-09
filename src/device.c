@@ -88,8 +88,7 @@ static const struct v4l2_file_operations akvcam_device_fops;
 
 enum v4l2_buf_type akvcam_device_v4l2_from_device_type(AKVCAM_DEVICE_TYPE type,
                                                        bool multiplanar);
-void akvcam_device_controls_updated(akvcam_device_t self,
-                                    struct v4l2_event *event);
+void akvcam_device_controls_updated(akvcam_device_t self, __u32 id, __s32 value);
 void akvcam_device_stop_streaming(akvcam_device_t self);
 int akvcam_device_clock_timeout(akvcam_device_t self);
 void akvcam_device_clock_run_once(akvcam_device_t self);
@@ -200,6 +199,7 @@ bool akvcam_device_register(akvcam_device_t self)
             self->vdev->release = video_device_release_empty;
             self->vdev->queue = queue;
             self->vdev->lock = &self->device_mutex;
+            self->vdev->ctrl_handler = akvcam_controls_handler(self->controls);
             akvcam_attributes_set(self->attributes, &self->vdev->dev);
             video_set_drvdata(self->vdev, self);
 
@@ -371,54 +371,53 @@ enum v4l2_buf_type akvcam_device_v4l2_from_device_type(AKVCAM_DEVICE_TYPE type,
     return (enum v4l2_buf_type) 0;
 }
 
-void akvcam_device_controls_updated(akvcam_device_t self,
-                                    struct v4l2_event *event)
+void akvcam_device_controls_updated(akvcam_device_t self, __u32 id, __s32 value)
 {
     akvcam_list_element_t it = NULL;
 
-    switch (event->id) {
+    switch (id) {
     case V4L2_CID_BRIGHTNESS:
-        self->brightness = event->u.ctrl.value;
+        self->brightness = value;
         break;
 
     case V4L2_CID_CONTRAST:
-        self->contrast = event->u.ctrl.value;
+        self->contrast = value;
         break;
 
     case V4L2_CID_SATURATION:
-        self->saturation = event->u.ctrl.value;
+        self->saturation = value;
         break;
 
     case V4L2_CID_HUE:
-        self->hue = event->u.ctrl.value;
+        self->hue = value;
         break;
 
     case V4L2_CID_GAMMA:
-        self->gamma = event->u.ctrl.value;
+        self->gamma = value;
         break;
 
     case V4L2_CID_HFLIP:
-        self->horizontal_flip = event->u.ctrl.value;
+        self->horizontal_flip = value;
         break;
 
     case V4L2_CID_VFLIP:
-        self->vertical_flip = event->u.ctrl.value;
+        self->vertical_flip = value;
         break;
 
     case V4L2_CID_COLORFX:
-        self->gray = event->u.ctrl.value == V4L2_COLORFX_BW;
+        self->gray = value == V4L2_COLORFX_BW;
         break;
 
     case AKVCAM_CID_SCALING:
-        self->scaling = (AKVCAM_SCALING) event->u.ctrl.value;
+        self->scaling = value;
         break;
 
     case AKVCAM_CID_ASPECT_RATIO:
-        self->aspect_ratio = (AKVCAM_ASPECT_RATIO) event->u.ctrl.value;
+        self->aspect_ratio = value;
         break;
 
     case AKVCAM_CID_SWAP_RGB:
-        self->swap_rgb = event->u.ctrl.value;
+        self->swap_rgb = value;
         break;
 
     default:

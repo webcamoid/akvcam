@@ -25,42 +25,18 @@
 #include "device_types.h"
 #include "utils.h"
 
-struct v4l2_queryctrl;
-struct v4l2_control;
-struct v4l2_ext_controls;
-struct v4l2_event_ctrl;
-struct v4l2_event;
-struct v4l2_query_ext_ctrl;
-
 // public
 akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE device_type);
 void akvcam_controls_delete(akvcam_controls_t self);
 akvcam_controls_t akvcam_controls_ref(akvcam_controls_t self);
 
-int akvcam_controls_query(akvcam_controls_ct self,
-                          struct v4l2_queryctrl *control);
-int akvcam_controls_fill_menu(akvcam_controls_ct self,
-                              struct v4l2_querymenu *menu);
-int akvcam_controls_get(akvcam_controls_ct self,
-                        struct v4l2_control *control);
-int akvcam_controls_set(akvcam_controls_t self,
-                        const struct v4l2_control *control);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)
-int akvcam_controls_query_ext(akvcam_controls_ct self,
-                              struct v4l2_query_ext_ctrl *control);
-int akvcam_controls_try_ext(akvcam_controls_ct self,
-                            struct v4l2_ext_controls *controls);
-int akvcam_controls_get_ext(akvcam_controls_ct self,
-                            struct v4l2_ext_controls *controls);
-int akvcam_controls_set_ext(akvcam_controls_t self,
-                            struct v4l2_ext_controls *controls);
-#endif
-bool akvcam_controls_contains(akvcam_controls_ct self, __u32 id);
-bool akvcam_controls_generate_event(akvcam_controls_ct self,
-                                    __u32 id,
-                                    struct v4l2_event *event);
+__s32 akvcam_controls_value(akvcam_controls_t self, __u32 id);
+const char *akvcam_controls_string_value(akvcam_controls_t self, __u32 id);
+int akvcam_controls_set_value(akvcam_controls_t self, __u32 id, __s32 value);
+int akvcam_controls_set_string_value(akvcam_controls_t self, __u32 id, const char *value);
+struct v4l2_ctrl_handler *akvcam_controls_handler(akvcam_controls_t self);
 
 // signals
-akvcam_signal(controls, updated, const struct v4l2_event *event);
+akvcam_signal(controls, updated, __u32 id, __s32 value);
 
 #endif // AKVCAM_CONTROLS_H

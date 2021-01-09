@@ -18,122 +18,141 @@
 
 #include <linux/kref.h>
 #include <linux/slab.h>
-#include <linux/uaccess.h>
+#include <media/v4l2-ctrls.h>
 
 #include "controls.h"
 #include "frame_types.h"
-#include "list.h"
 #include "log.h"
-
-typedef union
-{
-    __u8  name[32];
-    __s64 value;
-} akvcam_menu_item, *akvcam_menu_item_t;
-typedef const akvcam_menu_item *akvcam_menu_item_ct;
-
-typedef akvcam_menu_item_ct (*akvcam_control_menu_t)(akvcam_controls_ct controls,
-                                                     size_t *size,
-                                                     bool *int_menu);
-
-typedef struct
-{
-    __u32 id;
-    __u32 type;
-    char  name[32];
-    __s32 minimum;
-    __s32 maximum;
-    __s32 step;
-    __s32 default_value;
-    __u32 flags;
-    akvcam_control_menu_t menu;
-} akvcam_control_params, *akvcam_control_params_t;
-typedef const akvcam_control_params *akvcam_control_params_ct;
-
-typedef struct
-{
-    __u32 id;
-    __s32 value;
-    char value_str[AKVCAM_MAX_STRING_SIZE];
-} akvcam_control_value, *akvcam_control_value_t;
-typedef const akvcam_control_value *akvcam_control_value_ct;
 
 struct akvcam_controls
 {
     struct kref ref;
-    akvcam_control_value_t values;
+    struct v4l2_ctrl_handler handler;
     akvcam_signal_callback(controls, updated);
-    akvcam_control_params_ct control_params;
+    const struct v4l2_ctrl_config *control_params;
     size_t n_controls;
-    AKVCAM_DEVICE_TYPE type;
 };
 
 akvcam_signal_define(controls, updated)
 
-akvcam_menu_item_ct akvcam_controls_colorfx_menu(akvcam_controls_ct controls,
-                                                 size_t *size,
-                                                 bool *int_menu);
+static const struct v4l2_ctrl_ops akvcam_controls_ops;
 
-static const akvcam_control_params akvcam_controls_capture[] = {
-    {V4L2_CID_USER_CLASS, V4L2_CTRL_TYPE_CTRL_CLASS,   "User Controls",    0,   0, 0, 0, V4L2_CTRL_FLAG_READ_ONLY
-                                                                                       | V4L2_CTRL_FLAG_WRITE_ONLY, NULL                        },
-    {V4L2_CID_BRIGHTNESS,    V4L2_CTRL_TYPE_INTEGER,      "Brightness", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER, NULL                        },
-    {V4L2_CID_CONTRAST  ,    V4L2_CTRL_TYPE_INTEGER,        "Contrast", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER, NULL                        },
-    {V4L2_CID_SATURATION,    V4L2_CTRL_TYPE_INTEGER,      "Saturation", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER, NULL                        },
-    {V4L2_CID_HUE       ,    V4L2_CTRL_TYPE_INTEGER,             "Hue", -359, 359, 1, 0,     V4L2_CTRL_FLAG_SLIDER, NULL                        },
-    {V4L2_CID_GAMMA     ,    V4L2_CTRL_TYPE_INTEGER,           "Gamma", -255, 255, 1, 0,     V4L2_CTRL_FLAG_SLIDER, NULL                        },
-    {V4L2_CID_HFLIP     ,    V4L2_CTRL_TYPE_BOOLEAN, "Horizontal Flip",    0,   1, 1, 0,                         0, NULL                        },
-    {V4L2_CID_VFLIP     ,    V4L2_CTRL_TYPE_BOOLEAN,   "Vertical Flip",    0,   1, 1, 0,                         0, NULL                        },
-    {V4L2_CID_COLORFX   ,       V4L2_CTRL_TYPE_MENU,   "Color Effects",    0,   0, 1, 0,                         0, akvcam_controls_colorfx_menu},
-    {0                  ,                         0,                "",    0,   0, 0, 0,                         0, NULL                        },
+static const struct v4l2_ctrl_config akvcam_controls_capture[] = {
+    {.id = V4L2_CID_BRIGHTNESS, .min = -255             , .max = 255            , .step = 1},
+    {.id = V4L2_CID_CONTRAST  , .min = -255             , .max = 255            , .step = 1},
+    {.id = V4L2_CID_SATURATION, .min = -255             , .max = 255            , .step = 1},
+    {.id = V4L2_CID_HUE       , .min = -359             , .max = 359            , .step = 1},
+    {.id = V4L2_CID_GAMMA     , .min = -255             , .max = 255            , .step = 1},
+    {.id = V4L2_CID_HFLIP     , .min = 0                , .max = 1              , .step = 1},
+    {.id = V4L2_CID_VFLIP     , .min = 0                , .max = 1              , .step = 1},
+    {.id = V4L2_CID_COLORFX   , .min = V4L2_COLORFX_NONE, .max = V4L2_COLORFX_BW, .step = 1},
+    {.id = 0                                                                               },
 };
 
-akvcam_menu_item_ct akvcam_controls_scaling_menu(akvcam_controls_ct controls,
-                                                 size_t *size,
-                                                 bool *int_menu);
-akvcam_menu_item_ct akvcam_controls_aspect_menu(akvcam_controls_ct controls,
-                                                size_t *size,
-                                                bool *int_menu);
+static const char * const akvcam_controls_scaling_menu[] = {
+    [AKVCAM_SCALING_FAST  ] = "Fast"  ,
+    [AKVCAM_SCALING_LINEAR] = "Linear",
+};
 
-static const akvcam_control_params akvcam_controls_output[] = {
-    {V4L2_CID_USER_CLASS    , V4L2_CTRL_TYPE_CTRL_CLASS,      "User Controls", 0, 0, 0, 0, V4L2_CTRL_FLAG_READ_ONLY
-                                                                                         | V4L2_CTRL_FLAG_WRITE_ONLY, NULL                        },
-    {V4L2_CID_HFLIP         ,    V4L2_CTRL_TYPE_BOOLEAN,    "Horizontal Flip", 0, 1, 1, 0,                         0, NULL                        },
-    {V4L2_CID_VFLIP         ,    V4L2_CTRL_TYPE_BOOLEAN,      "Vertical Flip", 0, 1, 1, 0,                         0, NULL                        },
-    {AKVCAM_CID_SCALING     ,       V4L2_CTRL_TYPE_MENU,       "Scaling Mode", 0, 0, 1, 0,                         0, akvcam_controls_scaling_menu},
-    {AKVCAM_CID_ASPECT_RATIO,       V4L2_CTRL_TYPE_MENU,  "Aspect Ratio Mode", 0, 0, 1, 0,                         0, akvcam_controls_aspect_menu },
-    {AKVCAM_CID_SWAP_RGB    ,    V4L2_CTRL_TYPE_BOOLEAN, "Swap Read and Blue", 0, 1, 1, 0,                         0, NULL                        },
-    {0                      ,                         0,                   "", 0, 0, 0, 0,                         0, NULL                        },
+static const char * const akvcam_controls_aspect_menu[] = {
+    [AKVCAM_ASPECT_RATIO_IGNORE   ] = "Ignore"   ,
+    [AKVCAM_ASPECT_RATIO_KEEP     ] = "Keep"     ,
+    [AKVCAM_ASPECT_RATIO_EXPANDING] = "Expanding",
+};
+
+static const struct v4l2_ctrl_config akvcam_controls_output[] = {
+    {.id = V4L2_CID_HFLIP, .max = 1, .step = 1},
+    {.id = V4L2_CID_VFLIP, .max = 1, .step = 1},
+    {
+        .id = AKVCAM_CID_SCALING,
+        .type = V4L2_CTRL_TYPE_MENU,
+        .name = "Scaling Mode",
+        .max = ARRAY_SIZE(akvcam_controls_scaling_menu) - 1,
+        .step = 0,
+        .qmenu = akvcam_controls_scaling_menu,
+        .ops = &akvcam_controls_ops
+    },
+    {
+        .id = AKVCAM_CID_ASPECT_RATIO,
+        .type = V4L2_CTRL_TYPE_MENU,
+        .name = "Aspect Ratio Mode" ,
+        .max = ARRAY_SIZE(akvcam_controls_aspect_menu) - 1,
+        .step = 0,
+        .qmenu = akvcam_controls_aspect_menu,
+        .ops = &akvcam_controls_ops
+    },
+    {
+        .id = AKVCAM_CID_SWAP_RGB,
+        .type = V4L2_CTRL_TYPE_BOOLEAN,
+        .name = "Swap Read and Blue",
+        .max = 1,
+        .step = 1,
+        .ops = &akvcam_controls_ops
+    },
+    {.id = 0},
 };
 
 size_t akvcam_controls_capture_count(void);
 size_t akvcam_controls_output_count(void);
-akvcam_control_value_t akvcam_controls_value_by_id(akvcam_controls_ct self,
-                                                   __u32 id);
-akvcam_control_params_ct akvcam_controls_params_by_id(akvcam_controls_ct self,
-                                                     __u32 id);
+int akvcam_controls_cotrol_changed(struct v4l2_ctrl *control);
 
 akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE device_type)
 {
-    size_t i;
     akvcam_controls_t self = kzalloc(sizeof(struct akvcam_controls), GFP_KERNEL);
+    size_t i;
+
     kref_init(&self->ref);
 
     // Initialize controls with default values.
     if (device_type == AKVCAM_DEVICE_TYPE_OUTPUT) {
-        self->n_controls = akvcam_controls_output_count();
         self->control_params = akvcam_controls_output;
+        self->n_controls = akvcam_controls_output_count();
     } else {
-        self->n_controls = akvcam_controls_capture_count();
         self->control_params = akvcam_controls_capture;
+        self->n_controls = akvcam_controls_capture_count();
     }
 
-    self->values = kzalloc(self->n_controls * sizeof(akvcam_control_value), GFP_KERNEL);
+    v4l2_ctrl_handler_init(&self->handler, self->n_controls);
 
     for (i = 0; i < self->n_controls; i++) {
-        self->values[i].id = self->control_params[i].id;
-        self->values[i].value = self->control_params[i].default_value;
-        memset(self->values[i].value_str, 0, AKVCAM_MAX_STRING_SIZE);
+        const struct v4l2_ctrl_config *params = self->control_params + i;
+
+        if (params->id < AKVCAM_CID_BASE) {
+            const char *name;
+            enum v4l2_ctrl_type type;
+            s64 min;
+            s64 max;
+            u64 step;
+            s64 def;
+            u32 flags;
+            v4l2_ctrl_fill(params->id,
+                           &name,
+                           &type,
+                           &min,
+                           &max,
+                           &step,
+                           &def,
+                           &flags);
+
+            if (type == V4L2_CTRL_TYPE_MENU) {
+                v4l2_ctrl_new_std_menu(&self->handler,
+                                       &akvcam_controls_ops,
+                                       params->id,
+                                       params->max,
+                                       params->menu_skip_mask,
+                                       params->def);
+            } else {
+                v4l2_ctrl_new_std(&self->handler,
+                                  &akvcam_controls_ops,
+                                  params->id,
+                                  params->min,
+                                  params->max,
+                                  params->step,
+                                  params->def);
+            }
+        } else {
+            v4l2_ctrl_new_custom(&self->handler, params, self);
+        }
     }
 
     return self;
@@ -142,7 +161,7 @@ akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE device_type)
 static void akvcam_controls_free(struct kref *ref)
 {
     akvcam_controls_t self = container_of(ref, struct akvcam_controls, ref);
-    kfree(self->values);
+    v4l2_ctrl_handler_free(&self->handler);;
     kfree(self);
 }
 
@@ -159,565 +178,76 @@ akvcam_controls_t akvcam_controls_ref(akvcam_controls_t self)
 
     return self;
 }
-
-int akvcam_controls_query(akvcam_controls_ct self,
-                          struct v4l2_queryctrl *control)
+__s32 akvcam_controls_value(akvcam_controls_t self, __u32 id)
 {
-    __u32 id = control->id & V4L2_CTRL_ID_MASK;
-    bool next = control->id
-              & (V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND);
-    akvcam_control_params_ct _control = NULL;
-
-    akpr_function();
-
-    if (self->n_controls < 1)
-        return -EINVAL;
-
-    if (!id && next) {
-        _control = self->control_params;
-    } else {
-        size_t i;
-        __u32 priv_id = V4L2_CID_PRIVATE_BASE;
-
-        for (i = 0; i < self->n_controls; i++) {
-            akvcam_control_params_ct ctrl = self->control_params + i;
-            bool is_private = V4L2_CTRL_DRIVER_PRIV(ctrl->id);
-
-            if (ctrl->id == id || (is_private && priv_id == id)) {
-                if (!next)
-                    _control = ctrl;
-                else if (i + 1 < self->n_controls)
-                    _control = self->control_params + i + 1;
-                else
-                    return -EINVAL;
-
-                break;
-            }
-
-            if (is_private)
-                priv_id++;
-        }
-    }
-
-    if (!_control)
-        return -EINVAL;
-
-    memset(control, 0, sizeof(struct v4l2_queryctrl));
-    control->id = id >= V4L2_CID_PRIVATE_BASE? id: _control->id;
-    control->type = _control->type;
-    snprintf((char *) control->name, 32, "%s", _control->name);
-    control->minimum = _control->minimum;
-
-    if (_control->menu) {
-        size_t menu_size = 0;
-        _control->menu(self, &menu_size, NULL);
-        control->maximum = (__s32) akvcam_max(menu_size - 1, 0);
-    } else {
-        control->maximum = _control->maximum;
-    }
-
-    control->step = _control->step;
-    control->default_value = _control->default_value;
-    control->flags = _control->flags;
-
-    return 0;
-}
-
-int akvcam_controls_fill_menu(akvcam_controls_ct self,
-                              struct v4l2_querymenu *menu)
-{
-    akvcam_menu_item_ct menu_items;
-    size_t size = 0;
-    bool int_menu = false;
-    akvcam_control_params_ct params;
-
-    akpr_function();
-    params = akvcam_controls_params_by_id(self, menu->id);
-    menu->reserved = 0;
-
-    if (!params || !params->menu)
-        return -EINVAL;
-
-    menu_items = params->menu(self, &size, &int_menu);
-
-    if (!menu_items || size < 1)
-        return -EINVAL;
-
-    if ((ssize_t) menu->index < params->minimum
-        || menu->index >= size)
-        return -EINVAL;
-
-    if (int_menu)
-        menu->value = menu_items[menu->index].value;
-    else
-        snprintf((char*) menu->name, 32, "%s", menu_items[menu->index].name);
-
-    return 0;
-}
-
-int akvcam_controls_get(akvcam_controls_ct self,
-                        struct v4l2_control *control)
-{
-    akvcam_control_params_ct control_params;
-    akvcam_control_value_ct control_value;
-
-    akpr_function();
-
-    control_params = akvcam_controls_params_by_id(self, control->id);
-    control_value = akvcam_controls_value_by_id(self, control->id);
-
-    if (!control_value) {
-        akpr_err("Control ID not found: 0x%08x\n", control->id);
-
-        return -EINVAL;
-    }
-
-    akpr_info("Reading '%s' control.\n", control_params->name);
-
-    if (control_params->flags & V4L2_CTRL_FLAG_WRITE_ONLY) {
-        akpr_err("Control not readable\n");
-
-        return -EACCES;
-    }
-
-    control->value = control_value->value;
-    akpr_info("Control value: %d\n", control->value);
-
-    return 0;
-}
-
-int akvcam_controls_set(akvcam_controls_t self,
-                        const struct v4l2_control *control)
-{
-    akvcam_control_params_ct control_params;
-    akvcam_control_value_t control_value;
-
-    akpr_function();
-
-    control_params = akvcam_controls_params_by_id(self, control->id);
-    control_value = akvcam_controls_value_by_id(self, control->id);
-
-    if (!control_value) {
-        akpr_err("Control ID not found: 0x%08x\n", control->id);
-
-        return -EINVAL;
-    }
-
-    akpr_info("Writing '%s' control.\n", control_params->name);
-
-    if (control_params->flags & V4L2_CTRL_FLAG_READ_ONLY) {
-        akpr_err("Control not writable\n");
-
-        return -EACCES;
-    }
-
-    if (control->value < control_params->minimum)
-        return -ERANGE;
-
-    if (control_params->menu) {
-        size_t menu_size = 0;
-        control_params->menu(self, &menu_size, NULL);
-
-        if (control->value >= (__s32) menu_size)
-            return -ERANGE;
-    } else if (control->value > control_params->maximum) {
-        return -ERANGE;
-    }
-
-    control_value->value = control->value;
-    akpr_info("Control value: %d\n", control->value);
-
-    return 0;
-}
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)
-int akvcam_controls_query_ext(akvcam_controls_ct self,
-                              struct v4l2_query_ext_ctrl *control)
-{
-    __u32 id = control->id & V4L2_CTRL_ID_MASK;
-    bool next = control->id
-              & (V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND);
-    akvcam_control_params_ct _control = NULL;
-
-    akpr_function();
-
-    if (self->n_controls < 1)
-        return -EINVAL;
-
-    if (!id && next) {
-        _control = self->control_params;
-    } else {
-        size_t i;
-        __u32 priv_id = V4L2_CID_PRIVATE_BASE;
-
-        for (i = 0; i < self->n_controls; i++) {
-            akvcam_control_params_ct ctrl = self->control_params + i;
-            bool is_private = V4L2_CTRL_DRIVER_PRIV(ctrl->id);
-
-            if (ctrl->id == id || (is_private && priv_id == id)) {
-                if (!next)
-                    _control = ctrl;
-                else if (i + 1 < self->n_controls)
-                    _control = self->control_params + i + 1;
-                else
-                    return -EINVAL;
-
-                break;
-            }
-
-            if (is_private)
-                priv_id++;
-        }
-    }
-
-    if (!_control)
-        return -EINVAL;
-
-    memset(control, 0, sizeof(struct v4l2_query_ext_ctrl));
-    control->id = id >= V4L2_CID_PRIVATE_BASE? id: _control->id;
-    control->type = _control->type;
-    snprintf(control->name, 32, "%s", _control->name);
-    control->minimum = _control->minimum;
-
-    if (_control->menu) {
-        size_t menu_size = 0;
-        _control->menu(self, &menu_size, NULL);
-        control->maximum = (__s64) akvcam_max(menu_size - 1, 0);
-    } else {
-        control->maximum = _control->maximum;
-    }
-
-    control->step = (__u64) _control->step;
-    control->default_value = _control->default_value;
-    control->flags = _control->flags;
-
-    return 0;
-}
-
-int akvcam_controls_try_ext(akvcam_controls_ct self,
-                            struct v4l2_ext_controls *controls)
-{
-    size_t i;
-    akvcam_control_params_ct control_params;
-    struct v4l2_ext_control *control = NULL;
-    int result = 0;
-
-    akpr_function();
-    controls->error_idx = controls->count;
-    akvcam_init_reserved(controls);
-
-    if (controls->which == V4L2_CTRL_WHICH_DEF_VAL)
-        return -EINVAL;
-
-    control = kzalloc(sizeof(struct v4l2_ext_control), GFP_KERNEL);
-
-    for (i = 0; i < controls->count; i++) {
-        controls->error_idx = (__u32) i;
-
-        if (copy_from_user(control,
-                           (struct v4l2_ext_control __user *)
-                           controls->controls + i,
-                           sizeof(struct v4l2_ext_control)) != 0) {
-            result = -EIO;
-
-            break;
-        }
-
-        akvcam_init_field(control, reserved2);
-        control_params = akvcam_controls_params_by_id(self, control->id);
-
-        if (!control_params) {
-            akpr_err("Control ID not found: 0x%08x\n", control->id);
-            result = -EINVAL;
-
-            break;
-        }
-
-        akpr_info("Trying '%s' control.\n", control_params->name);
-
-        if (control_params->flags & V4L2_CTRL_FLAG_READ_ONLY) {
-            akpr_err("Control not writable\n");
-            result = -EACCES;
-
-            break;
-        }
-
-        if (control->value < control_params->minimum) {
-            result = -ERANGE;
-
-            break;
-        }
-
-        if (control_params->menu) {
-            size_t menu_size = 0;
-            control_params->menu(self, &menu_size, NULL);
-
-            if (control->value >= (__s32) menu_size) {
-                result = -ERANGE;
-
-                break;
-            }
-        } else if (control->value > control_params->maximum) {
-            result = -ERANGE;
-
-            break;
-        }
-    }
-
-    kfree(control);
-
-    return result;
-}
-
-int akvcam_controls_get_ext(akvcam_controls_ct self,
-                            struct v4l2_ext_controls *controls)
-{
-    size_t i;
-    struct v4l2_ext_control *control = NULL;
-    int result = 0;
-
-    akpr_function();
-    akpr_debug("IN: %s\n", akvcam_string_from_ext_controls(controls));
-    controls->error_idx = controls->count;
-    akvcam_init_reserved(controls);
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0)
-    if (controls->which == V4L2_CTRL_WHICH_REQUEST_VAL)
-        return -ENOTTY;
-#endif
-
-    control = kzalloc(sizeof(struct v4l2_ext_control), GFP_KERNEL);
-
-    for (i = 0; i < controls->count; i++) {
-        akvcam_control_params_ct control_params;
-        akvcam_control_value_ct control_value;
-
-        if (copy_from_user(control,
-                           (struct v4l2_ext_control __user *)
-                           controls->controls + i,
-                           sizeof(struct v4l2_ext_control)) != 0) {
-            result = -EIO;
-
-            break;
-        }
-
-        akvcam_init_field(control, reserved2);
-        akpr_info("Control ID: 0x%08x\n", control->id);
-        control_params = akvcam_controls_params_by_id(self, control->id);
-        control_value = akvcam_controls_value_by_id(self, control->id);
-
-        if (!control_value || !control_value) {
-            akpr_err("Control ID not found: 0x%08x\n", control->id);
-            result = -EINVAL;
-
-            break;
-        }
-
-        akpr_info("Control name: %s\n", control_params->name);
-
-        if (control_params->flags & V4L2_CTRL_FLAG_WRITE_ONLY) {
-            akpr_err("Control not readable\n");
-            result = -EACCES;
-
-            break;
-        }
-
-        if (control_params->type == V4L2_CTRL_TYPE_STRING) {
-            __u32 buffer_size =
-                    akvcam_min(control->size, AKVCAM_MAX_STRING_SIZE);
-            size_t str_len = akvcam_strlen(control_value->value_str);
-
-            if (buffer_size < str_len) {
-                result = -ENOSPC;
-
-                break;
-            }
-
-            if (clear_user((char __user *) control->string,
-                           control->size) != 0) {
-                result = -EIO;
-
-                break;
-            }
-
-            if (copy_to_user((char __user *) control->string,
-                             control_value->value_str,
-                             str_len) != 0) {
-                result = -EIO;
-
-                break;
-            }
-        } else {
-            if (controls->which == V4L2_CTRL_WHICH_CUR_VAL
-                || controls->which == V4L2_CTRL_ID2WHICH(control->id)) {
-                control->value = control_value->value;
-            } else if (controls->which == V4L2_CTRL_WHICH_DEF_VAL) {
-                control->value = control_params->default_value;
-            } else {
-                result = -EIO;
-
-                break;
-            }
-
-            if (result == 0)
-                akpr_info("Control value: %d\n", control->value);
-        }
-
-        akvcam_init_field(control, reserved2);
-
-        if (copy_to_user((struct v4l2_ext_control __user *)
-                         controls->controls + i,
-                         control,
-                         sizeof(struct v4l2_ext_control)) != 0) {
-            result = -EIO;
-
-            break;
-        }
-    }
-
-    kfree(control);
-
-    return result;
-}
-
-int akvcam_controls_set_ext(akvcam_controls_t self,
-                            struct v4l2_ext_controls *controls)
-{
-    size_t i;
-    struct v4l2_ext_control *control = NULL;
-    struct v4l2_event event;
-    int result;
-
-    akpr_function();
-    akpr_debug("IN: %s\n", akvcam_string_from_ext_controls(controls));
-    controls->error_idx = controls->count;
-    akvcam_init_reserved(controls);
-
-    if (controls->which == V4L2_CTRL_WHICH_DEF_VAL)
-        return -EINVAL;
-
-    control = kzalloc(sizeof(struct v4l2_ext_control), GFP_KERNEL);
+    struct v4l2_ctrl *control = v4l2_ctrl_find(&self->handler, id);
 
     if (!control)
-        return -ENOMEM;
+        return 0;
 
-    for (i = 0; i < controls->count; i++) {
-        akvcam_control_params_ct control_params;
-        akvcam_control_value_t control_value;
-
-        if (copy_from_user(control,
-                           (struct v4l2_ext_control __user *)
-                           controls->controls + i,
-                           sizeof(struct v4l2_ext_control)) != 0) {
-            result = -EIO;
-
-            break;
-        }
-
-        akvcam_init_field(control, reserved2);
-        akpr_info("Control ID: 0x%08x\n", control->id);
-        control_params = akvcam_controls_params_by_id(self, control->id);
-        control_value = akvcam_controls_value_by_id(self, control->id);
-
-        if (!control_value || !control_value) {
-            akpr_err("Control ID not found: 0x%08x\n", control->id);
-            result = -EINVAL;
-
-            break;
-        }
-
-        akpr_info("Control name: %s\n", control_params->name);
-
-        if (control_params->flags & V4L2_CTRL_FLAG_READ_ONLY) {
-            akpr_err("Control not writable\n");
-            result = -EACCES;
-
-            break;
-        }
-
-        if (control->value < control_params->minimum) {
-            result = -ERANGE;
-
-            break;
-        }
-
-        if (control_params->menu) {
-            size_t menu_size = 0;
-            control_params->menu(self, &menu_size, NULL);
-
-            if (control->value >= (__s32) menu_size) {
-                result = -ERANGE;
-
-                break;
-            }
-        } else if (control->value > control_params->maximum) {
-            result = -ERANGE;
-
-            break;
-        }
-
-        akpr_info("Control value: %d\n", control->value);
-        control_value->value = control->value;
-
-        if (akvcam_controls_generate_event(self, control->id, &event))
-            akvcam_emit(self, updated, &event);
-    }
-
-    kfree(control);
-
-    return result;
-}
-#endif
-
-bool akvcam_controls_contains(akvcam_controls_ct self, __u32 id)
-{
-    size_t i;
-
-    for (i = 0; i < self->n_controls; i++)
-        if (self->control_params[i].id == id)
-            return true;
-
-    return false;
+    return v4l2_ctrl_g_ctrl(control);
 }
 
-bool akvcam_controls_generate_event(akvcam_controls_ct self,
-                                    __u32 id,
-                                    struct v4l2_event *event)
+const char *akvcam_controls_string_value(akvcam_controls_t self, __u32 id)
 {
-    akvcam_control_params_ct control_params;
-    akvcam_control_value_ct control_value;
+    struct v4l2_ctrl *control = v4l2_ctrl_find(&self->handler, id);
 
-    akpr_function();
-    control_params = akvcam_controls_params_by_id(self, id);
-    control_value = akvcam_controls_value_by_id(self, id);
+    if (!control || !control->qmenu)
+        return NULL;
 
-    if (!control_params || !control_value)
-        return false;
+    return control->qmenu[v4l2_ctrl_g_ctrl(control)];
+}
 
-    if (control_params->type == V4L2_CTRL_TYPE_CTRL_CLASS)
-        return false;
+int akvcam_controls_set_value(akvcam_controls_t self, __u32 id, __s32 value)
+{
+    struct v4l2_ctrl *control = v4l2_ctrl_find(&self->handler, id);
+    int result;
 
-    memset(event, 0, sizeof(struct v4l2_event));
-    event->type = V4L2_EVENT_CTRL;
-    event->id = id;
-    event->u.ctrl.changes = V4L2_EVENT_CTRL_CH_VALUE;
-    event->u.ctrl.type = control_params->type;
-    event->u.ctrl.value = control_value->value;
-    event->u.ctrl.flags = control_params->flags;
-    event->u.ctrl.minimum = control_params->minimum;
+    if (!control)
+        return -EINVAL;
 
-    if (control_params->menu) {
-        size_t menu_size = 0;
-        control_params->menu(self, &menu_size, NULL);
-        event->u.ctrl.maximum = (__s32) akvcam_max(menu_size - 1, 0);
-    } else {
-        event->u.ctrl.maximum = control_params->maximum;
-    }
+    result = v4l2_ctrl_s_ctrl(control, value);
 
-    event->u.ctrl.step = control_params->step;
-    event->u.ctrl.default_value = control_params->default_value;
+    if (result)
+        return result;
 
-    return true;
+    akvcam_emit(self, updated, control->id, control->val);
+
+    return 0;
+}
+
+int akvcam_controls_set_string_value(akvcam_controls_t self, __u32 id, const char *value)
+{
+    struct v4l2_ctrl *control = v4l2_ctrl_find(&self->handler, id);
+    s64 i;
+    int result = -EINVAL;
+
+    if (!control || !control->qmenu)
+        return -EINVAL;
+
+    for (i = 0; i <= control->maximum; i++)
+        if (strncmp(control->qmenu[i], value, AKVCAM_MAX_STRING_SIZE) == 0) {
+            result = 0;
+
+            break;
+        }
+
+    if (result)
+        return result;
+
+    result = v4l2_ctrl_s_ctrl(control, i);
+
+    if (result)
+        return result;
+
+    akvcam_emit(self, updated, control->id, control->val);
+
+    return 0;
+}
+
+struct v4l2_ctrl_handler *akvcam_controls_handler(akvcam_controls_t self)
+{
+    return self->handler.error? NULL: &self->handler;
 }
 
 size_t akvcam_controls_capture_count(void)
@@ -748,103 +278,16 @@ size_t akvcam_controls_output_count(void)
     return count;
 }
 
-akvcam_menu_item_ct akvcam_controls_colorfx_menu(akvcam_controls_ct controls,
-                                                 size_t *size,
-                                                 bool *int_menu)
+int akvcam_controls_cotrol_changed(struct v4l2_ctrl *control)
 {
-    static const akvcam_menu_item colorfx[] = {
-        {.name = "None"         },
-        {.name = "Black & White"},
-    };
+    akvcam_controls_t self =
+            container_of(control->handler, struct akvcam_controls, handler);
 
-    UNUSED(controls);
+    akvcam_emit(self, updated, control->id, control->val);
 
-    if (size)
-        *size = 2;
-
-    if (int_menu)
-        *int_menu = false;
-
-    return colorfx;
+    return 0;
 }
 
-akvcam_menu_item_ct akvcam_controls_scaling_menu(akvcam_controls_ct controls,
-                                                 size_t *size,
-                                                 bool *int_menu)
-{
-    static const akvcam_menu_item scaling[] = {
-        {.name = "Fast"  },
-        {.name = "Linear"},
-    };
-
-    UNUSED(controls);
-
-    if (size)
-        *size = 2;
-
-    if (int_menu)
-        *int_menu = false;
-
-    return scaling;
-}
-
-akvcam_menu_item_ct akvcam_controls_aspect_menu(akvcam_controls_ct controls,
-                                                size_t *size,
-                                                bool *int_menu)
-{
-    static const akvcam_menu_item aspect[] = {
-        {.name = "Ignore"   },
-        {.name = "Keep"     },
-        {.name = "Expanding"},
-    };
-
-    UNUSED(controls);
-
-    if (size)
-        *size = 3;
-
-    if (int_menu)
-        *int_menu = false;
-
-    return aspect;
-}
-
-akvcam_control_value_t akvcam_controls_value_by_id(akvcam_controls_ct self,
-                                                   __u32 id)
-{
-    size_t i;
-    __u32 priv_id = V4L2_CID_PRIVATE_BASE;
-
-    for (i = 0; i < self->n_controls; i++) {
-        akvcam_control_value_t value = self->values + i;
-        bool is_private = V4L2_CTRL_DRIVER_PRIV(value->id);
-
-        if (value->id == id || (is_private && priv_id == id))
-            return value;
-
-        if (is_private)
-            priv_id++;
-    }
-
-    return NULL;
-}
-
-akvcam_control_params_ct akvcam_controls_params_by_id(akvcam_controls_ct self,
-                                                      __u32 id)
-{
-    size_t i;
-    __u32 priv_id = V4L2_CID_PRIVATE_BASE;
-
-    for (i = 0; i < self->n_controls; i++) {
-        akvcam_control_params_ct param = self->control_params + i;
-        bool is_private = V4L2_CTRL_DRIVER_PRIV(param->id);
-
-        if (param->id == id || (is_private && priv_id == id))
-            return param;
-
-        if (is_private)
-            priv_id++;
-    }
-
-    return NULL;
-}
+static const struct v4l2_ctrl_ops akvcam_controls_ops = {
+    .s_ctrl = akvcam_controls_cotrol_changed,
+};

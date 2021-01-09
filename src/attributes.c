@@ -42,18 +42,18 @@ typedef struct
 } akvcam_attributes_controls_map, *akvcam_attributes_controls_map_t;
 
 static akvcam_attributes_controls_map akvcam_attributes_controls[] = {
-    {"brightness"  ,     V4L2_CID_BRIGHTNESS},
-    {"contrast"    ,       V4L2_CID_CONTRAST},
-    {"saturation"  ,     V4L2_CID_SATURATION},
-    {"hue"         ,            V4L2_CID_HUE},
-    {"gamma"       ,          V4L2_CID_GAMMA},
-    {"hflip"       ,          V4L2_CID_HFLIP},
-    {"vflip"       ,          V4L2_CID_VFLIP},
-    {"scaling"     ,      AKVCAM_CID_SCALING},
+    {"brightness"  , V4L2_CID_BRIGHTNESS    },
+    {"contrast"    , V4L2_CID_CONTRAST      },
+    {"saturation"  , V4L2_CID_SATURATION    },
+    {"hue"         , V4L2_CID_HUE           },
+    {"gamma"       , V4L2_CID_GAMMA         },
+    {"hflip"       , V4L2_CID_HFLIP         },
+    {"vflip"       , V4L2_CID_VFLIP         },
+    {"scaling"     , AKVCAM_CID_SCALING     },
     {"aspect_ratio", AKVCAM_CID_ASPECT_RATIO},
-    {"swap_rgb"    ,     AKVCAM_CID_SWAP_RGB},
-    {"colorfx"     ,        V4L2_CID_COLORFX},
-    {NULL          ,                       0},
+    {"swap_rgb"    , AKVCAM_CID_SWAP_RGB    },
+    {"colorfx"     , V4L2_CID_COLORFX       },
+    {NULL          , 0                      },
 };
 
 size_t akvcam_attributes_controls_count(void);
@@ -136,30 +136,26 @@ static ssize_t akvcam_attributes_connected_devices_show(struct device *dev,
     akvcam_device_t device = video_get_drvdata(vdev);
     akvcam_devices_list_t devices;
     akvcam_list_element_t it = NULL;
-    size_t space_left = PAGE_SIZE;
+    size_t n = 0;
     size_t i;
 
     UNUSED(attribute);
     devices = akvcam_device_connected_devices_nr(device);
     memset(buffer, 0, PAGE_SIZE);
 
-    for (i = 0; i < 64 && space_left > 0; i++) {
-        int bytes_written;
-
+    for (i = 0; i < 64 && PAGE_SIZE > n; i++) {
         device = akvcam_list_next(devices, &it);
 
         if (!it)
             break;
 
-        bytes_written = snprintf(buffer,
-                                 space_left,
-                                 "/dev/video%d\n",
-                                 akvcam_device_num(device));
-        buffer += bytes_written;
-        space_left -= (size_t) bytes_written;
+        n = snprintf(buffer + n,
+                     PAGE_SIZE - n,
+                     "/dev/video%d\n",
+                     akvcam_device_num(device));
     }
 
-    return (ssize_t) (PAGE_SIZE - space_left);
+    return n;
 }
 
 static ssize_t akvcam_attributes_streaming_devices_show(struct device *dev,
@@ -170,8 +166,7 @@ static ssize_t akvcam_attributes_streaming_devices_show(struct device *dev,
     akvcam_device_t device = video_get_drvdata(vdev);
     akvcam_devices_list_t devices;
     akvcam_list_element_t it = NULL;
-    size_t space_left = PAGE_SIZE;
-    int bytes_written;
+    size_t n = 0;
     size_t i;
 
     UNUSED(attribute);
@@ -185,17 +180,15 @@ static ssize_t akvcam_attributes_streaming_devices_show(struct device *dev,
             break;
 
         if (akvcam_device_streaming(device)) {
-            bytes_written = snprintf(buffer,
-                                     space_left,
-                                     "/dev/video%d\n",
-                                     akvcam_device_num(device));
-            buffer += bytes_written;
-            space_left -= (size_t) bytes_written;
+            n = snprintf(buffer + n,
+                         PAGE_SIZE - n,
+                         "/dev/video%d\n",
+                         akvcam_device_num(device));
             i++;
         }
     }
 
-    return (ssize_t) (PAGE_SIZE - space_left);
+    return n;
 }
 
 static ssize_t akvcam_attributes_device_modes_show(struct device *dev,
@@ -234,15 +227,14 @@ static ssize_t akvcam_attributes_int_show(struct device *dev,
     struct video_device *vdev = to_video_device(dev);
     akvcam_device_t device = video_get_drvdata(vdev);
     akvcam_controls_t controls;
-    struct v4l2_control control;
+    __u32 id = akvcam_attributes_controls_id_by_name(attribute->attr.name);
+    __s32 value;
 
     controls = akvcam_device_controls_nr(device);
-    memset(&control, 0, sizeof(struct v4l2_control));
-    control.id = akvcam_attributes_controls_id_by_name(attribute->attr.name);
-    akvcam_controls_get(controls, &control);
+    value = akvcam_controls_value(controls, id);
     memset(buffer, 0, PAGE_SIZE);
 
-    return sprintf(buffer, "%d\n", control.value);
+    return snprintf(buffer, PAGE_SIZE, "%d\n", value);
 }
 
 static ssize_t akvcam_attributes_int_store(struct device *dev,
@@ -253,7 +245,7 @@ static ssize_t akvcam_attributes_int_store(struct device *dev,
     struct video_device *vdev = to_video_device(dev);
     akvcam_device_t device = video_get_drvdata(vdev);
     akvcam_controls_t controls;
-    struct v4l2_control control;
+    __u32 id = akvcam_attributes_controls_id_by_name(attribute->attr.name);
     __s32 value = 0;
     int result;
 
@@ -261,10 +253,7 @@ static ssize_t akvcam_attributes_int_store(struct device *dev,
         return -EINVAL;
 
     controls = akvcam_device_controls_nr(device);
-    memset(&control, 0, sizeof(struct v4l2_control));
-    control.id = akvcam_attributes_controls_id_by_name(attribute->attr.name);
-    control.value = value;
-    result = akvcam_controls_set(controls, &control);
+    result = akvcam_controls_set_value(controls, id, value);
 
     if (result)
         return result;
@@ -279,20 +268,14 @@ static ssize_t akvcam_attributes_menu_show(struct device *dev,
     struct video_device *vdev = to_video_device(dev);
     akvcam_device_t device = video_get_drvdata(vdev);
     akvcam_controls_t controls;
-    struct v4l2_control control;
-    struct v4l2_querymenu menu;
+    __u32 id = akvcam_attributes_controls_id_by_name(attribute->attr.name);
+    const char *value;
 
     controls = akvcam_device_controls_nr(device);
-    memset(&control, 0, sizeof(struct v4l2_control));
-    control.id = akvcam_attributes_controls_id_by_name(attribute->attr.name);
-    akvcam_controls_get(controls, &control);
-    memset(&menu, 0, sizeof(struct v4l2_querymenu));
-    menu.id = control.id;
-    menu.index = (__u32) control.value;
-    akvcam_controls_fill_menu(controls, &menu);
+    value = akvcam_controls_string_value(controls, id);
     memset(buffer, 0, PAGE_SIZE);
 
-    return sprintf(buffer, "%s\n", menu.name);
+    return snprintf(buffer, PAGE_SIZE, "%s\n", value);
 }
 
 static ssize_t akvcam_attributes_menu_store(struct device *dev,
@@ -303,41 +286,19 @@ static ssize_t akvcam_attributes_menu_store(struct device *dev,
     struct video_device *vdev = to_video_device(dev);
     akvcam_device_t device = video_get_drvdata(vdev);
     akvcam_controls_t controls;
-    struct v4l2_control control;
-    struct v4l2_querymenu menu;
     char *buffer_stripped;
     __u32 id = akvcam_attributes_controls_id_by_name(attribute->attr.name);
-    __u32 i;
-    ssize_t result = -EINVAL;
+    ssize_t result;
 
     controls = akvcam_device_controls_nr(device);
     buffer_stripped = akvcam_strip_str(buffer, AKVCAM_MEMORY_TYPE_KMALLOC);
-
-    for (i = 0;; i++) {
-        memset(&menu, 0, sizeof(struct v4l2_querymenu));
-        menu.id = id;
-        menu.index = i;
-
-        if (akvcam_controls_fill_menu(controls, &menu))
-            break;
-
-        if (strcmp((char *) menu.name, buffer_stripped) == 0) {
-            memset(&control, 0, sizeof(struct v4l2_control));
-            control.id = id;
-            control.value = (__s32) i;
-
-            if (akvcam_controls_set(controls, &control))
-                break;
-
-            result = (ssize_t) size;
-
-            break;
-        }
-    }
-
+    result = akvcam_controls_set_string_value(controls, id, buffer_stripped);
     kfree(buffer_stripped);
 
-    return result;
+    if (result)
+        return result;
+
+    return size;
 }
 
 static DEVICE_ATTR(connected_devices,
