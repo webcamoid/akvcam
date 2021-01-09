@@ -50,7 +50,6 @@ struct akvcam_device
     akvcam_formats_list_t formats;
     akvcam_format_t format;
     akvcam_controls_t controls;
-    akvcam_attributes_t attributes;
     akvcam_devices_list_t connected_devices;
     akvcam_buffers_t buffers;
     akvcam_frame_t current_frame;
@@ -115,7 +114,6 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->formats = akvcam_list_new_copy(formats);
     self->format = akvcam_format_new_copy(akvcam_list_front(formats));
     self->controls = akvcam_controls_new(type);
-    self->attributes = akvcam_attributes_new(type);
     self->connected_devices = akvcam_list_new();
     multiplanar = akvcam_format_have_multiplanar(formats);
     self->buffer_type = akvcam_device_v4l2_from_device_type(type, multiplanar);
@@ -149,7 +147,6 @@ static void akvcam_device_free(struct kref *ref)
     akvcam_buffers_delete(self->buffers);
     akvcam_device_unregister(self);
     akvcam_list_delete(self->connected_devices);
-    akvcam_attributes_delete(self->attributes);
     akvcam_controls_delete(self->controls);
     akvcam_format_delete(self->format);
     akvcam_list_delete(self->formats);
@@ -200,7 +197,7 @@ bool akvcam_device_register(akvcam_device_t self)
             self->vdev->queue = queue;
             self->vdev->lock = &self->device_mutex;
             self->vdev->ctrl_handler = akvcam_controls_handler(self->controls);
-            akvcam_attributes_set(self->attributes, &self->vdev->dev);
+            self->vdev->dev.groups = akvcam_attributes_groups(self->type);
             video_set_drvdata(self->vdev, self);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
@@ -309,39 +306,6 @@ akvcam_buffers_t akvcam_device_buffers_nr(akvcam_device_ct self)
 akvcam_buffers_t akvcam_device_buffers(akvcam_device_ct self)
 {
     return akvcam_buffers_ref(self->buffers);
-}
-
-static bool akvcam_device_are_equals(const akvcam_device_t device,
-                                     const struct file *filp)
-{
-    bool equals;
-    char *devname = kzalloc(1024, GFP_KERNEL);
-
-    snprintf(devname, 1024, "video%d", device->vdev->num);
-    equals = strcmp(devname, (char *) filp->f_path.dentry->d_iname) == 0;
-    kfree(devname);
-
-    return equals;
-}
-
-akvcam_device_t akvcam_device_from_file_nr(struct file *filp)
-{
-    akvcam_list_element_t it;
-    akvcam_device_t device = video_drvdata(filp);
-
-    if (device)
-        return device;
-
-    it = akvcam_list_find(akvcam_driver_devices_nr(),
-                          filp,
-                          (akvcam_are_equals_t) akvcam_device_are_equals);
-
-    return akvcam_list_element_data(it);
-}
-
-akvcam_device_t akvcam_device_from_file(struct file *filp)
-{
-    return akvcam_device_ref(akvcam_device_from_file_nr(filp));
 }
 
 AKVCAM_DEVICE_TYPE akvcam_device_type_from_v4l2(enum v4l2_buf_type type)

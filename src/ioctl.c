@@ -563,7 +563,6 @@ int akvcam_ioctl_enum_framesizes(struct file *file,
 
     akpr_function();
     akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device));
-    akpr_debug("IN: %s\n", akvcam_string_from_v4l2_frmsizeenum(frame_sizes));
 
     formats = akvcam_device_formats(device);
     resolutions = akvcam_format_resolutions(formats,
@@ -579,7 +578,6 @@ int akvcam_ioctl_enum_framesizes(struct file *file,
     }
 
     akvcam_list_delete(resolutions);
-    akpr_debug("OUT: %s\n", akvcam_string_from_v4l2_frmsizeenum(frame_sizes));
 
     return resolution? 0: -EINVAL;
 }

@@ -21,15 +21,6 @@
 
 #include "device_types.h"
 
-struct akvcam_attributes;
-typedef struct akvcam_attributes *akvcam_attributes_t;
-struct device;
-
-// public
-akvcam_attributes_t akvcam_attributes_new(AKVCAM_DEVICE_TYPE device_type);
-void akvcam_attributes_delete(akvcam_attributes_t self);
-akvcam_attributes_t akvcam_attributes_ref(akvcam_attributes_t self);
-
-void akvcam_attributes_set(akvcam_attributes_t self, struct device *dev);
+const struct attribute_group **akvcam_attributes_groups(AKVCAM_DEVICE_TYPE device_type);
 
 #endif // AKVCAM_ATTRIBUTES_H

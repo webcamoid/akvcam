@@ -133,42 +133,6 @@ uint akvcam_driver_version(void)
     return LINUX_VERSION_CODE;
 }
 
-akvcam_devices_list_t akvcam_driver_devices_nr(void)
-{
-    if (!akvcam_driver_global)
-        return NULL;
-
-    return akvcam_driver_global->devices;
-}
-
-akvcam_devices_list_t akvcam_driver_devices(void)
-{
-    return akvcam_list_ref(akvcam_driver_devices_nr());
-}
-
-akvcam_device_t akvcam_driver_device_from_num_nr(int32_t num)
-{
-    akvcam_list_element_t element = NULL;
-
-    for (;;) {
-        akvcam_device_t device =
-                akvcam_list_next(akvcam_driver_global->devices, &element);
-
-        if (!element)
-            break;
-
-        if (akvcam_device_num(device) == num)
-            return device;
-    }
-
-    return NULL;
-}
-
-akvcam_device_t akvcam_driver_device_from_num(int32_t num)
-{
-    return akvcam_device_ref(akvcam_driver_device_from_num_nr(num));
-}
-
 bool akvcam_driver_register(void)
 {
     akvcam_list_element_t element = NULL;

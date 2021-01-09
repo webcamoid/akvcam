@@ -165,18 +165,6 @@ typedef enum
     AKVCAM_MEMORY_TYPE_VMALLOC,
 } AKVCAM_MEMORY_TYPE;
 
-enum v4l2_buf_type;
-enum v4l2_memory;
-enum v4l2_field;
-enum v4l2_colorspace;
-enum v4l2_frmsizetypes;
-struct v4l2_ext_controls;
-struct v4l2_format;
-struct v4l2_buffer;
-struct v4l2_requestbuffers;
-struct v4l2_create_buffers;
-struct v4l2_frmsizeenum;
-
 typedef bool (*akvcam_are_equals_t)(const void *element_data, const void *data);
 typedef void *(*akvcam_copy_t)(void *data);
 typedef void (*akvcam_delete_t)(void *data);
@@ -184,32 +172,14 @@ typedef void (*akvcam_delete_t)(void *data);
 uint64_t akvcam_id(void);
 int akvcam_get_last_error(void);
 int akvcam_set_last_error(int error);
-const char *akvcam_string_from_ioctl(uint cmd);
 const char *akvcam_string_from_error(int error);
-const char *akvcam_string_from_ioctl_error(uint cmd, int error);
-const char *akvcam_string_from_v4l2_buf_type(enum v4l2_buf_type type);
 const char *akvcam_string_from_rw_mode(AKVCAM_RW_MODE rw_mode);
-const char *akvcam_string_from_v4l2_memory(enum v4l2_memory memory);
-const char *akvcam_string_from_v4l2_format(const struct v4l2_format *format);
-const char *akvcam_string_from_v4l2_field(enum v4l2_field field);
-const char *akvcam_string_from_v4l2_pixelformat(__u32 pixelformat);
-const char *akvcam_string_from_v4l2_colorspace(enum v4l2_colorspace colorspace);
-const char *akvcam_string_from_v4l2_frmsizeenum(const struct v4l2_frmsizeenum *frame_sizes);
-const char *akvcam_string_from_v4l2_frmsizetypes(enum v4l2_frmsizetypes type);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)
-const char *akvcam_string_from_ext_controls(const struct v4l2_ext_controls *ext_controls);
-const char *akvcam_string_from_v4l2_ctrl_which(__s32 ctrl_which);
-#endif
-bool akvcam_v4l2_buf_type_is_mutiplanar(enum v4l2_buf_type type);
-size_t akvcam_line_size(const char *buffer, size_t size, bool *found);
 char *akvcam_strdup(const char *str, AKVCAM_MEMORY_TYPE type);
 char *akvcam_strip_str(const char *str, AKVCAM_MEMORY_TYPE type);
 char *akvcam_strip_str_sub(const char *str,
                            size_t from,
                            size_t size,
                            AKVCAM_MEMORY_TYPE type);
-char *akvcam_strip_move_str(char *str, AKVCAM_MEMORY_TYPE type);
-size_t akvcam_str_count(const char *str, char c);
 void akvcam_replace(char *str, char from, char to);
 
 #endif // AKVCAM_UTILS_H

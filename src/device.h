@@ -19,8 +19,6 @@
 #ifndef AKVCAM_DEVICE_H
 #define AKVCAM_DEVICE_H
 
-#include <linux/videodev2.h>
-
 #include "device_types.h"
 #include "buffers_types.h"
 #include "controls_types.h"
@@ -60,8 +58,6 @@ akvcam_devices_list_t akvcam_device_connected_devices(akvcam_device_ct self);
 __u32 akvcam_device_caps(akvcam_device_ct self);
 
 // public static
-akvcam_device_t akvcam_device_from_file_nr(struct file *filp);
-akvcam_device_t akvcam_device_from_file(struct file *filp);
 AKVCAM_DEVICE_TYPE akvcam_device_type_from_v4l2(enum v4l2_buf_type type);
 
 #endif //AKVCAM_ DEVICE_H
