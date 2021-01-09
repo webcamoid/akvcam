@@ -647,12 +647,6 @@ void akvcam_driver_print_devices(void)
             if (rw_mode_strings[i].rw_mode & rw_mode)
                 akpr_info("\t\t%s\n", rw_mode_strings[i].description);
 
-        if (rw_mode & AKVCAM_RW_MODE_READWRITE) {
-            akpr_info("\tUser Controls: No\n");
-        } else {
-            akpr_info("\tUser Controls: Yes\n");
-        }
-
         akvcam_driver_print_formats(device);
         akvcam_driver_print_connections(device);
         akpr_info("\n");
