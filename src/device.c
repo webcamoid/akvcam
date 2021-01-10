@@ -480,7 +480,9 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
         int result;
 
         if (!mutex_lock_interruptible(&self->frame_mutex)) {
-            if (output_device && self->thread != NULL && self->current_frame) {
+            if (output_device
+                && output_device->thread != NULL
+                && self->current_frame) {
                 akpr_debug("Reading current frame.\n");
                 frame = akvcam_frame_new_copy(self->current_frame);
             }
@@ -702,6 +704,7 @@ static const struct v4l2_file_operations akvcam_device_fops = {
     .release        = vb2_fop_release,
     .unlocked_ioctl = video_ioctl2   ,
     .read           = vb2_fop_read   ,
+    .write          = vb2_fop_write  ,
     .mmap           = vb2_fop_mmap   ,
     .poll           = vb2_fop_poll   ,
 };

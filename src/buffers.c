@@ -369,7 +369,6 @@ void akvcam_buffers_stop_streaming(struct vb2_queue *queue)
     akvcam_buffers_t self = vb2_get_drv_priv(queue);
 
     akpr_function();
-
     akvcam_emit_no_args(self, streaming_stopped);
 
     if (!mutex_lock_interruptible(&self->frames_mutex)) {
