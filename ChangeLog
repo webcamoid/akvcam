@@ -1,0 +1,47 @@
+akvcam 1.2.0:
+
+- Added support for linux 5.10.
+- Use V4L2 kernel APIs for dealing with almost anything, v4l2 protocol is too
+  much complicated to be handled manually.
+- Added DMABUF support.
+- RW devices can also have controls too.
+- Removed a bunch of useless code.
+
+akvcam 1.1.1:
+
+- Minimum supported kernel version: 4.4
+- Maximum tested kernel version: 5.9
+- Install the module to /usr/src when running make install.
+- Added USE_DKMS for make install to install the module using DKMS.
+- Replaced spin_lock with mutex_lock_interruptible.
+- Don't stop streaming if the released node is not the node that started the
+  streaming.
+- Print ioctl error messages.
+- Print the device that's calling the node and ioctl functions.
+- Added installer and daily build.
+
+akvcam 1.1.0:
+
+- Make it work with linux 5.7.
+- Allow setting the device number.
+- Added virtual camera usage example.
+
+akvcam 1.0.4:
+
+- Update to support 5.6 kernel.
+
+akvcam 1.0.3:
+
+- Set video_device.device_caps when creating akvcam_device.
+
+akvcam 1.0.2:
+
+- Fixed nearest video format calculation.
+
+akvcam 1.0.1:
+
+- Added support for linux 5.0.
+
+akvcam 1.0.0:
+
+- First release.
