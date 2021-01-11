@@ -21,7 +21,7 @@ Visit the [wiki](https://github.com/webcamoid/akvcam/wiki) for a comprehensive c
 
 [![Download](https://img.shields.io/badge/Download-Releases-3f2a7e.svg)](https://github.com/webcamoid/akvcam/releases)
 [![Daily Build](https://img.shields.io/badge/Download-Daily%20Build-3f2a7e.svg)](https://bintray.com/webcamoid/webcamoid/akvcam/daily)
-[![Total Downloads](https://img.shields.io/github/downloads/webcamoid/akvcam/total.svg?label=Total%20Downloads&color=3f2a7e)](https://www.somsubhra.com/github-release-stats/?username=webcamoid&repository=akvcam)
+[![Total Downloads](https://img.shields.io/github/downloads/webcamoid/akvcam/total.svg?label=Total%20Downloads&color=3f2a7e)](https://tooomm.github.io/github-release-stats/?username=webcamoid&repository=akvcam)
 
 ## Donations ##
 

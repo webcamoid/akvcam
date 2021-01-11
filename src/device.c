@@ -402,6 +402,7 @@ void akvcam_device_controls_updated(akvcam_device_t self, __u32 id, __s32 value)
         capture_device->vertical_flip = self->vertical_flip;
         capture_device->scaling = self->scaling;
         capture_device->aspect_ratio = self->aspect_ratio;
+        capture_device->swap_rgb = self->swap_rgb;
     }
 }
 
