@@ -23,7 +23,7 @@ else
     export DOWNLOAD_CMD="curl --retry 10 -sS -kLOC -"
 fi
 
-if ( [[ ! -z "${DAILY_BUILD}" ]] || [[ ! -z "$RELEASE_BUILD" ]] ) && [[ "$TRAVIS_BRANCH" == "master" ]]; then
+if [[ ! -z "${DAILY_BUILD}" ]] || [[ ! -z "$RELEASE_BUILD" ]]; then
     if [ -z "$DAILY_BUILD" ]; then
         version=$(grep -re '^PACKAGE_VERSION[[:space:]]*=[[:space:]]*' src/dkms.conf | awk -F= '{print $2}' | tr -d '"')
         publish=false
@@ -60,7 +60,7 @@ if ( [[ ! -z "${DAILY_BUILD}" ]] || [[ ! -z "$RELEASE_BUILD" ]] ) && [[ "$TRAVIS
     # Upload to Github Releases
     upload=false
 
-    if [[ ! -z "$DAILY_BUILD" ]] && [[ "$TRAVIS_BRANCH" == master ]] && [[ "$upload" == true ]]; then
+    if [[ ! -z "$DAILY_BUILD" ]] && [[ "$upload" == true ]]; then
         hub=''
 
         if [ "${TRAVIS_OS_NAME}" = linux ]; then
