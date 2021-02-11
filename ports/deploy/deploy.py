@@ -29,8 +29,8 @@ if __name__ =='__main__':
 
         try:
             deploy = __import__('deploy_' + system).Deploy()
-        except:
-            print('No valid deploy script found.')
+        except Exception as e:
+            print('No valid deploy script found: ', e)
 
             exit()
 
