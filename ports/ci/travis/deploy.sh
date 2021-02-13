@@ -28,6 +28,7 @@ cat << EOF > ${DEPLOYSCRIPT}
 
 export PATH="\$PWD/.local/bin:\$PATH"
 export PYTHONPATH="\$PWD/ports/deploy/DeployTools"
+export TRAVIS_BRANCH=$TRAVIS_BRANCH
 EOF
 
 if [ ! -z "${DAILY_BUILD}" ]; then

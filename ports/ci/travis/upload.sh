@@ -28,7 +28,7 @@ if [[ ! -z "${DAILY_BUILD}" ]] || [[ ! -z "$RELEASE_BUILD" ]]; then
         version=$(grep -re '^PACKAGE_VERSION[[:space:]]*=[[:space:]]*' src/dkms.conf | awk -F= '{print $2}' | tr -d '"')
         publish=false
     else
-        version=daily
+        version=daily-$TRAVIS_BRANCH
         publish=true
     fi
 
