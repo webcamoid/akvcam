@@ -1,6 +1,6 @@
 Makefile
 !src/Makefile
-*.pro.user
+*.user
 *.pro.user.*
 *.cmd
 *.mk
@@ -20,3 +20,4 @@ modules.order
 *.ur-safe
 __pycache__
 packages_auto
+.kdev4
