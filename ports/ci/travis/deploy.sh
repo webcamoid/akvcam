@@ -17,17 +17,17 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-cd ports/deploy
 git clone https://github.com/webcamoid/DeployTools.git
-cd ../..
 
 DEPLOYSCRIPT=deployscript.sh
 
 cat << EOF > ${DEPLOYSCRIPT}
 #!/bin/sh
 
-export PATH="\$PWD/.local/bin:\$PATH"
-export PYTHONPATH="\$PWD/ports/deploy/DeployTools"
+export PATH="\${PWD}/.local/bin:\${PATH}"
+export INSTALL_PREFIX="\${PWD}/package-data"
+export PACKAGES_DIR="\${PWD}/packages"
+export PYTHONPATH="\${PWD}/DeployTools"
 export TRAVIS_BRANCH=$TRAVIS_BRANCH
 EOF
 
@@ -38,7 +38,19 @@ EOF
 fi
 
 cat << EOF >> ${DEPLOYSCRIPT}
-xvfb-run --auto-servernum python3 ports/deploy/deploy.py
+cd src
+make install INSTALLDIR=\${INSTALL_PREFIX}/src
+cd ..
+cp -vf package_info.conf.in package_info.conf
+version= \$(grep '^MODULE_VERSION' src/Makefile | awk -F= '{print \$2}' | tr -d ' ')
+sed -i "s|@VERSION@|\${version}|g" package_info.conf
+sed -i "s|@CMAKE_SOURCE_DIR@|\${PWD}|g" package_info.conf
+sed -i "s|@QTIFW_TARGET_DIR@|@ApplicationsDir@/akvcam|g" package_info.conf
+xvfb-run --auto-servernum python3 \
+        ./DeployTools/deploy.py \
+        -d "\${INSTALL_PREFIX}" \
+        -c ./package_info.conf \
+        -o "\${PACKAGES_DIR}
 EOF
 
 chmod +x ${DEPLOYSCRIPT}

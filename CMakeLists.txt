@@ -44,13 +44,9 @@ endforeach()
 
 configure_file(src/dkms.conf src/dkms.conf COPYONLY)
 configure_file(src/Makefile src/Makefile COPYONLY)
-
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/akvcam.ko
-                   COMMAND ${MAKE_CMD}
-                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src
-                   VERBATIM)
-add_custom_target(akvcam ALL
-                  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/src/akvcam.ko
+add_custom_target(akvcam ALL ${MAKE_CMD}
+                  BYPRODUCTS src/akvcam.ko
+                  WORKING_DIRECTORY src
                   VERBATIM
                   SOURCES src/dkms.conf
                           src/Makefile
@@ -58,7 +54,7 @@ add_custom_target(akvcam ALL
 
 # This is a hack for making possible for the IDE to detect the kernel include
 # directories. Don't try to build it, because it won't.
-add_library(akvcamlib STATIC EXCLUDE_FROM_ALL ${MODULE_SOURCES})
+add_library(akvcam-sources STATIC EXCLUDE_FROM_ALL ${MODULE_SOURCES})
 include_directories(src
                     ${KERNEL_DIR}/include
                     ${KERNEL_DIR}/include/linux
@@ -71,3 +67,15 @@ add_definitions(-D__KERNEL__
                 -DCONFIG_PAGE_OFFSET=0
                 -DCONFIG_PCI
                 -DKBUILD_MODNAME="")
+
+file(READ src/Makefile SRC_MAKEFILE)
+string(REGEX MATCH "MODULE_VERSION *= *([0-9]+.[0-9]+.[0-9]+)" _ ${SRC_MAKEFILE})
+set(VERSION ${CMAKE_MATCH_1})
+set(QTIFW_TARGET_DIR "\@ApplicationsDir\@/akvcam")
+configure_file(package_info.conf.in package_info.conf)
+
+install(FILES ${MODULE_SOURCES}
+              src/dkms.conf
+              src/Makefile
+              COPYING
+        DESTINATION .)

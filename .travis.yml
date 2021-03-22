@@ -19,9 +19,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.4.250
-      - KERNEL_VERSION=4.4.250-0404250
-      - KERNEL_VERSION_C=202101091339
+      - REPOSITORY=v4.4.262
+      - KERNEL_VERSION=4.4.262-0404262
+      - KERNEL_VERSION_C=202103171638
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
       - USE_QEMU=1
@@ -33,9 +33,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.4.250
-      - KERNEL_VERSION=4.4.250-0404250
-      - KERNEL_VERSION_C=202101091339
+      - REPOSITORY=v4.4.262
+      - KERNEL_VERSION=4.4.262-0404262
+      - KERNEL_VERSION_C=202103171638
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
       - USE_QEMU=1
@@ -47,9 +47,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.9.250
-      - KERNEL_VERSION=4.9.250-0409250
-      - KERNEL_VERSION_C=202101091438
+      - REPOSITORY=v4.9.262
+      - KERNEL_VERSION=4.9.262-0409262
+      - KERNEL_VERSION_C=202103171635
       - USE_QEMU=1
   - os: linux
     sudo: required
@@ -58,9 +58,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.14.214
-      - KERNEL_VERSION=4.14.214-0414214
-      - KERNEL_VERSION_C=202101091348
+      - REPOSITORY=v4.14.226
+      - KERNEL_VERSION=4.14.226-0414226
+      - KERNEL_VERSION_C=202103171428
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
       - USE_QEMU=1
@@ -71,9 +71,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=focal
-      - REPOSITORY=v4.19.166
-      - KERNEL_VERSION=4.19.166-0419166
-      - KERNEL_VERSION_C=202101091340
+      - REPOSITORY=v4.19.182
+      - KERNEL_VERSION=4.19.182-0419182
+      - KERNEL_VERSION_C=202103201036
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
   - os: linux
@@ -83,9 +83,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=focal
-      - REPOSITORY=v5.4.88
-      - KERNEL_VERSION=5.4.88-050488
-      - KERNEL_VERSION_C=202101091336
+      - REPOSITORY=v5.4.107
+      - KERNEL_VERSION=5.4.107-0504107
+      - KERNEL_VERSION_C=202103201034
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
   - os: linux
@@ -95,9 +95,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=groovy
-      - REPOSITORY=v5.9.16
-      - KERNEL_VERSION=5.9.16-050916
-      - KERNEL_VERSION_C=202012211331
+      - REPOSITORY=v5.10.25
+      - KERNEL_VERSION=5.10.25-051025
+      - KERNEL_VERSION_C=202103201033
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
 
@@ -108,9 +108,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=groovy
-      - REPOSITORY=v5.10.6
-      - KERNEL_VERSION=5.10.6-051006
-      - KERNEL_VERSION_C=202101091334
+      - REPOSITORY=v5.11.8
+      - KERNEL_VERSION=5.11.8-051108
+      - KERNEL_VERSION_C=202103200636
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
 

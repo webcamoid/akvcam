@@ -41,12 +41,9 @@ if [[ ! -z "${DAILY_BUILD}" ]] || [[ ! -z "$RELEASE_BUILD" ]]; then
         --key="${BT_KEY}" \
         --licenses=GPL-2.0-or-later
 
-    path=ports/deploy/packages_auto
+    path=packages
 
     for f in $(find $path -type f); do
-        packagePath=${f#$path/}
-        folder=$(dirname "$packagePath")
-
         ./jfrog bt upload \
             --user=hipersayanx \
             --key="$BT_KEY" \
@@ -54,7 +51,7 @@ if [[ ! -z "${DAILY_BUILD}" ]] || [[ ! -z "$RELEASE_BUILD" ]]; then
             --publish=$publish \
             "$f" \
             webcamoid/webcamoid/akvcam/$version \
-            "$folder"/
+            "linux"/
     done
 
     # Upload to Github Releases
@@ -85,7 +82,7 @@ if [[ ! -z "${DAILY_BUILD}" ]] || [[ ! -z "$RELEASE_BUILD" ]]; then
         fi
 
         if [ ! -z "$hubTag" ]; then
-            path=ports/deploy/packages_auto
+            path=packages
 
             for f in $(find $path -type f); do
                 hubTag=$(hub release -df '%T %t%n' | grep 'Daily Build' | awk '{print $1}' | sed 's/.*://')

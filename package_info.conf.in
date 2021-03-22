@@ -1,0 +1,21 @@
+[Package]
+name = akvcam
+version = @VERSION@
+sourcesDir = @CMAKE_SOURCE_DIR@
+targetPlatform = posix
+buildInfoFile = share/build-info.txt
+targetArch = any
+outputFormats = QtIFW
+hideArch = true
+
+[QtIFW]
+organization = org.webcamoidprj
+appName = akvcam
+title = akvcam, fully compliant V4L2 virtual camera driver for Linux.
+description = Install akvcam
+url = https://github.com/webcamoid/akvcam
+targetDir = @QTIFW_TARGET_DIR@
+license = COPYING
+licenseName = GNU General Public License v2.0 or later
+script = ports/deploy/installscript.posix.qs
+changeLog = ChangeLog
