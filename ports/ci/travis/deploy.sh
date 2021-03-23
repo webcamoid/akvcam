@@ -42,7 +42,7 @@ cd src
 make install INSTALLDIR=\${INSTALL_PREFIX}/src
 cd ..
 cp -vf package_info.conf.in package_info.conf
-version= \$(grep '^MODULE_VERSION' src/Makefile | awk -F= '{print \$2}' | tr -d ' ')
+version=\$(grep '^MODULE_VERSION' src/Makefile | awk -F= '{print \$2}' | tr -d ' ')
 sed -i "s|@VERSION@|\${version}|g" package_info.conf
 sed -i "s|@CMAKE_SOURCE_DIR@|\${PWD}|g" package_info.conf
 sed -i "s|@QTIFW_TARGET_DIR@|@ApplicationsDir@/akvcam|g" package_info.conf
@@ -50,7 +50,7 @@ xvfb-run --auto-servernum python3 \
         ./DeployTools/deploy.py \
         -d "\${INSTALL_PREFIX}" \
         -c ./package_info.conf \
-        -o "\${PACKAGES_DIR}
+        -o "\${PACKAGES_DIR}"
 EOF
 
 chmod +x ${DEPLOYSCRIPT}
