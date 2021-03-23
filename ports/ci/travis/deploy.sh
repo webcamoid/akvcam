@@ -29,6 +29,7 @@ export INSTALL_PREFIX="\${PWD}/package-data"
 export PACKAGES_DIR="\${PWD}/packages"
 export PYTHONPATH="\${PWD}/DeployTools"
 export TRAVIS_BRANCH=$TRAVIS_BRANCH
+export TRAVIS_BUILD_WEB_URL=$TRAVIS_BUILD_WEB_URL
 EOF
 
 if [ ! -z "${DAILY_BUILD}" ]; then

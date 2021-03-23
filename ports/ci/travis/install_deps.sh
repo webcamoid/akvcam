@@ -48,22 +48,23 @@ ${EXEC} apt-get -qq -y upgrade
 # Install dev tools
 ${EXEC} apt-get -qq -y install \
     g++ \
-    make \
-    libelf-dev \
+    git \
     kmod \
+    libelf-dev \
+    libxkbcommon-x11-0 \
+    make \
+    python3 \
     sparse \
     wget \
-    libxkbcommon-x11-0 \
-    python3 \
     xvfb
 
 if [ ! -z "${USE_QEMU}" ]; then
     ${EXEC} apt-get -qq -y install \
         debootstrap \
+        ffmpeg \
         initramfs-tools \
         qemu-system-x86 \
         qemu-utils \
-        ffmpeg \
         ubuntu-wallpapers
 fi
 
