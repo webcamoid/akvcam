@@ -93,22 +93,23 @@ if [ ! -z "${USE_QEMU}" ]; then
     ${EXEC} update-initramfs -c -k "${KERNEL_VERSION}-generic"
 fi
 
-
 # Install Qt Installer Framework
 
 mkdir -p .local/bin
-qtIFW=QtInstallerFramework-linux-x64.run
+qtIFW=QtInstallerFramework-linux-x64-${QTIFWVER}.run
 ${DOWNLOAD_CMD} "http://download.qt.io/official_releases/qt-installer-framework/${QTIFWVER}/${qtIFW}" || true
 
 if [ -e ${qtIFW} ]; then
     chmod +x ${qtIFW}
     QT_QPA_PLATFORM=minimal \
-    ./QtInstallerFramework-linux-x64.run \
-        ${qtIinstallerVerbose} \
-        --script "$PWD/ports/ci/travis/qtifw_non_interactive_install.qs" \
-        --no-force-installations
-
-    cd .local
-    cp -rvf ~/Qt/QtIFW-"${QTIFWVER/-*/}"/* .
+    ./${qtIFW} \
+        --verbose \
+        --root ~/QtIFW \
+        --accept-licenses \
+        --accept-messages \
+        --confirm-command \
+        install
+        cd .local
+        cp -rvf ~/QtIFW/* .
     cd ..
 fi

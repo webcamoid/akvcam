@@ -6,7 +6,7 @@ addons:
 
 env:
   global:
-    - QTIFWVER=4.0.1
+    - QTIFWVER=4.1.0
     # BT_KEY
     - secure: "jpAdFkDOmltToCv20sTD0mfavylXQo3g/rFD62bK2jTBX0xZ+PCFGP0MGdxl15RckD4FbP6M64tQLiHFP/qS93gItbQTZF4o+rA2bmLyycvshSdMYi1j8qCO1yJ7ZAMi59Ni/F6L1o8QP48vwJlx6veTY5SRg9adnBJsdnluOhTZBnI2sMJ07dnrq6byWKcQvvQCoErKWAbnauao7VzKb+L4oKmXimqkNbMld7NX0MBP29OARYlhFXItVsJuZ1J6lCUn+upVvMP4QsMO9wZxhbu0DiVLYOWUAA8coYocQxbnNH8+3bX7UJqZ3ARDwrXMQUcW3oaVa9S9XlWfDFdhr0B/hHwjHoC0cxVfH+Ik1U661fjtK4pp34mpt+99T6sFlDB4Xr1yh9LAOj1UAdywG93anlL5DaSCv1XKEJNJg+v9PAL8mltCfJmzaxsfWQt+MUUejLbrmd7sk8qXJIlO5GA20ONsAzYQpcEsxKryzmyB6H5PqtnozvpzqPoXIopTJZ6fR/lTQ/8LvmEM0+2bbpqY7vnBSjsAq1IRHuG0VfYaxr1dV/rGQ7Bybsu1fLHNMr6bujKQOlJJ5xJakejKIklu3NB9WTEjO/vJupBrzROCHKes/L0hktKypLmpKXihKJWLfMHU57dW8ZX9mLHfypBg8c57uGVhTG5rC43jZHs="
 
@@ -19,9 +19,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.4.262
-      - KERNEL_VERSION=4.4.262-0404262
-      - KERNEL_VERSION_C=202103171638
+      - REPOSITORY=v4.4.267
+      - KERNEL_VERSION=4.4.267-0404267
+      - KERNEL_VERSION_C=202104160747
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
       - USE_QEMU=1
@@ -33,9 +33,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=xenial
-      - REPOSITORY=v4.4.262
-      - KERNEL_VERSION=4.4.262-0404262
-      - KERNEL_VERSION_C=202103171638
+      - REPOSITORY=v4.4.267
+      - KERNEL_VERSION=4.4.267-0404267
+      - KERNEL_VERSION_C=202104160747
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
       - USE_QEMU=1
@@ -47,9 +47,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.9.262
-      - KERNEL_VERSION=4.9.262-0409262
-      - KERNEL_VERSION_C=202103171635
+      - REPOSITORY=v4.9.268
+      - KERNEL_VERSION=4.9.268-0409268
+      - KERNEL_VERSION_C=202104281135
       - USE_QEMU=1
   - os: linux
     sudo: required
@@ -58,9 +58,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=bionic
-      - REPOSITORY=v4.14.226
-      - KERNEL_VERSION=4.14.226-0414226
-      - KERNEL_VERSION_C=202103171428
+      - REPOSITORY=v4.14.232
+      - KERNEL_VERSION=4.14.232-0414232
+      - KERNEL_VERSION_C=202104280742
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
       - USE_QEMU=1
@@ -71,9 +71,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=focal
-      - REPOSITORY=v4.19.182
-      - KERNEL_VERSION=4.19.182-0419182
-      - KERNEL_VERSION_C=202103201036
+      - REPOSITORY=v4.19.189
+      - KERNEL_VERSION=4.19.189-0419189
+      - KERNEL_VERSION_C=202104281238
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
   - os: linux
@@ -83,9 +83,9 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=focal
-      - REPOSITORY=v5.4.107
-      - KERNEL_VERSION=5.4.107-0504107
-      - KERNEL_VERSION_C=202103201034
+      - REPOSITORY=v5.4.116
+      - KERNEL_VERSION=5.4.116-0504116
+      - KERNEL_VERSION_C=202105021035
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
   - os: linux
@@ -95,12 +95,11 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=groovy
-      - REPOSITORY=v5.10.25
-      - KERNEL_VERSION=5.10.25-051025
-      - KERNEL_VERSION_C=202103201033
+      - REPOSITORY=v5.10.34
+      - KERNEL_VERSION=5.10.34-051034
+      - KERNEL_VERSION_C=202105021033
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
-
   - os: linux
     sudo: required
     services:
@@ -108,9 +107,21 @@ matrix:
     compiler: gcc
     env:
       - SYSTEM_VERSION=groovy
-      - REPOSITORY=v5.11.8
-      - KERNEL_VERSION=5.11.8-051108
-      - KERNEL_VERSION_C=202103200636
+      - REPOSITORY=v5.11.18
+      - KERNEL_VERSION=5.11.18-051118
+      - KERNEL_VERSION_C=202105020631
+      - UNSIGNED_IMG=1
+      - NEED_MODULES=1
+  - os: linux
+    sudo: required
+    services:
+      - docker
+    compiler: gcc
+    env:
+      - SYSTEM_VERSION=groovy
+      - REPOSITORY=v5.12.1
+      - KERNEL_VERSION=5.12.1-051201
+      - KERNEL_VERSION_C=202105021030
       - UNSIGNED_IMG=1
       - NEED_MODULES=1
 

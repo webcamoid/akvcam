@@ -32,7 +32,7 @@ I'm accepting donations in crypto currencies, any donation amount is welcome and
 
 ## Status ##
 
-[![Build Status](https://travis-ci.org/webcamoid/akvcam.svg?branch=master)](https://travis-ci.org/webcamoid/akvcam)
+[![Build Status](https://travis-ci.com/webcamoid/akvcam.svg?branch=master)](https://travis-ci.com/webcamoid/akvcam)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/eaeeaacb491c498bbffbe2087bc2d4dd)](https://www.codacy.com/gh/webcamoid/akvcam/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=webcamoid/akvcam&amp;utm_campaign=Badge_Grade)
 [![Project Stats](https://www.openhub.net/p/akvcam/widgets/project_thin_badge.gif)](https://www.openhub.net/p/akvcam)
 
