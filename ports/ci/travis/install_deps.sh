@@ -52,6 +52,7 @@ ${EXEC} apt-get -qq -y install \
     kmod \
     libelf-dev \
     libxkbcommon-x11-0 \
+    libwayland-cursor0 \
     make \
     python3 \
     sparse \
