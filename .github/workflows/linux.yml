@@ -1,0 +1,137 @@
+name: Linux Ubuntu
+
+on: [push, pull_request]
+
+env:
+  QTIFWVER: 4.1.1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+       include:
+         - system_version: xenial
+           repository: v4.4.267
+           kernel_version: 4.4.267-0404267
+           kernel_version_c: 202104160747
+           unsigned_img: 1
+           need_modules: 1
+           use_qemu: 1
+           upload: 1
+         - system_version: bionic
+           repository: v4.9.268
+           kernel_version: 4.9.268-0409268
+           kernel_version_c: 202104281135
+           use_qemu: 1
+         - system_version: bionic
+           repository: v4.14.232
+           kernel_version: 4.14.232-0414232
+           kernel_version_c: 202104280742
+           unsigned_img: 1
+           need_modules: 1
+           use_qemu: 1
+         - system_version: focal
+           repository: v4.19.189
+           kernel_version: 4.19.189-0419189
+           kernel_version_c: 202104281238
+           unsigned_img: 1
+           need_modules: 1
+         - system_version: focal
+           repository: v5.4.116
+           kernel_version: 5.4.116-0504116
+           kernel_version_c: 202105021035
+           unsigned_img: 1
+           need_modules: 1
+         - system_version: groovy
+           repository: v5.10.34
+           kernel_version: 5.10.34-051034
+           kernel_version_c: 202105021033
+           unsigned_img: 1
+           need_modules: 1
+         - system_version: groovy
+           repository: v5.11.18
+           kernel_version: 5.11.18-051118
+           kernel_version_c: 202105020631
+           unsigned_img: 1
+           need_modules: 1
+         - system_version: groovy
+           repository: v5.12.1
+           kernel_version: 5.12.1-051201
+           kernel_version_c: 202105021030
+           unsigned_img: 1
+           need_modules: 1
+    env:
+      SYSTEM_VERSION: ${{ matrix.system_version }}
+      REPOSITORY: ${{ matrix.repository }}
+      KERNEL_VERSION: ${{ matrix.kernel_version }}
+      KERNEL_VERSION_C: ${{ matrix.kernel_version_c }}
+      UNSIGNED_IMG: ${{ matrix.unsigned_img }}
+      NEED_MODULES: ${{ matrix.need_modules }}
+      USE_QEMU: ${{ matrix.use_qemu }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Docker
+      run: |
+        sudo apt-get install -qq -y curl wget libxkbcommon-x11-0
+        docker pull ubuntu:${SYSTEM_VERSION}
+        docker ps -a
+        docker run --privileged -it -d -v ${PWD}:/sources -w /sources --name ubuntu ubuntu:${SYSTEM_VERSION} /bin/sh
+        export EXEC="docker exec ubuntu"
+        export SYSTEM_ARCH=amd64
+    - name: Install dependencies
+      run: |
+        chmod +x ports/ci/linux/install_deps.sh
+        ./ports/ci/linux/install_deps.sh
+    - name: Release Build
+      if: ${{ startsWith(github.ref, 'refs/tags/') }}
+      run: |
+        chmod +x ports/ci/linux/build.sh
+        ./ports/ci/linux/build.sh
+    - name: Release Deploy
+      if: ${{ startsWith(github.ref, 'refs/tags/') }}
+      run: |
+        chmod +x ports/ci/linux/deploy.sh
+        ./ports/ci/linux/deploy.sh
+    - name: Daily Build
+      if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      env:
+        DAILY_BUILD: 1
+      run: |
+        chmod +x ports/ci/linux/build.sh
+        ./ports/ci/linux/build.sh
+    - name: Test module
+      run: |
+        chmod +x ports/ci/linux/test.sh
+        ./ports/ci/linux/test.sh
+    - name: Daily Deploy
+      if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      env:
+        DAILY_BUILD: 1
+      run: |
+        chmod +x ports/ci/linux/deploy.sh
+        ./ports/ci/linux/deploy.sh
+    - name: Release Upload
+      uses: softprops/action-gh-release@v1
+      if: ${{ startsWith(github.ref, 'refs/tags/') && matrix.upload }}
+      with:
+        files: packages/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Daily Build Upload
+      uses: softprops/action-gh-release@v1
+      if: ${{ !startsWith(github.ref, 'refs/tags/') && matrix.upload }}
+      with:
+        body: "${{ github.event.head_commit.message }} (commit: ${{ github.sha }})"
+        prerelease: true
+        files: packages/*
+        name: Daily Build
+        tag_name: daily-build
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Linux daily build packages
+      uses: actions/upload-artifact@v2
+      if: ${{ matrix.upload }}
+      with:
+        name: linux-daily-build
+        path: packages/*

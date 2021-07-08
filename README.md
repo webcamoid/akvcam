@@ -32,7 +32,7 @@ Monero: 41wpsZWaZ7Mj83RFUbTapM1PvAFiMKbgk8ecJ7W7s36ZVydMWy9rMU1M4khiU4QpY9M9x4cU
 
 ## Status ##
 
-[![Build Status](https://travis-ci.com/webcamoid/akvcam.svg?branch=master)](https://travis-ci.com/webcamoid/akvcam)
+[![Linux](https://github.com/webcamoid/akvcam/actions/workflows/linux.yml/badge.svg)](https://github.com/webcamoid/akvcam/actions/workflows/linux.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/eaeeaacb491c498bbffbe2087bc2d4dd)](https://www.codacy.com/gh/webcamoid/akvcam/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=webcamoid/akvcam&amp;utm_campaign=Badge_Grade)
 [![Project Stats](https://www.openhub.net/p/akvcam/widgets/project_thin_badge.gif)](https://www.openhub.net/p/akvcam)
 

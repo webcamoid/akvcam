@@ -24,40 +24,6 @@ system_image=system-image.img
 system_mount_point=system-mount-point
 
 cat << EOF >> ${BUILDSCRIPT}
-echo "Available kernel headers:"
-echo
-ls /usr/src | grep linux-headers- | sort
-echo
-
-if [ ! -z "${USE_QEMU}" ]; then
-    echo "Available kernel images:"
-    echo
-    ls /boot/vmlinuz-* | sort
-    echo
-    echo "Available RAM disk images:"
-    echo
-    ls /boot/initrd.img-* | sort
-    echo
-    echo "Available kernel modules:"
-    echo
-    ls /lib/modules | sort
-    echo
-    echo "Available QEMU images:"
-    echo
-    ls /usr/bin/qemu-system-* | sort
-    echo
-fi
-
-# Build the driver and show it's info.
-cd src
-make KERNEL_DIR=/usr/src/linux-headers-${KERNEL_VERSION}-generic USE_SPARSE=1
-cd ..
-echo
-echo "Driver info:"
-echo
-modinfo src/${DRIVER_FILE}
-echo
-
 if [ ! -z "${USE_QEMU}" ]; then
     # Create the system image to boot with QEMU.
     qemu-img create -f raw ${system_image} 1g
