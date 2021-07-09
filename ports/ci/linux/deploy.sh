@@ -28,8 +28,10 @@ export PATH="\${PWD}/.local/bin:\${PATH}"
 export INSTALL_PREFIX="\${PWD}/package-data"
 export PACKAGES_DIR="\${PWD}/packages"
 export PYTHONPATH="\${PWD}/DeployTools"
-export TRAVIS_BRANCH=$TRAVIS_BRANCH
-export TRAVIS_BUILD_WEB_URL=$TRAVIS_BUILD_WEB_URL
+export GITHUB_REF=$GITHUB_REF
+export GITHUB_SERVER_URL=$GITHUB_SERVER_URL
+export GITHUB_REPOSITORY=$GITHUB_REPOSITORY
+export GITHUB_RUN_ID=$GITHUB_RUN_ID
 EOF
 
 if [ ! -z "${DAILY_BUILD}" ]; then

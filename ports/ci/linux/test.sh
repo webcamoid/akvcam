@@ -87,7 +87,7 @@ if [ ! -z "${USE_QEMU}" ]; then
 
     # Copy config.ini file.
     mkdir -p ${system_mount_point}/etc/akvcam
-    cp -vf ports/ci/travis/config.ini ${system_mount_point}/etc/akvcam/config.ini
+    cp -vf ports/ci/linux/config.ini ${system_mount_point}/etc/akvcam/config.ini
 
     # Choose a random wallpaper and use it as default frame.
     wallpaper=\$(ls /usr/share/backgrounds/*.{jpg,png} | shuf -n1)
