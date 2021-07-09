@@ -50,6 +50,7 @@ ${EXEC} apt-get -qq -y install \
     g++ \
     git \
     kmod \
+    libdbus-1-3 \
     libelf-dev \
     libfontconfig1 \
     libwayland-cursor0 \
