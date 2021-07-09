@@ -4,6 +4,8 @@ on: [push, pull_request]
 
 env:
   QTIFWVER: 4.1.1
+  EXEC: "docker exec ubuntu"
+  SYSTEM_ARCH: amd64
 
 jobs:
   build:
@@ -77,8 +79,6 @@ jobs:
         docker pull ubuntu:${SYSTEM_VERSION}
         docker ps -a
         docker run --privileged -it -d -v ${PWD}:/sources -w /sources --name ubuntu ubuntu:${SYSTEM_VERSION} /bin/sh
-        export EXEC="docker exec ubuntu"
-        export SYSTEM_ARCH=amd64
     - name: Install dependencies
       run: |
         chmod +x ports/ci/linux/install_deps.sh
