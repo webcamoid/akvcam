@@ -24,45 +24,45 @@ jobs:
            use_qemu: 1
            upload: 1
          - system_version: bionic
-           repository: v4.9.268
-           kernel_version: 4.9.268-0409268
-           kernel_version_c: 202104281135
+           repository: v4.9.274
+           kernel_version: 4.9.274-0409274
+           kernel_version_c: 202106301447
            use_qemu: 1
          - system_version: bionic
-           repository: v4.14.232
-           kernel_version: 4.14.232-0414232
-           kernel_version_c: 202104280742
+           repository: v4.14.215
+           kernel_version: 4.14.215-0414215
+           kernel_version_c: 202101122110
            unsigned_img: 1
            need_modules: 1
            use_qemu: 1
          - system_version: focal
-           repository: v4.19.189
-           kernel_version: 4.19.189-0419189
-           kernel_version_c: 202104281238
+           repository: v4.19.196
+           kernel_version: 4.19.196-0419196
+           kernel_version_c: 202106301451
            unsigned_img: 1
            need_modules: 1
          - system_version: focal
-           repository: v5.4.116
-           kernel_version: 5.4.116-0504116
-           kernel_version_c: 202105021035
+           repository: v5.4.130
+           kernel_version: 5.4.130-0504130
+           kernel_version_c: 202107071335
            unsigned_img: 1
            need_modules: 1
-         - system_version: groovy
-           repository: v5.10.34
-           kernel_version: 5.10.34-051034
-           kernel_version_c: 202105021033
+         - system_version: hirsute
+           repository: v5.10.48
+           kernel_version: 5.10.48-051048
+           kernel_version_c: 202107071338
            unsigned_img: 1
            need_modules: 1
-         - system_version: groovy
-           repository: v5.11.18
-           kernel_version: 5.11.18-051118
-           kernel_version_c: 202105020631
+         - system_version: impish
+           repository: v5.12.15
+           kernel_version: 5.12.15-051215
+           kernel_version_c: 202107070935
            unsigned_img: 1
            need_modules: 1
-         - system_version: groovy
-           repository: v5.12.1
-           kernel_version: 5.12.1-051201
-           kernel_version_c: 202105021030
+         - system_version: impish
+           repository: v5.13.1
+           kernel_version: 5.13.1-051301
+           kernel_version_c: 202107071335
            unsigned_img: 1
            need_modules: 1
     env:
