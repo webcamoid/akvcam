@@ -23,7 +23,7 @@ BUILDSCRIPT=dockerbuild.sh
 system_image=system-image.img
 system_mount_point=system-mount-point
 
-cat << EOF >> ${BUILDSCRIPT}
+cat << EOF > ${BUILDSCRIPT}
 if [ ! -z "${USE_QEMU}" ]; then
     # Create the system image to boot with QEMU.
     qemu-img create -f raw ${system_image} 1g
