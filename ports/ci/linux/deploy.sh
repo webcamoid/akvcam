@@ -26,7 +26,7 @@ cat << EOF > ${DEPLOYSCRIPT}
 
 export PATH="\${PWD}/.local/bin:\${PATH}"
 export INSTALL_PREFIX="\${PWD}/package-data"
-export PACKAGES_DIR="\${PWD}/packages-${REPOSITORY}"
+export PACKAGES_DIR="\${PWD}/packages"
 export PYTHONPATH="\${PWD}/DeployTools"
 export GITHUB_REF=$GITHUB_REF
 export GITHUB_SERVER_URL=$GITHUB_SERVER_URL

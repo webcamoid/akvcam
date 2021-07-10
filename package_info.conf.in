@@ -19,4 +19,3 @@ license = COPYING
 licenseName = GNU General Public License v2.0 or later
 script = ports/deploy/installscript.posix.qs
 changeLog = ChangeLog
-verbose = true
