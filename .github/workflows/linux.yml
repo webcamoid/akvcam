@@ -4,7 +4,6 @@ on: [push, pull_request]
 
 env:
   QTIFWVER: 4.1.1
-  EXEC: "docker exec ubuntu"
   SYSTEM_ARCH: amd64
 
 jobs:
@@ -65,54 +64,104 @@ jobs:
            kernel_version_c: 202107071335
            unsigned_img: 1
            need_modules: 1
-    env:
-      SYSTEM_VERSION: ${{ matrix.system_version }}
-      REPOSITORY: ${{ matrix.repository }}
-      KERNEL_VERSION: ${{ matrix.kernel_version }}
-      KERNEL_VERSION_C: ${{ matrix.kernel_version_c }}
-      UNSIGNED_IMG: ${{ matrix.unsigned_img }}
-      NEED_MODULES: ${{ matrix.need_modules }}
-      USE_QEMU: ${{ matrix.use_qemu }}
     steps:
     - uses: actions/checkout@v2
-    - name: Install Docker
-      run: |
-        sudo apt-get install -qq -y curl wget libxkbcommon-x11-0
-        docker pull ubuntu:${SYSTEM_VERSION}
-        docker ps -a
-        docker run --privileged -it -d -v ${PWD}:/sources -w /sources --name ubuntu ubuntu:${SYSTEM_VERSION} /bin/sh
-    - name: Install dependencies
-      run: |
-        chmod +x ports/ci/linux/install_deps.sh
-        ./ports/ci/linux/install_deps.sh
-    - name: Release Build
+    - name: Release build
+      uses: addnab/docker-run-action@v3
       if: ${{ startsWith(github.ref, 'refs/tags/') }}
-      run: |
-        chmod +x ports/ci/linux/build.sh
-        ./ports/ci/linux/build.sh
-    - name: Daily Build
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        registry: gcr.io
+        image: ubuntu:${{ matrix.system_version }}
+        options: >-
+          --privileged
+          -v ${{ github.workspace }}:/sources
+          -e GITHUB_REF=${{ env.GITHUB_REF }}
+          -e GITHUB_SERVER_URL=${{ env.GITHUB_SERVER_URL }}
+          -e GITHUB_REPOSITORY=${{ env.GITHUB_REPOSITORY }}
+          -e GITHUB_RUN_ID=${{ env.GITHUB_RUN_ID }}
+          -e SYSTEM_VERSION=${{ matrix.system_version }}
+          -e SYSTEM_ARCH=${{ env.SYSTEM_ARCH }}
+          -e REPOSITORY=${{ matrix.repository }}
+          -e KERNEL_VERSION=${{ matrix.kernel_version }}
+          -e KERNEL_VERSION_C=${{ matrix.kernel_version_c }}
+          -e UNSIGNED_IMG=${{ matrix.unsigned_img }}
+          -e NEED_MODULES=${{ matrix.need_modules }}
+          -e USE_QEMU=${{ matrix.use_qemu }}
+          -e QTIFWVER=${{ env.QTIFWVER }}
+          -e UPLOAD=${{ matrix.upload }}
+        run: |
+          cd /sources
+          echo
+          echo Install dependencies
+          echo
+          chmod +x ports/ci/linux/install_deps.sh
+          ./ports/ci/linux/install_deps.sh
+          echo
+          echo Release Build
+          echo
+          chmod +x ports/ci/linux/build.sh
+          ./ports/ci/linux/build.sh
+          echo
+          echo Test module
+          echo
+          chmod +x ports/ci/linux/test.sh
+          ./ports/ci/linux/test.sh
+          echo
+          echo Release Deploy
+          echo
+          chmod +x ports/ci/linux/deploy.sh
+          ./ports/ci/linux/deploy.sh
+    - uses: actions/checkout@v2
+    - name: Daily build
+      uses: addnab/docker-run-action@v3
       if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-      env:
-        DAILY_BUILD: 1
-      run: |
-        chmod +x ports/ci/linux/build.sh
-        ./ports/ci/linux/build.sh
-    - name: Test module
-      run: |
-        chmod +x ports/ci/linux/test.sh
-        ./ports/ci/linux/test.sh
-    - name: Release Deploy
-      if: ${{ startsWith(github.ref, 'refs/tags/') }}
-      run: |
-        chmod +x ports/ci/linux/deploy.sh
-        ./ports/ci/linux/deploy.sh
-    - name: Daily Deploy
-      if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-      env:
-        DAILY_BUILD: 1
-      run: |
-        chmod +x ports/ci/linux/deploy.sh
-        ./ports/ci/linux/deploy.sh
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        registry: gcr.io
+        image: ubuntu:${{ matrix.system_version }}
+        options: >-
+          --privileged
+          -v ${{ github.workspace }}:/sources
+          -e GITHUB_REF=${{ env.GITHUB_REF }}
+          -e GITHUB_SERVER_URL=${{ env.GITHUB_SERVER_URL }}
+          -e GITHUB_REPOSITORY=${{ env.GITHUB_REPOSITORY }}
+          -e GITHUB_RUN_ID=${{ env.GITHUB_RUN_ID }}
+          -e SYSTEM_VERSION=${{ matrix.system_version }}
+          -e SYSTEM_ARCH=${{ env.SYSTEM_ARCH }}
+          -e REPOSITORY=${{ matrix.repository }}
+          -e KERNEL_VERSION=${{ matrix.kernel_version }}
+          -e KERNEL_VERSION_C=${{ matrix.kernel_version_c }}
+          -e UNSIGNED_IMG=${{ matrix.unsigned_img }}
+          -e NEED_MODULES=${{ matrix.need_modules }}
+          -e USE_QEMU=${{ matrix.use_qemu }}
+          -e QTIFWVER=${{ env.QTIFWVER }}
+          -e UPLOAD=${{ matrix.upload }}
+          -e DAILY_BUILD=1
+        run: |
+          cd /sources
+          echo
+          echo Install dependencies
+          echo
+          chmod +x ports/ci/linux/install_deps.sh
+          ./ports/ci/linux/install_deps.sh
+          echo
+          echo Daily Build
+          echo
+          chmod +x ports/ci/linux/build.sh
+          ./ports/ci/linux/build.sh
+          echo
+          echo Test module
+          echo
+          chmod +x ports/ci/linux/test.sh
+          ./ports/ci/linux/test.sh
+          echo
+          echo Daily Deploy
+          echo
+          chmod +x ports/ci/linux/deploy.sh
+          ./ports/ci/linux/deploy.sh
     - name: Release Upload
       uses: softprops/action-gh-release@v1
       if: ${{ startsWith(github.ref, 'refs/tags/') && matrix.upload }}
