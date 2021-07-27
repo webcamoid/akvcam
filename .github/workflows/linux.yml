@@ -90,11 +90,6 @@ jobs:
       run: |
         chmod +x ports/ci/linux/build.sh
         ./ports/ci/linux/build.sh
-    - name: Release Deploy
-      if: ${{ startsWith(github.ref, 'refs/tags/') }}
-      run: |
-        chmod +x ports/ci/linux/deploy.sh
-        ./ports/ci/linux/deploy.sh
     - name: Daily Build
       if: ${{ !startsWith(github.ref, 'refs/tags/') }}
       env:
@@ -106,6 +101,11 @@ jobs:
       run: |
         chmod +x ports/ci/linux/test.sh
         ./ports/ci/linux/test.sh
+    - name: Release Deploy
+      if: ${{ startsWith(github.ref, 'refs/tags/') }}
+      run: |
+        chmod +x ports/ci/linux/deploy.sh
+        ./ports/ci/linux/deploy.sh
     - name: Daily Deploy
       if: ${{ !startsWith(github.ref, 'refs/tags/') }}
       env:

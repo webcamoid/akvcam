@@ -19,34 +19,14 @@
 
 git clone https://github.com/webcamoid/DeployTools.git
 
-DEPLOYSCRIPT=deployscript.sh
+export PATH="${PWD}/.local/bin:${PATH}"
+export INSTALL_PREFIX="${PWD}/package-data"
+export PACKAGES_DIR="${PWD}/packages"
+export BUILD_PATH=${PWD}/src
+export PYTHONPATH="${PWD}/DeployTools"
 
-cat << EOF > ${DEPLOYSCRIPT}
-#!/bin/sh
-
-export PATH="\${PWD}/.local/bin:\${PATH}"
-export INSTALL_PREFIX="\${PWD}/package-data"
-export PACKAGES_DIR="\${PWD}/packages"
-export PYTHONPATH="\${PWD}/DeployTools"
-export GITHUB_REF=$GITHUB_REF
-export GITHUB_SERVER_URL=$GITHUB_SERVER_URL
-export GITHUB_REPOSITORY=$GITHUB_REPOSITORY
-export GITHUB_RUN_ID=$GITHUB_RUN_ID
-EOF
-
-if [ ! -z "${DAILY_BUILD}" ]; then
-    cat << EOF >> ${DEPLOYSCRIPT}
-export DAILY_BUILD=1
-EOF
-fi
-
-cat << EOF >> ${DEPLOYSCRIPT}
 xvfb-run --auto-servernum python3 \
         ./DeployTools/deploy.py \
-        -d "\${INSTALL_PREFIX}" \
+        -d "${INSTALL_PREFIX}" \
         -c ./package_info.conf \
-        -o "\${PACKAGES_DIR}"
-EOF
-
-chmod +x ${DEPLOYSCRIPT}
-${EXEC} bash ${DEPLOYSCRIPT}
+        -o "${PACKAGES_DIR}"

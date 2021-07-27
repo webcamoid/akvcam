@@ -19,12 +19,10 @@
 
 DRIVER_FILE=akvcam.ko
 DEFERRED_LOG=1
-BUILDSCRIPT=dockerbuild.sh
 system_image=system-image.img
 system_mount_point=system-mount-point
 
-cat << EOF > ${BUILDSCRIPT}
-if [ ! -z "${USE_QEMU}" ]; then
+if [ "${USE_QEMU}" = 1 ]; then
     # Create the system image to boot with QEMU.
     qemu-img create -f raw ${system_image} 1g
     mkfs.ext4 -F ${system_image}
@@ -56,40 +54,42 @@ if [ ! -z "${USE_QEMU}" ]; then
     touch ${system_mount_point}/root/driver_test.sh
     chmod +x ${system_mount_point}/root/driver_test.sh
 
-    echo '[ "\$(tty)" != /dev/tty1 ] && exit' >> ${system_mount_point}/root/driver_test.sh
-    echo 'depmod -a >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
-    echo 'modprobe v4l2-common' >> ${system_mount_point}/root/driver_test.sh
-    echo 'modprobe videobuf2-core' >> ${system_mount_point}/root/driver_test.sh
-    echo 'modprobe videobuf2-v4l2' >> ${system_mount_point}/root/driver_test.sh
-    echo 'modprobe videobuf2-vmalloc' >> ${system_mount_point}/root/driver_test.sh
-    echo 'modprobe videodev' >> ${system_mount_point}/root/driver_test.sh
-    echo 'dmesg -C' >> ${system_mount_point}/root/driver_test.sh
+    cat << EOF > ${system_mount_point}/root/driver_test.sh
+[ "\$(tty)" != /dev/tty1 ] && exit
+depmod -a >>driver_log.txt 2>&1
+modprobe v4l2-common
+modprobe videobuf2-core
+modprobe videobuf2-v4l2
+modprobe videobuf2-vmalloc
+modprobe videodev
+dmesg -C
 
-    if [ "${DEFERRED_LOG}" = 1 ]; then
-        echo 'insmod ${DRIVER_FILE} loglevel=7 >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
-        echo 'v4l2-ctl -d /dev/video0 --all -L >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
-        echo 'v4l2-compliance -d /dev/video0 -s -f >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
-        echo 'rmmod ${DRIVER_FILE} >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
-        echo 'dmesg >>driver_log.txt 2>&1' >> ${system_mount_point}/root/driver_test.sh
-    else
-        echo 'insmod ${DRIVER_FILE} loglevel=7' >> ${system_mount_point}/root/driver_test.sh
-        echo 'v4l2-ctl -d /dev/video0 --all -L' >> ${system_mount_point}/root/driver_test.sh
-        echo 'v4l2-compliance -d /dev/video0 -s -f' >> ${system_mount_point}/root/driver_test.sh
-        echo 'rmmod ${DRIVER_FILE}' >> ${system_mount_point}/root/driver_test.sh
-        echo 'dmesg' >> ${system_mount_point}/root/driver_test.sh
-    fi
+if [ "${DEFERRED_LOG}" = 1 ]; then
+    insmod ${DRIVER_FILE} loglevel=7 >>driver_log.txt 2>&1
+    v4l2-ctl -d /dev/video0 --all -L >>driver_log.txt 2>&1
+    v4l2-compliance -d /dev/video0 -s -f >>driver_log.txt 2>&1
+    rmmod ${DRIVER_FILE} >>driver_log.txt 2>&1
+    dmesg >>driver_log.txt 2>&1
+else
+    insmod ${DRIVER_FILE} loglevel=7
+    v4l2-ctl -d /dev/video0 --all -L
+    v4l2-compliance -d /dev/video0 -s -f
+    rmmod ${DRIVER_FILE}
+    dmesg
+fi
 
-    echo 'shutdown -h now' >> ${system_mount_point}/root/driver_test.sh
+shutdown -h now
+EOF
 
     # Copy config.ini file.
     mkdir -p ${system_mount_point}/etc/akvcam
     cp -vf ports/ci/linux/config.ini ${system_mount_point}/etc/akvcam/config.ini
 
     # Choose a random wallpaper and use it as default frame.
-    wallpaper=\$(ls /usr/share/backgrounds/*.{jpg,png} | shuf -n1)
+    wallpaper=$(ls /usr/share/backgrounds/*.{jpg,png} | shuf -n1)
     ffmpeg \
         -y \
-        -i "\${wallpaper}" \
+        -i "${wallpaper}" \
         -s 640x480 \
         -pix_fmt bgr24 \
         ${system_mount_point}/etc/akvcam/default_frame.bmp
@@ -105,12 +105,12 @@ if [ ! -z "${USE_QEMU}" ]; then
     echo
     echo "Booting system with custom kernel:"
     echo
-    qemu-system-x86_64 \\
-        -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \\
-        -initrd /boot/initrd.img-${KERNEL_VERSION}-generic \\
-        -m 512M \\
-        -append "root=/dev/sda console=ttyS0,9600 systemd.unit=multi-user.target rw" \\
-        -drive file=${system_image},format=raw \\
+    qemu-system-x86_64 \
+        -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \
+        -initrd /boot/initrd.img-${KERNEL_VERSION}-generic \
+        -m 512M \
+        -append "root=/dev/sda console=ttyS0,9600 systemd.unit=multi-user.target rw" \
+        -drive file=${system_image},format=raw \
         --nographic
 
     if [ ! -z "${DEFERRED_LOG}" ]; then
@@ -119,5 +119,3 @@ if [ ! -z "${USE_QEMU}" ]; then
         umount -vf ${system_mount_point}/
     fi
 fi
-EOF
-${EXEC} bash ${BUILDSCRIPT}

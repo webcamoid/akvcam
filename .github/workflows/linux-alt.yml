@@ -1,0 +1,188 @@
+name: Linux Ubuntu Alt
+
+on: [push, pull_request]
+
+env:
+  QTIFWVER: 4.1.1
+  SYSTEM_ARCH: amd64
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 10
+      fail-fast: false
+      matrix:
+       include:
+         - system_version: xenial
+           repository: v4.4.267
+           kernel_version: 4.4.267-0404267
+           kernel_version_c: 202104160747
+           unsigned_img: 1
+           need_modules: 1
+           use_qemu: 1
+           upload: 1
+         - system_version: bionic
+           repository: v4.9.274
+           kernel_version: 4.9.274-0409274
+           kernel_version_c: 202106301447
+           use_qemu: 1
+         - system_version: bionic
+           repository: v4.14.215
+           kernel_version: 4.14.215-0414215
+           kernel_version_c: 202101122110
+           unsigned_img: 1
+           need_modules: 1
+           use_qemu: 1
+         - system_version: focal
+           repository: v4.19.196
+           kernel_version: 4.19.196-0419196
+           kernel_version_c: 202106301451
+           unsigned_img: 1
+           need_modules: 1
+         - system_version: focal
+           repository: v5.4.130
+           kernel_version: 5.4.130-0504130
+           kernel_version_c: 202107071335
+           unsigned_img: 1
+           need_modules: 1
+         - system_version: hirsute
+           repository: v5.10.48
+           kernel_version: 5.10.48-051048
+           kernel_version_c: 202107071338
+           unsigned_img: 1
+           need_modules: 1
+         - system_version: impish
+           repository: v5.12.15
+           kernel_version: 5.12.15-051215
+           kernel_version_c: 202107070935
+           unsigned_img: 1
+           need_modules: 1
+         - system_version: impish
+           repository: v5.13.1
+           kernel_version: 5.13.1-051301
+           kernel_version_c: 202107071335
+           unsigned_img: 1
+           need_modules: 1
+    steps:
+    - uses: actions/checkout@v2
+    - name: Release build
+      uses: addnab/docker-run-action@v3
+      if: ${{ startsWith(github.ref, 'refs/tags/') }}
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        registry: gcr.io
+        image: ubuntu:${{ matrix.system_version }}
+        options: >-
+          --privileged
+          -v ${{ github.workspace }}:/sources
+          -e GITHUB_REF=${{ env.GITHUB_REF }}
+          -e GITHUB_SERVER_URL=${{ env.GITHUB_SERVER_URL }}
+          -e GITHUB_REPOSITORY=${{ env.GITHUB_REPOSITORY }}
+          -e GITHUB_RUN_ID=${{ env.GITHUB_RUN_ID }}
+          -e SYSTEM_VERSION=${{ matrix.system_version }}
+          -e SYSTEM_ARCH=${{ env.SYSTEM_ARCH }}
+          -e REPOSITORY=${{ matrix.repository }}
+          -e KERNEL_VERSION=${{ matrix.kernel_version }}
+          -e KERNEL_VERSION_C=${{ matrix.kernel_version_c }}
+          -e UNSIGNED_IMG=${{ matrix.unsigned_img }}
+          -e NEED_MODULES=${{ matrix.need_modules }}
+          -e USE_QEMU=${{ matrix.use_qemu }}
+          -e QTIFWVER=${{ env.QTIFWVER }}
+          -e UPLOAD=${{ matrix.upload }}
+        run: |
+          cd /sources
+          echo
+          echo Install dependencies
+          echo
+          chmod +x ports/ci/linux-alt/install_deps.sh
+          ./ports/ci/linux-alt/install_deps.sh
+          echo
+          echo Release Build
+          echo
+          chmod +x ports/ci/linux-alt/build.sh
+          ./ports/ci/linux-alt/build.sh
+          echo
+          echo Test module
+          echo
+          chmod +x ports/ci/linux-alt/test.sh
+          ./ports/ci/linux-alt/test.sh
+          echo
+          echo Release Deploy
+          echo
+          chmod +x ports/ci/linux-alt/deploy.sh
+          ./ports/ci/linux-alt/deploy.sh
+    - uses: actions/checkout@v2
+    - name: Daily build
+      uses: addnab/docker-run-action@v3
+      if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        registry: gcr.io
+        image: ubuntu:${{ matrix.system_version }}
+        options: >-
+          --privileged
+          -v ${{ github.workspace }}:/sources
+          -e GITHUB_REF=${{ env.GITHUB_REF }}
+          -e GITHUB_SERVER_URL=${{ env.GITHUB_SERVER_URL }}
+          -e GITHUB_REPOSITORY=${{ env.GITHUB_REPOSITORY }}
+          -e GITHUB_RUN_ID=${{ env.GITHUB_RUN_ID }}
+          -e SYSTEM_VERSION=${{ matrix.system_version }}
+          -e SYSTEM_ARCH=${{ env.SYSTEM_ARCH }}
+          -e REPOSITORY=${{ matrix.repository }}
+          -e KERNEL_VERSION=${{ matrix.kernel_version }}
+          -e KERNEL_VERSION_C=${{ matrix.kernel_version_c }}
+          -e UNSIGNED_IMG=${{ matrix.unsigned_img }}
+          -e NEED_MODULES=${{ matrix.need_modules }}
+          -e USE_QEMU=${{ matrix.use_qemu }}
+          -e QTIFWVER=${{ env.QTIFWVER }}
+          -e UPLOAD=${{ matrix.upload }}
+          -e DAILY_BUILD=1
+        run: |
+          cd /sources
+          echo
+          echo Install dependencies
+          echo
+          chmod +x ports/ci/linux-alt/install_deps.sh
+          ./ports/ci/linux-alt/install_deps.sh
+          echo
+          echo Daily Build
+          echo
+          chmod +x ports/ci/linux-alt/build.sh
+          ./ports/ci/linux-alt/build.sh
+          echo
+          echo Test module
+          echo
+          chmod +x ports/ci/linux-alt/test.sh
+          ./ports/ci/linux-alt/test.sh
+          echo
+          echo Daily Deploy
+          echo
+          chmod +x ports/ci/linux-alt/deploy.sh
+          ./ports/ci/linux-alt/deploy.sh
+    - name: Release Upload
+      uses: softprops/action-gh-release@v1
+      if: ${{ startsWith(github.ref, 'refs/tags/') && matrix.upload }}
+      with:
+        files: packages/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Daily Build Upload
+      uses: softprops/action-gh-release@v1
+      if: ${{ !startsWith(github.ref, 'refs/tags/') && matrix.upload }}
+      with:
+        body: "${{ github.event.head_commit.message }} (commit: ${{ github.sha }})"
+        prerelease: true
+        files: packages/*
+        name: Daily Build
+        tag_name: daily-build
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Linux daily build packages
+      uses: actions/upload-artifact@v2
+      if: ${{ matrix.upload }}
+      with:
+        name: linux-daily-build
+        path: packages/*

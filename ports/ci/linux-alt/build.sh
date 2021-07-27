@@ -17,9 +17,6 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-BUILDSCRIPT=dockerbuild.sh
-
-cat << EOF >> ${BUILDSCRIPT}
 echo "Available kernel headers:"
 echo
 ls /usr/src | grep linux-headers- | sort
@@ -46,18 +43,16 @@ fi
 
 # Build the driver and show it's info.
 
-export INSTALL_PREFIX="\${PWD}/package-data"
+export INSTALL_PREFIX="${PWD}/package-data"
 cp -vf package_info.conf.in package_info.conf
-version=\$(grep '^MODULE_VERSION' src/Makefile | awk -F= '{print \$2}' | tr -d ' ')
-sed -i "s|@VERSION@|\${version}|g" package_info.conf
-sed -i "s|@CMAKE_SOURCE_DIR@|\${PWD}|g" package_info.conf
+version=$(grep '^MODULE_VERSION' src/Makefile | awk -F= '{print $2}' | tr -d ' ')
+sed -i "s|@VERSION@|${version}|g" package_info.conf
+sed -i "s|@CMAKE_SOURCE_DIR@|${PWD}|g" package_info.conf
 sed -i "s|@QTIFW_TARGET_DIR@|@ApplicationsDir@/akvcam|g" package_info.conf
 cd src
 make KERNEL_DIR=/usr/src/linux-headers-${KERNEL_VERSION}-generic USE_SPARSE=1
-make install INSTALLDIR=\${INSTALL_PREFIX}/src
+make install INSTALLDIR=${INSTALL_PREFIX}/src
 echo
 echo "Driver info:"
 echo
-modinfo src/akvcam.ko
-EOF
-${EXEC} bash ${BUILDSCRIPT}
+modinfo akvcam.ko
