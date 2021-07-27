@@ -20,9 +20,8 @@
 git clone https://github.com/webcamoid/DeployTools.git
 
 export PATH="${PWD}/.local/bin:${PATH}"
-export INSTALL_PREFIX="${PWD}/package-data"
-export PACKAGES_DIR="${PWD}/packages"
-export BUILD_PATH=${PWD}/src
+export INSTALL_PREFIX="${PWD}/package-data-${REPOSITORY%.*}"
+export PACKAGES_DIR="${PWD}/packages-${REPOSITORY%.*}"
 export PYTHONPATH="${PWD}/DeployTools"
 
 xvfb-run --auto-servernum python3 \

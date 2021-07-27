@@ -17,6 +17,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+export BUILD_PATH=${PWD}/src-${REPOSITORY%.*}
 DRIVER_FILE=akvcam.ko
 DEFERRED_LOG=1
 system_image=system-image.img
@@ -49,7 +50,7 @@ if [ "${USE_QEMU}" = 1 ]; then
     sed -i 's/root:.:/root::/' ${system_mount_point}/etc/shadow
 
     # Prepare the system to test the driver
-    cp -vf src/${DRIVER_FILE} ${system_mount_point}/root
+    cp -vf "${BUILD_PATH}/${DRIVER_FILE}" ${system_mount_point}/root
     echo './driver_test.sh' >> ${system_mount_point}/root/.profile
     touch ${system_mount_point}/root/driver_test.sh
     chmod +x ${system_mount_point}/root/driver_test.sh
