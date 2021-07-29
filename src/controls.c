@@ -29,8 +29,6 @@ struct akvcam_controls
     struct kref ref;
     struct v4l2_ctrl_handler handler;
     akvcam_signal_callback(controls, updated);
-    const struct v4l2_ctrl_config *control_params;
-    size_t n_controls;
 };
 
 akvcam_signal_define(controls, updated)
@@ -92,30 +90,30 @@ static const struct v4l2_ctrl_config akvcam_controls_output[] = {
     {.id = 0},
 };
 
-size_t akvcam_controls_capture_count(void);
-size_t akvcam_controls_output_count(void);
 int akvcam_controls_cotrol_changed(struct v4l2_ctrl *control);
 
 akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE device_type)
 {
     akvcam_controls_t self = kzalloc(sizeof(struct akvcam_controls), GFP_KERNEL);
+    const struct v4l2_ctrl_config *control_params;
+    size_t n_controls = 0;
     size_t i;
 
     kref_init(&self->ref);
 
     // Initialize controls with default values.
-    if (device_type == AKVCAM_DEVICE_TYPE_OUTPUT) {
-        self->control_params = akvcam_controls_output;
-        self->n_controls = akvcam_controls_output_count();
-    } else {
-        self->control_params = akvcam_controls_capture;
-        self->n_controls = akvcam_controls_capture_count();
-    }
+    if (device_type == AKVCAM_DEVICE_TYPE_OUTPUT)
+        control_params = akvcam_controls_output;
+    else
+        control_params = akvcam_controls_capture;
 
-    v4l2_ctrl_handler_init(&self->handler, self->n_controls);
+    for (i = 0; control_params[i].id; i++)
+        n_controls++;
 
-    for (i = 0; i < self->n_controls; i++) {
-        const struct v4l2_ctrl_config *params = self->control_params + i;
+    v4l2_ctrl_handler_init(&self->handler, n_controls);
+
+    for (i = 0; control_params[i].id; i++) {
+        const struct v4l2_ctrl_config *params = control_params + i;
 
         if (params->id < AKVCAM_CID_BASE) {
             const char *name;
@@ -248,34 +246,6 @@ int akvcam_controls_set_string_value(akvcam_controls_t self, __u32 id, const cha
 struct v4l2_ctrl_handler *akvcam_controls_handler(akvcam_controls_t self)
 {
     return self->handler.error? NULL: &self->handler;
-}
-
-size_t akvcam_controls_capture_count(void)
-{
-    static size_t count = 0;
-
-    if (count < 1) {
-        size_t i;
-
-        for (i = 0; akvcam_controls_capture[i].id; i++)
-            count++;
-    }
-
-    return count;
-}
-
-size_t akvcam_controls_output_count(void)
-{
-    static size_t count = 0;
-
-    if (count < 1) {
-        size_t i;
-
-        for (i = 0; akvcam_controls_output[i].id; i++)
-            count++;
-    }
-
-    return count;
 }
 
 int akvcam_controls_cotrol_changed(struct v4l2_ctrl *control)

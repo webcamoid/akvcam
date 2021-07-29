@@ -54,7 +54,6 @@ static akvcam_attributes_controls_map akvcam_attributes_controls[] = {
     {NULL          , 0                      },
 };
 
-size_t akvcam_attributes_controls_count(void);
 __u32 akvcam_attributes_controls_id_by_name(const char *name);
 
 const struct attribute_group **akvcam_attributes_groups(AKVCAM_DEVICE_TYPE device_type)
@@ -64,28 +63,12 @@ const struct attribute_group **akvcam_attributes_groups(AKVCAM_DEVICE_TYPE devic
                 akvcam_attributes_capture_groups;
 }
 
-size_t akvcam_attributes_controls_count(void)
-{
-    static size_t count = 0;
-
-    if (count < 1) {
-        size_t i;
-
-        for (i = 0; akvcam_attributes_controls[i].name; i++)
-            count++;
-    }
-
-    return count;
-}
-
 __u32 akvcam_attributes_controls_id_by_name(const char *name)
 {
-    size_t count = akvcam_attributes_controls_count();
     size_t i;
 
-    for (i = 0; i < count; i++)
-        if (strcmp(akvcam_attributes_controls[i].name,
-                   name) == 0)
+    for (i = 0; akvcam_attributes_controls[i].name; i++)
+        if (strcmp(akvcam_attributes_controls[i].name, name) == 0)
             return akvcam_attributes_controls[i].id;
 
     return 0;

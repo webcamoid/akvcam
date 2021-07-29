@@ -172,8 +172,8 @@ typedef void (*akvcam_delete_t)(void *data);
 uint64_t akvcam_id(void);
 int akvcam_get_last_error(void);
 int akvcam_set_last_error(int error);
-const char *akvcam_string_from_error(int error);
-const char *akvcam_string_from_rw_mode(AKVCAM_RW_MODE rw_mode);
+void akvcam_string_from_error(int error, char *str, size_t len);
+void akvcam_string_from_rw_mode(AKVCAM_RW_MODE rw_mode, char *str, size_t len);
 char *akvcam_strdup(const char *str, AKVCAM_MEMORY_TYPE type);
 char *akvcam_strip_str(const char *str, AKVCAM_MEMORY_TYPE type);
 char *akvcam_strip_str_sub(const char *str,

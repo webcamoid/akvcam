@@ -67,7 +67,6 @@ static const akvcam_format_globals akvcam_format_globals_formats[] = {
     {0                  ,  0, 0,         NULL,           NULL, ""     }
 };
 
-size_t akvcam_formats_count(void);
 akvcam_format_globals_ct akvcam_format_globals_by_fourcc(__u32 fourcc);
 akvcam_format_globals_ct akvcam_format_globals_by_str(const char *str);
 
@@ -301,7 +300,7 @@ __u32 akvcam_format_fourcc_from_string(const char *fourcc_str)
 {
     size_t i;
 
-    for (i = 0; i < akvcam_formats_count(); i++)
+    for (i = 0; akvcam_format_globals_formats[i].fourcc; i++)
         if (strcasecmp(akvcam_format_globals_formats[i].str, fourcc_str) == 0)
             return (akvcam_format_globals_formats + i)->fourcc;
 
@@ -579,25 +578,11 @@ bool akvcam_format_have_multiplanar(akvcam_formats_list_ct formats)
     return false;
 }
 
-size_t akvcam_formats_count(void)
-{
-    static size_t count = 0;
-
-    if (count < 1) {
-        size_t i;
-
-        for (i = 0; akvcam_format_globals_formats[i].fourcc; i++)
-            count++;
-    }
-
-    return count;
-}
-
 akvcam_format_globals_ct akvcam_format_globals_by_fourcc(__u32 fourcc)
 {
     size_t i;
 
-    for (i = 0; i < akvcam_formats_count(); i++)
+    for (i = 0; akvcam_format_globals_formats[i].fourcc; i++)
         if (akvcam_format_globals_formats[i].fourcc == fourcc)
             return akvcam_format_globals_formats + i;
 
@@ -608,7 +593,7 @@ akvcam_format_globals_ct akvcam_format_globals_by_str(const char *str)
 {
     size_t i;
 
-    for (i = 0; i < akvcam_formats_count(); i++)
+    for (i = 0; akvcam_format_globals_formats[i].fourcc; i++)
         if (strcmp(akvcam_format_globals_formats[i].str, str) == 0)
             return akvcam_format_globals_formats + i;
 

@@ -33,14 +33,14 @@ static struct akvcam_utils
 typedef struct
 {
     __u32 cmd;
-    char  str[32];
+    char str[32];
 } akvcam_utils_ioctl_strings, *akvcam_utils_ioctl_strings_t;
 
 typedef struct
 {
     int error;
-    char  str[32];
-    char  description[AKVCAM_MAX_STRING_SIZE];
+    char str[32];
+    char description[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_error_strings, *akvcam_utils_error_strings_t;
 
 typedef struct
@@ -52,55 +52,55 @@ typedef struct
 typedef struct
 {
     enum v4l2_field field;
-    char  str[AKVCAM_MAX_STRING_SIZE];
+    char str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_field_strings, *akvcam_utils_field_strings_t;
 
 typedef struct
 {
     enum v4l2_frmsizetypes type;
-    char  str[AKVCAM_MAX_STRING_SIZE];
+    char str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_frmsize_type_strings, *akvcam_utils_frmsize_type_strings_t;
 
 typedef struct
 {
     __u32 pixelformat;
-    char  str[AKVCAM_MAX_STRING_SIZE];
+    char str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_pixelformat_strings, *akvcam_utils_pixelformat_strings_t;
 
 typedef struct
 {
     enum v4l2_memory memory;
-    char  str[AKVCAM_MAX_STRING_SIZE];
+    char str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_v4l2_memory_strings, *akvcam_utils_v4l2_memory_strings_t;
 
 typedef struct
 {
     enum v4l2_colorspace colorspace;
-    char  str[AKVCAM_MAX_STRING_SIZE];
+    char str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_v4l2_colorspace_strings, *akvcam_utils_v4l2_colorspace_strings_t;
 
 typedef struct
 {
     AKVCAM_RW_MODE rw_mode;
-    char  str[AKVCAM_MAX_STRING_SIZE];
+    char str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_rw_mode_strings, *akvcam_utils_rw_mode_strings_t;
 
 typedef struct
 {
     __u32 flag;
-    char  str[AKVCAM_MAX_STRING_SIZE];
+    char str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_buffer_flags_strings, *akvcam_utils_buffer_flags_strings_t;
 
 typedef struct
 {
     __u32 flag;
-    char  str[AKVCAM_MAX_STRING_SIZE];
+    char str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_buffer_capabilities_strings, *akvcam_utils_buffer_capabilities_strings_t;
 
 typedef struct
 {
     __s32 ctrl_which;
-    char  str[AKVCAM_MAX_STRING_SIZE];
+    char str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_ctrl_which_class_strings, *akvcam_utils_ctrl_which_class_strings_t;
 
 uint64_t akvcam_id(void)
@@ -120,10 +120,9 @@ int akvcam_set_last_error(int error)
     return error;
 }
 
-const char *akvcam_string_from_error(int error)
+void akvcam_string_from_error(int error, char *str, size_t len)
 {
     size_t i;
-    static char errorstr[AKVCAM_MAX_STRING_SIZE];
     static const akvcam_utils_error_strings error_strings[] = {
         {EPERM	, "EPERM"  , "Operation not permitted"            },
         {ENOENT	, "ENOENT" , "No such file or directory"          },
@@ -162,33 +161,27 @@ const char *akvcam_string_from_error(int error)
         {0      , ""       , ""                                   },
     };
 
-    memset(errorstr, 0, AKVCAM_MAX_STRING_SIZE);
-
-    if (error >= 0)
-        return errorstr;
+    memset(str, 0, len);
 
     for (i = 0; akvcam_strlen(error_strings[i].str) > 0; i++)
         if (error_strings[i].error == -error) {
-            snprintf(errorstr,
-                     AKVCAM_MAX_STRING_SIZE,
+            snprintf(str,
+                     len,
                      "%s (%s)",
                      error_strings[i].description,
                      error_strings[i].str);
 
-            return errorstr;
+            return;
         }
 
-    snprintf(errorstr, AKVCAM_MAX_STRING_SIZE, "Unknown error (%d)", error);
-
-    return errorstr;
+    snprintf(str, len, "Unknown error (%d)", error);
 }
 
-const char *akvcam_string_from_rw_mode(AKVCAM_RW_MODE rw_mode)
+void akvcam_string_from_rw_mode(AKVCAM_RW_MODE rw_mode, char *str, size_t len)
 {
     size_t i = 0;
     size_t j = 0;
     size_t n;
-    static char rw_mode_str[AKVCAM_MAX_STRING_SIZE];
     static const akvcam_utils_rw_mode_strings rw_mode_strings[] = {
         {AKVCAM_RW_MODE_READWRITE, "rw"     },
         {AKVCAM_RW_MODE_MMAP     , "mmap"   },
@@ -197,20 +190,19 @@ const char *akvcam_string_from_rw_mode(AKVCAM_RW_MODE rw_mode)
         {0                       , ""       },
     };
 
-    n = snprintf(rw_mode_str, AKVCAM_MAX_STRING_SIZE, "AKVCAM_RW_MODE(");
+    memset(str, 0, len);
+    n = snprintf(str, len, "AKVCAM_RW_MODE(");
 
     for (i = 0; akvcam_strlen(rw_mode_strings[i].str) > 0; i++)
         if (rw_mode_strings[i].rw_mode & rw_mode) {
             if (j > 0)
-                n += snprintf(rw_mode_str + n, AKVCAM_MAX_STRING_SIZE - n, ", ");
+                n += snprintf(str + n, len - n, ", ");
 
-            n += snprintf(rw_mode_str + n, AKVCAM_MAX_STRING_SIZE - n, "%s", rw_mode_strings[i].str);
+            n += snprintf(str + n, len - n, "%s", rw_mode_strings[i].str);
             j++;
         }
 
-    snprintf(rw_mode_str + n, AKVCAM_MAX_STRING_SIZE - n, ")");
-
-    return rw_mode_str;
+    snprintf(str + n, len - n, ")");
 }
 
 char *akvcam_strdup(const char *str, AKVCAM_MEMORY_TYPE type)

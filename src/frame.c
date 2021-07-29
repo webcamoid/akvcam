@@ -246,7 +246,6 @@ static const akvcam_video_convert akvcam_frame_convert_table[] = {
     {0                 , 0                  , NULL                 }
 };
 
-size_t akvcam_convert_funcs_count(void);
 akvcam_video_convert_funtion_t akvcam_convert_func(__u32 from, __u32 to);
 
 struct akvcam_frame
@@ -830,7 +829,7 @@ bool akvcam_frame_can_convert(__u32 in_fourcc, __u32 out_fourcc)
     if (in_fourcc == out_fourcc)
         return true;
 
-    for (i = 0; i < akvcam_convert_funcs_count(); i++)
+    for (i = 0; akvcam_frame_convert_table[i].from; i++)
         if (akvcam_frame_convert_table[i].from == in_fourcc
             && akvcam_frame_convert_table[i].to == out_fourcc) {
             return true;
@@ -1444,25 +1443,11 @@ akvcam_RGB24 akvcam_extrapolated_color(akvcam_frame_t self,
     return akvcam_extrapolate_color(&color_min, &color_max, k_num_y, k_den_y);
 }
 
-size_t akvcam_convert_funcs_count(void)
-{
-    static size_t count = 0;
-
-    if (count < 1) {
-        size_t i;
-
-        for (i = 0; akvcam_frame_convert_table[i].from; i++)
-            count++;
-    }
-
-    return count;
-}
-
 akvcam_video_convert_funtion_t akvcam_convert_func(__u32 from, __u32 to)
 {
     size_t i;
 
-    for (i = 0; i < akvcam_convert_funcs_count(); i++) {
+    for (i = 0; akvcam_frame_convert_table[i].from; i++) {
         akvcam_video_convert_ct convert = akvcam_frame_convert_table + i;
 
         if (convert->from == from && convert->to == to)

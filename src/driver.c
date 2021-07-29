@@ -380,6 +380,7 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
     akvcam_formats_list_t formats;
     akvcam_driver_rw_mode_strings_ct rw_mode_strings =
             akvcam_driver_rw_mode_strs();
+    char *rw_mode_str;
     size_t i;
 
     akpr_info("Reading device\n");
@@ -410,7 +411,10 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
     if (!mode)
         mode |= AKVCAM_RW_MODE_MMAP | AKVCAM_RW_MODE_USERPTR;
 
-    akpr_info("Device mode: %s\n", akvcam_string_from_rw_mode(mode));
+    rw_mode_str = kzalloc(AKVCAM_MAX_STRING_SIZE, GFP_KERNEL);
+    akvcam_string_from_rw_mode(mode, rw_mode_str, AKVCAM_MAX_STRING_SIZE);
+    akpr_info("Device mode: %s\n", rw_mode_str);
+    kfree(rw_mode_str);
     formats = akvcam_driver_read_device_formats(settings, available_formats);
 
     if (akvcam_list_empty(formats)) {

@@ -101,7 +101,11 @@ bool akvcam_file_open(akvcam_file_t self)
 
     if (IS_ERR(self->filp)) {
         int error = PTR_ERR(self->filp);
-        akpr_err("%s\n", akvcam_string_from_error(error));
+        char *error_str = kzalloc(AKVCAM_MAX_STRING_SIZE, GFP_KERNEL);
+
+        akvcam_string_from_error(error, error_str, AKVCAM_MAX_STRING_SIZE);
+        akpr_err("%s\n", error_str);
+        kfree(error_str);
 
         return false;
     }

@@ -508,8 +508,13 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
         akvcam_frame_delete(frame);
         result = akvcam_buffers_write_frame(self->buffers, adjusted_frame);
 
-        if (result < 0)
-            akpr_err("Failed writing frame: %s.\n", akvcam_string_from_error(result));
+        if (result < 0) {
+            char *error_str = kzalloc(AKVCAM_MAX_STRING_SIZE, GFP_KERNEL);
+
+            akvcam_string_from_error(result, error_str, AKVCAM_MAX_STRING_SIZE);
+            akpr_err("Failed writing frame: %s.\n", error_str);
+            kfree(error_str);
+        }
 
         akvcam_frame_delete(adjusted_frame);
     } else {
