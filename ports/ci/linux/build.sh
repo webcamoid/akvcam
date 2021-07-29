@@ -50,10 +50,10 @@ sed -i "s|@VERSION@|${version}|g" package_info.conf
 sed -i "s|@CMAKE_SOURCE_DIR@|${PWD}|g" package_info.conf
 sed -i "s|@QTIFW_TARGET_DIR@|@ApplicationsDir@/akvcam|g" package_info.conf
 buildDir=src-${REPOSITORY%.*}
-cp -rvf src ${buildDir}
-cd ${buildDir}
-make KERNEL_DIR=/usr/src/linux-headers-${KERNEL_VERSION}-generic USE_SPARSE=1
-make install INSTALLDIR=${INSTALL_PREFIX}/src
+cp -rvf src "${buildDir}"
+cd "${buildDir}"
+make KERNEL_DIR="/usr/src/linux-headers-${KERNEL_VERSION}-generic" USE_SPARSE=1
+make install INSTALLDIR="${INSTALL_PREFIX}/src"
 echo
 echo "Driver info:"
 echo

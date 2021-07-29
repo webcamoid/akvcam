@@ -63,10 +63,10 @@ mkdir -p .local/bin
 qtIFW=QtInstallerFramework-linux-x64-${QTIFWVER}.run
 ${DOWNLOAD_CMD} "http://download.qt.io/official_releases/qt-installer-framework/${QTIFWVER}/${qtIFW}" || true
 
-if [ -e ${qtIFW} ]; then
-    chmod +x ${qtIFW}
+if [ -e "${qtIFW}" ]; then
+    chmod +x "${qtIFW}"
     QT_QPA_PLATFORM=minimal \
-    ./${qtIFW} \
+    ./"${qtIFW}" \
         --verbose \
         --root ~/QtIFW \
         --accept-licenses \

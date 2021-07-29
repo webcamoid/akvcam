@@ -36,13 +36,14 @@ if [ "${USE_QEMU}" = 1 ]; then
     debootstrap \
         --components=main,universe,multiverse \
         --include=autofs,kmod,systemd,systemd-sysv,util-linux,v4l-utils \
-        --arch ${SYSTEM_ARCH} \
+        --arch "${SYSTEM_ARCH}" \
         --variant=minbase \
-        ${SYSTEM_VERSION} ${system_mount_point}
+        "${SYSTEM_VERSION}" \
+        "${system_mount_point}"
 
     # Copy kernel modules
-    mkdir -p ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
-    cp -rf /lib/modules/${KERNEL_VERSION}-generic/* ${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic
+    mkdir -p "${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic"
+    cp -rf "/lib/modules/${KERNEL_VERSION}-generic"/* "${system_mount_point}/lib/modules/${KERNEL_VERSION}-generic"
 
     # Configure auto login with root user
     sed -i 's/#NAutoVTs=6/NAutoVTs=1/' ${system_mount_point}/etc/systemd/logind.conf
@@ -107,8 +108,8 @@ EOF
     echo "Booting system with custom kernel:"
     echo
     qemu-system-x86_64 \
-        -kernel /boot/vmlinuz-${KERNEL_VERSION}-generic \
-        -initrd /boot/initrd.img-${KERNEL_VERSION}-generic \
+        -kernel "/boot/vmlinuz-${KERNEL_VERSION}-generic" \
+        -initrd "/boot/initrd.img-${KERNEL_VERSION}-generic" \
         -m 512M \
         -append "root=/dev/sda console=ttyS0,9600 systemd.unit=multi-user.target rw" \
         -drive file=${system_image},format=raw \
