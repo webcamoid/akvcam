@@ -21,7 +21,6 @@
 #include <linux/module.h>
 
 #include "driver.h"
-#include "global_deleter.h"
 #include "log.h"
 #include "settings.h"
 
@@ -47,7 +46,6 @@ static int __init akvcam_init(void)
 static void __exit akvcam_uninit(void)
 {
     akvcam_driver_uninit();
-    akvcam_global_deleter_run();
 }
 
 module_init(akvcam_init)

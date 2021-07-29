@@ -32,7 +32,7 @@
 #include "driver.h"
 #include "format.h"
 #include "frame.h"
-#include "global_deleter.h"
+#include "frame_filter.h"
 #include "ioctl.h"
 #include "list.h"
 #include "log.h"
@@ -53,6 +53,8 @@ struct akvcam_device
     akvcam_devices_list_t connected_devices;
     akvcam_buffers_t buffers;
     akvcam_frame_t current_frame;
+    akvcam_frame_ct default_frame;
+    akvcam_frame_filter_ct frame_filter;
     struct mutex device_mutex;
     struct mutex frame_mutex;
     struct mutex clock_mutex;
@@ -96,13 +98,14 @@ void akvcam_device_clock_stop(akvcam_device_t self);
 int akvcam_device_clock_timeout(akvcam_device_t self);
 akvcam_frame_t akvcam_device_frame_apply_adjusts(akvcam_device_ct self,
                                                  akvcam_frame_ct frame);
-akvcam_frame_t akvcam_default_frame(void);
 
 akvcam_device_t akvcam_device_new(const char *name,
                                   const char *description,
                                   AKVCAM_DEVICE_TYPE type,
                                   AKVCAM_RW_MODE rw_mode,
-                                  akvcam_formats_list_t formats)
+                                  akvcam_formats_list_t formats,
+                                  akvcam_frame_ct default_frame,
+                                  akvcam_frame_filter_ct frame_filter)
 {
     bool multiplanar;
 
@@ -118,6 +121,9 @@ akvcam_device_t akvcam_device_new(const char *name,
     multiplanar = akvcam_format_have_multiplanar(formats);
     self->buffer_type = akvcam_device_v4l2_from_device_type(type, multiplanar);
     self->buffers = akvcam_buffers_new(rw_mode, self->buffer_type);
+    self->current_frame = NULL;
+    self->default_frame = default_frame;
+    self->frame_filter = frame_filter;
     self->rw_mode = rw_mode;
     self->videonr = -1;
     mutex_init(&self->device_mutex);
@@ -132,9 +138,6 @@ akvcam_device_t akvcam_device_new(const char *name,
     akvcam_connect(controls, self->controls, updated, self, akvcam_device_controls_updated);
     akvcam_connect(buffers, self->buffers, streaming_started, self, akvcam_device_clock_start);
     akvcam_connect(buffers, self->buffers, streaming_stopped, self, akvcam_device_stop_streaming);
-
-    // Preload deault frame otherwise it will not get loaded in RW mode.
-    akvcam_default_frame();
 
     return self;
 }
@@ -469,8 +472,6 @@ __u32 akvcam_device_caps(akvcam_device_ct self)
 
 void akvcam_device_clock_run_once(akvcam_device_t self)
 {
-    akvcam_frame_t default_frame = akvcam_default_frame();
-
     akpr_function();
 
     if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
@@ -492,9 +493,9 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
         }
 
         if (!frame) {
-            if (default_frame && akvcam_frame_size(default_frame) > 0) {
+            if (self->default_frame && akvcam_frame_size(self->default_frame) > 0) {
                 akpr_debug("Reading default frame.\n");
-                frame = akvcam_frame_new_copy(default_frame);
+                frame = akvcam_frame_new_copy(self->default_frame);
             } else {
                 akpr_debug("Generating random frame.\n");
                 frame = akvcam_frame_new(self->format, NULL, 0);
@@ -622,17 +623,15 @@ akvcam_frame_t akvcam_device_frame_apply_adjusts(akvcam_device_ct self,
         akvcam_frame_mirror(new_frame,
                             horizontal_flip,
                             vertical_flip);
-
-        if (self->swap_rgb)
-            akvcam_frame_swap_rgb(new_frame);
-
-        akvcam_frame_adjust(new_frame,
-                            self->hue,
-                            self->saturation,
-                            self->brightness,
-                            self->contrast,
-                            self->gamma,
-                            self->gray);
+        akvcam_frame_filter_apply(self->frame_filter,
+                                  new_frame,
+                                  self->hue,
+                                  self->saturation,
+                                  self->brightness,
+                                  self->contrast,
+                                  self->gamma,
+                                  self->gray,
+                                  self->swap_rgb);
         akvcam_frame_scaled(new_frame,
                             owidth,
                             oheight,
@@ -648,55 +647,19 @@ akvcam_frame_t akvcam_device_frame_apply_adjusts(akvcam_device_ct self,
         akvcam_frame_mirror(new_frame,
                             horizontal_flip,
                             vertical_flip);
-
-        if (self->swap_rgb)
-            akvcam_frame_swap_rgb(new_frame);
-
-        akvcam_frame_adjust(new_frame,
-                            self->hue,
-                            self->saturation,
-                            self->brightness,
-                            self->contrast,
-                            self->gamma,
-                            self->gray);
+        akvcam_frame_filter_apply(self->frame_filter,
+                                  new_frame,
+                                  self->hue,
+                                  self->saturation,
+                                  self->brightness,
+                                  self->contrast,
+                                  self->gamma,
+                                  self->gray,
+                                  self->swap_rgb);
         akvcam_frame_convert(new_frame, fourcc);
     }
 
     return new_frame;
-}
-
-akvcam_frame_t akvcam_default_frame(void)
-{
-    static akvcam_frame_t frame = NULL;
-    akvcam_settings_t settings;
-    bool loaded = false;
-
-    if (frame)
-        return frame;
-
-    settings = akvcam_settings_new();
-
-    if (akvcam_settings_load(settings, akvcam_settings_file())) {
-        char *file_name;
-
-        akvcam_settings_begin_group(settings, "General");
-        file_name = akvcam_settings_value(settings, "default_frame");
-        frame = akvcam_frame_new(NULL, NULL, 0);
-        loaded = akvcam_frame_load(frame, file_name);
-        akvcam_settings_end_group(settings);
-    }
-
-    akvcam_settings_delete(settings);
-
-    if (loaded) {
-        akvcam_global_deleter_add(frame,
-                                  (akvcam_delete_t) akvcam_frame_delete);
-    } else {
-        akvcam_frame_delete(frame);
-        frame = NULL;
-    }
-
-    return frame;
 }
 
 static const struct v4l2_file_operations akvcam_device_fops = {

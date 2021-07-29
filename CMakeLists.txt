@@ -19,6 +19,7 @@ cmake_minimum_required(VERSION 3.14)
 
 project(akvcam LANGUAGES C)
 
+set(CMAKE_VERBOSE_MAKEFILE ON)
 execute_process(COMMAND uname -r
                 OUTPUT_VARIABLE KERNEL_RELEASE
                 OUTPUT_STRIP_TRAILING_WHITESPACE)

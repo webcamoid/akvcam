@@ -53,22 +53,7 @@ bool akvcam_frame_scaled(akvcam_frame_t self,
                          size_t height,
                          AKVCAM_SCALING mode,
                          AKVCAM_ASPECT_RATIO aspectRatio);
-void akvcam_frame_swap_rgb(akvcam_frame_t self);
 bool akvcam_frame_convert(akvcam_frame_t self, __u32 fourcc);
-void akvcam_frame_adjust_hsl(akvcam_frame_t self,
-                             int hue,
-                             int saturation,
-                             int luminance);
-void akvcam_frame_adjust_contrast(akvcam_frame_t self, int contrast);
-void akvcam_frame_adjust_gamma(akvcam_frame_t self, int gamma);
-void akvcam_frame_to_gray_scale(akvcam_frame_t self);
-void akvcam_frame_adjust(akvcam_frame_t self,
-                         int hue,
-                         int saturation,
-                         int luminance,
-                         int contrast,
-                         int gamma,
-                         bool gray);
 
 // public static
 const char *akvcam_frame_scaling_to_string(AKVCAM_SCALING scaling);

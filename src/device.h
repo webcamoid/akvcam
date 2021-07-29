@@ -23,6 +23,8 @@
 #include "buffers_types.h"
 #include "controls_types.h"
 #include "format_types.h"
+#include "frame_filter_types.h"
+#include "frame_types.h"
 
 struct file;
 
@@ -31,7 +33,9 @@ akvcam_device_t akvcam_device_new(const char *name,
                                   const char *description,
                                   AKVCAM_DEVICE_TYPE type,
                                   AKVCAM_RW_MODE rw_mode,
-                                  akvcam_formats_list_t formats);
+                                  akvcam_formats_list_t formats,
+                                  akvcam_frame_ct default_frame,
+                                  akvcam_frame_filter_ct frame_filter);
 void akvcam_device_delete(akvcam_device_t self);
 akvcam_device_t akvcam_device_ref(akvcam_device_t self);
 

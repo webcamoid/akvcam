@@ -24,7 +24,6 @@
 #include "frame.h"
 #include "file_read.h"
 #include "format.h"
-#include "global_deleter.h"
 #include "log.h"
 #include "utils.h"
 
@@ -149,7 +148,6 @@ typedef void (*akvcam_extrapolate_t)(size_t dstCoord,
                                      size_t num, size_t den, size_t s,
                                      size_t *srcCoordMin, size_t *srcCoordMax,
                                      size_t *kNum, size_t *kDen);
-int akvcam_grayval(int r, int g, int b);
 
 // YUV utility functions
 uint8_t akvcam_rgb_y(int r, int g, int b);
@@ -214,8 +212,6 @@ akvcam_RGB24 akvcam_extrapolated_color(akvcam_frame_t self,
                                        size_t k_num_x, size_t k_den_x,
                                        size_t y_min, size_t y_max,
                                        size_t k_num_y, size_t k_den_y);
-void akvcam_rgb_to_hsl(int r, int g, int b, int *h, int *s, int *l);
-void akvcam_hsl_to_rgb(int h, int s, int l, int *r, int *g, int *b);
 
 typedef void (*akvcam_video_convert_funtion_t)(akvcam_frame_t dst,
                                                akvcam_frame_ct src);
@@ -262,8 +258,6 @@ struct akvcam_frame
 };
 
 bool akvcam_frame_adjust_format_supported(__u32 fourcc);
-const uint8_t *akvcam_contrast_table(void);
-const uint8_t *akvcam_gamma_table(void);
 
 akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
                                 const void *data,
@@ -746,33 +740,6 @@ bool akvcam_frame_scaled(akvcam_frame_t self,
     return true;
 }
 
-void akvcam_frame_swap_rgb(akvcam_frame_t self)
-{
-    __u32 fourcc;
-    size_t width;
-    size_t height;
-    size_t x;
-    size_t y;
-
-    fourcc = akvcam_format_fourcc(self->format);
-
-    if (!akvcam_frame_adjust_format_supported(fourcc))
-        return;
-
-    width = akvcam_format_width(self->format);
-    height = akvcam_format_height(self->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t line = akvcam_frame_line(self, 0, y);
-
-        for (x = 0; x < width; x++) {
-            uint8_t tmp = line[x].r;
-            line[x].r = line[x].b;
-            line[x].b = tmp;
-        }
-    }
-}
-
 bool akvcam_frame_convert(akvcam_frame_t self, __u32 fourcc)
 {
     akvcam_format_t format;
@@ -799,245 +766,6 @@ bool akvcam_frame_convert(akvcam_frame_t self, __u32 fourcc)
     akvcam_format_delete(format);
 
     return true;
-}
-
-void akvcam_frame_adjust_hsl(akvcam_frame_t self,
-                             int hue,
-                             int saturation,
-                             int luminance)
-{
-    __u32 fourcc;
-    size_t width;
-    size_t height;
-    size_t x;
-    size_t y;
-    int h;
-    int s;
-    int l;
-    int r;
-    int g;
-    int b;
-
-    if (hue == 0 && saturation == 0 && luminance == 0)
-        return;
-
-    fourcc = akvcam_format_fourcc(self->format);
-
-    if (!akvcam_frame_adjust_format_supported(fourcc))
-        return;
-
-    width = akvcam_format_width(self->format);
-    height = akvcam_format_height(self->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t line = akvcam_frame_line(self, 0, y);
-
-        for (x = 0; x < width; x++) {
-            akvcam_rgb_to_hsl(line[x].r, line[x].g, line[x].b, &h, &s, &l);
-
-            h = akvcam_mod(h + hue, 360);
-            s = akvcam_bound(0, s + saturation, 255);
-            l = akvcam_bound(0, l + luminance, 255);
-
-            akvcam_hsl_to_rgb(h, s, l, &r, &g, &b);
-
-            line[x].r = (uint8_t) r;
-            line[x].g = (uint8_t) g;
-            line[x].b = (uint8_t) b;
-        }
-    }
-}
-
-void akvcam_frame_adjust_contrast(akvcam_frame_t self, int contrast)
-{
-    __u32 fourcc;
-    size_t width;
-    size_t height;
-    size_t x;
-    size_t y;
-    const uint8_t *contrast_table = akvcam_contrast_table();
-    size_t contrast_offset;
-
-    if (!contrast_table || contrast == 0)
-        return;
-
-    fourcc = akvcam_format_fourcc(self->format);
-
-    if (!akvcam_frame_adjust_format_supported(fourcc))
-        return;
-
-    width = akvcam_format_width(self->format);
-    height = akvcam_format_height(self->format);
-
-    contrast = akvcam_bound(-255, contrast, 255);
-    contrast_offset = (size_t) (contrast + 255) << 8;
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t line = akvcam_frame_line(self, 0, y);
-
-        for (x = 0; x < width; x++) {
-            line[x].r = contrast_table[contrast_offset | line[x].r];
-            line[x].g = contrast_table[contrast_offset | line[x].g];
-            line[x].b = contrast_table[contrast_offset | line[x].b];
-        }
-    }
-}
-
-void akvcam_frame_adjust_gamma(akvcam_frame_t self, int gamma)
-{
-    __u32 fourcc;
-    size_t width;
-    size_t height;
-    size_t x;
-    size_t y;
-    const uint8_t *gamma_table = akvcam_gamma_table();
-    size_t gamma_offset;
-
-    if (!gamma_table || gamma == 0)
-        return;
-
-    fourcc = akvcam_format_fourcc(self->format);
-
-    if (!akvcam_frame_adjust_format_supported(fourcc))
-        return;
-
-    width = akvcam_format_width(self->format);
-    height = akvcam_format_height(self->format);
-
-    gamma = akvcam_bound(-255, gamma, 255);
-    gamma_offset = (size_t) (gamma + 255) << 8;
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t line = akvcam_frame_line(self, 0, y);
-
-        for (x = 0; x < width; x++) {
-            line[x].r = gamma_table[gamma_offset | line[x].r];
-            line[x].g = gamma_table[gamma_offset | line[x].g];
-            line[x].b = gamma_table[gamma_offset | line[x].b];
-        }
-    }
-}
-
-void akvcam_frame_to_gray_scale(akvcam_frame_t self)
-{
-    __u32 fourcc;
-    size_t width;
-    size_t height;
-    size_t x;
-    size_t y;
-
-    fourcc = akvcam_format_fourcc(self->format);
-
-    if (!akvcam_frame_adjust_format_supported(fourcc))
-        return;
-
-    width = akvcam_format_width(self->format);
-    height = akvcam_format_height(self->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t line = akvcam_frame_line(self, 0, y);
-
-        for (x = 0; x < width; x++) {
-            int luma = akvcam_grayval(line[x].r, line[x].g, line[x].b);
-
-            line[x].r = (uint8_t) luma;
-            line[x].g = (uint8_t) luma;
-            line[x].b = (uint8_t) luma;
-        }
-    }
-}
-
-void akvcam_frame_adjust(akvcam_frame_t self,
-                         int hue,
-                         int saturation,
-                         int luminance,
-                         int contrast,
-                         int gamma,
-                         bool gray)
-{
-    __u32 fourcc;
-    size_t width;
-    size_t height;
-    size_t x;
-    size_t y;
-    akvcam_RGB24_t line;
-    int h;
-    int s;
-    int l;
-    int r;
-    int g;
-    int b;
-    int luma;
-    const uint8_t *contrast_table = akvcam_contrast_table();
-    const uint8_t *gamma_table = akvcam_gamma_table();
-    size_t contrast_offset;
-    size_t gamma_offset;
-
-    if (hue == 0
-        && saturation == 0
-        && luminance == 0
-        && contrast == 0
-        && gamma == 0
-        && !gray)
-        return;
-
-    fourcc = akvcam_format_fourcc(self->format);
-
-    if (!akvcam_frame_adjust_format_supported(fourcc))
-        return;
-
-    width = akvcam_format_width(self->format);
-    height = akvcam_format_height(self->format);
-
-    contrast = akvcam_bound(-255, contrast, 255);
-    contrast_offset = (size_t) (contrast + 255) << 8;
-
-    gamma = akvcam_bound(-255, gamma, 255);
-    gamma_offset = (size_t) (gamma + 255) << 8;
-
-    for (y = 0; y < height; y++) {
-        line = akvcam_frame_line(self, 0, y);
-
-        for (x = 0; x < width; x++) {
-            r = line[x].r;
-            g = line[x].g;
-            b = line[x].b;
-
-            if (hue != 0 || saturation != 0 ||  luminance != 0) {
-                akvcam_rgb_to_hsl(r, g, b, &h, &s, &l);
-
-                h = akvcam_mod(h + hue, 360);
-                s = akvcam_bound(0, s + saturation, 255);
-                l = akvcam_bound(0, l + luminance, 255);
-
-                akvcam_hsl_to_rgb(h, s, l, &r, &g, &b);
-            }
-
-            if (gamma_table && gamma != 0) {
-                r = gamma_table[gamma_offset | (size_t) r];
-                g = gamma_table[gamma_offset | (size_t) g];
-                b = gamma_table[gamma_offset | (size_t) b];
-            }
-
-            if (contrast_table && contrast != 0) {
-                r = contrast_table[contrast_offset | (size_t) r];
-                g = contrast_table[contrast_offset | (size_t) g];
-                b = contrast_table[contrast_offset | (size_t) b];
-            }
-
-            if (gray) {
-                luma = akvcam_grayval(r, g, b);
-
-                r = luma;
-                g = luma;
-                b = luma;
-            }
-
-            line[x].r = (uint8_t) r;
-            line[x].g = (uint8_t) g;
-            line[x].b = (uint8_t) b;
-        }
-    }
 }
 
 const char *akvcam_frame_scaling_to_string(AKVCAM_SCALING scaling)
@@ -1109,11 +837,6 @@ bool akvcam_frame_can_convert(__u32 in_fourcc, __u32 out_fourcc)
         }
 
     return false;
-}
-
-int akvcam_grayval(int r, int g, int b)
-{
-    return (11 * r + 16 * g + 5 * b) >> 5;
 }
 
 uint8_t akvcam_rgb_y(int r, int g, int b)
@@ -1721,73 +1444,6 @@ akvcam_RGB24 akvcam_extrapolated_color(akvcam_frame_t self,
     return akvcam_extrapolate_color(&color_min, &color_max, k_num_y, k_den_y);
 }
 
-void akvcam_rgb_to_hsl(int r, int g, int b, int *h, int *s, int *l)
-{
-    int max = akvcam_max(r, akvcam_max(g, b));
-    int min = akvcam_min(r, akvcam_min(g, b));
-    int c = max - min;
-
-    *l = (max + min) / 2;
-
-    if (!c) {
-        *h = 0;
-        *s = 0;
-    } else {
-        if (max == r)
-            *h = akvcam_mod(g - b, 6 * c);
-        else if (max == g)
-            *h = b - r + 2 * c;
-        else
-            *h = r - g + 4 * c;
-
-        *h = 60 * (*h) / c;
-        *s = 255 * c / (255 - akvcam_abs(max + min - 255));
-    }
-}
-
-void akvcam_hsl_to_rgb(int h, int s, int l, int *r, int *g, int *b)
-{
-    int c = s * (255 - akvcam_abs(2 * l - 255)) / 255;
-    int x = c * (60 - akvcam_abs((h % 120) - 60)) / 60;
-    int m;
-
-    if (h >= 0 && h < 60) {
-        *r = c;
-        *g = x;
-        *b = 0;
-    } else if (h >= 60 && h < 120) {
-        *r = x;
-        *g = c;
-        *b = 0;
-    } else if (h >= 120 && h < 180) {
-        *r = 0;
-        *g = c;
-        *b = x;
-    } else if (h >= 180 && h < 240) {
-        *r = 0;
-        *g = x;
-        *b = c;
-    } else if (h >= 240 && h < 300) {
-        *r = x;
-        *g = 0;
-        *b = c;
-    } else if (h >= 300 && h < 360) {
-        *r = c;
-        *g = 0;
-        *b = x;
-    } else {
-        *r = 0;
-        *g = 0;
-        *b = 0;
-    }
-
-    m = 2 * l - c;
-
-    *r = (2 * (*r) + m) / 2;
-    *g = (2 * (*g) + m) / 2;
-    *b = (2 * (*b) + m) / 2;
-}
-
 size_t akvcam_convert_funcs_count(void)
 {
     static size_t count = 0;
@@ -1830,126 +1486,4 @@ bool akvcam_frame_adjust_format_supported(__u32 fourcc)
             return true;
 
     return false;
-}
-
-const uint8_t *akvcam_contrast_table(void)
-{
-    static uint8_t *contrast_table = NULL;
-    static const int64_t min_contrast = -255;
-    static const int64_t max_contrast = 255;
-    static const int64_t max_color = 255;
-    int64_t contrast;
-
-    if (contrast_table)
-        return contrast_table;
-
-    contrast_table = vmalloc((max_color + 1) * (max_contrast - min_contrast + 1));
-
-    for (contrast = min_contrast; contrast <= max_contrast; contrast++) {
-        uint64_t i;
-        int64_t f_num = 259 * (255 + contrast);
-        int64_t f_den = 255 * (259 - contrast);
-        size_t offset = (size_t) (contrast + 255) << 8;
-
-        for (i = 0; i <= max_color; i++) {
-            int64_t ic = (f_num * ((ssize_t) i - 128) + 128 * f_den) / f_den;
-            contrast_table[offset | i] = (uint8_t) akvcam_bound(0, ic, 255);
-        }
-    }
-
-    akvcam_global_deleter_add(contrast_table, (akvcam_delete_t) vfree);
-
-    return contrast_table;
-}
-
-/* Gamma correction is traditionally computed with the following formula:
- *
- * c = N * (c / N) ^ gamma
- *
- * Where 'c' is the color component and 'N' is the maximum value of the color
- * component, 255 in this case. The formula will define a curve between 0 and
- * N. When 'gamma' is 1 it will draw a rect, returning the identity image at the
- * output. when 'gamma' is near to 0 it will draw a decreasing curve (mountain),
- * Giving more light to darker colors. When 'gamma' is higher than 1 it will
- * draw a increasing curve (valley), making bright colors darker.
- *
- * Explained in a simple way, gamma correction will modify image brightness
- * preserving the contrast.
- *
- * The problem with the original formula is that it requires floating point
- * computing which is not possible in the kernel because not all target
- * architectures have a FPU.
- *
- * So instead, we will use a quadric function, that even if it does not returns
- * the same values, it will cause the same effect and is good enough for our
- * purpose. We use the formula:
- *
- * y = a * x ^ 2 + b * x
- *
- * and because we have the point (0, N) already defined, then we can calculate
- * b as :
- *
- * b = 1 - a * N
- *
- * and replacing
- *
- * y = a * x ^ 2 + (1 - a * N) * x
- *
- * we are missing a third point (x', y') to fully define the value of 'a', so
- * the value of 'a' will be given by:
- *
- * a = (y' - x') / (x' ^ 2 - N * x')
- *
- * we will take the point (x', y') from the segment orthogonal to the curve's
- * segment, that is:
- *
- * y' = N - x'
- *
- * Here x' will be our fake 'gamma' value.
- * Then the value of 'a' becomes:
- *
- * a = (N - 2 * x') / (x' ^ 2 - N * x')
- *
- * finally we clamp/bound the resulting value between 0 and N and that's what
- * this code does.
- */
-const uint8_t *akvcam_gamma_table(void)
-{
-    static uint8_t *gamma_table = NULL;
-    static const int64_t min_gamma = -255;
-    static const int64_t max_gamma = 255;
-    static const int64_t max_color = 255;
-    int64_t gamma;
-
-    if (gamma_table)
-        return gamma_table;
-
-    gamma_table = vmalloc((max_color + 1) * (max_gamma - min_gamma + 1));
-
-    for (gamma = min_gamma; gamma <= max_gamma; gamma++) {
-        int64_t i;
-        int64_t g = (255 + gamma) >> 1;
-        int64_t f_num = 2 * g - 255;
-        int64_t f_den = g * (g - 255);
-        size_t offset = (size_t) (gamma + 255) << 8;
-
-        for (i = 0; i <= max_color; i++) {
-            int64_t ig;
-
-            if (g > 0 && g != 255) {
-                ig = (f_num * i * i + (f_den - f_num * 255) * i) / f_den;
-                ig = akvcam_bound(0, ig, 255);
-            } else if (g != 255) {
-                ig = 0;
-            } else {
-                ig = 255;
-            }
-
-            gamma_table[offset | i] = (uint8_t) ig;
-        }
-    }
-
-    akvcam_global_deleter_add(gamma_table, (akvcam_delete_t) vfree);
-
-    return gamma_table;
 }

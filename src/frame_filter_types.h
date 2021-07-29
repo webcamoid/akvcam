@@ -1,5 +1,5 @@
 /* akvcam, virtual camera for Linux.
- * Copyright (C) 2018  Gonzalo Exequiel Pedone
+ * Copyright (C) 2021  Gonzalo Exequiel Pedone
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef AKVCAM_GLOBAL_DELETER_H
-#define AKVCAM_GLOBAL_DELETER_H
+#ifndef AKVCAM_FRAME_FILTER_TYPES_H
+#define AKVCAM_FRAME_FILTER_TYPES_H
 
-#include "utils.h"
+struct akvcam_frame_filter;
+typedef struct akvcam_frame_filter *akvcam_frame_filter_t;
+typedef const struct akvcam_frame_filter *akvcam_frame_filter_ct;
 
-void akvcam_global_deleter_add(void *user_data, akvcam_delete_t deleter);
-void akvcam_global_deleter_run(void);
-
-#endif // AKVCAM_GLOBAL_DELETER_H
+#endif // AKVCAM_FRAME_FILTER_TYPES_H

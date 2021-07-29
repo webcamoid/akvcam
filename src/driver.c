@@ -24,6 +24,8 @@
 #include "buffers.h"
 #include "device.h"
 #include "format.h"
+#include "frame.h"
+#include "frame_filter.h"
 #include "list.h"
 #include "log.h"
 #include "settings.h"
@@ -41,12 +43,15 @@ typedef struct
     char name[AKVCAM_MAX_STRING_SIZE];
     char description[AKVCAM_MAX_STRING_SIZE];
     akvcam_devices_list_t devices;
+    akvcam_frame_t default_frame;
+    akvcam_frame_filter_t frame_filter;
 } akvcam_driver, *akvcam_driver_t;
 
 static akvcam_driver_t akvcam_driver_global = NULL;
 
 bool akvcam_driver_register(void);
 void akvcam_driver_unregister(void);
+akvcam_frame_t akvcam_driver_load_default_frame(akvcam_settings_t settings);
 akvcam_matrix_t akvcam_driver_read_formats(akvcam_settings_t settings);
 akvcam_formats_list_t akvcam_driver_read_format(akvcam_settings_t settings);
 akvcam_devices_list_t akvcam_driver_read_devices(akvcam_settings_t settings,
@@ -79,10 +84,15 @@ int akvcam_driver_init(const char *name, const char *description)
     akvcam_driver_global = kzalloc(sizeof(akvcam_driver), GFP_KERNEL);
     snprintf(akvcam_driver_global->name, AKVCAM_MAX_STRING_SIZE, "%s", name);
     snprintf(akvcam_driver_global->description, AKVCAM_MAX_STRING_SIZE, "%s", description);
+    akvcam_driver_global->default_frame = NULL;
+    akvcam_driver_global->devices = NULL;
+    akvcam_driver_global->frame_filter = akvcam_frame_filter_new();
     akpr_info("Reading settings\n");
     settings = akvcam_settings_new();
 
     if (akvcam_settings_load(settings, akvcam_settings_file())) {
+        akvcam_driver_global->default_frame =
+                akvcam_driver_load_default_frame(settings);
         available_formats = akvcam_driver_read_formats(settings);
         akvcam_driver_global->devices =
                 akvcam_driver_read_devices(settings, available_formats);
@@ -90,6 +100,7 @@ int akvcam_driver_init(const char *name, const char *description)
         akvcam_driver_connect_devices(settings, akvcam_driver_global->devices);
     } else {
         akpr_err("Error reading settings\n");
+        akvcam_driver_global->default_frame = NULL;
         akvcam_driver_global->devices = akvcam_list_new();
     }
 
@@ -109,6 +120,8 @@ void akvcam_driver_uninit(void)
 
     akvcam_driver_unregister();
     akvcam_list_delete(akvcam_driver_global->devices);
+    akvcam_frame_delete(akvcam_driver_global->default_frame);
+    akvcam_frame_filter_delete(akvcam_driver_global->frame_filter);
     kfree(akvcam_driver_global);
 }
 
@@ -187,6 +200,27 @@ void akvcam_driver_unregister(void)
 
         akvcam_device_unregister(device);
     }
+}
+
+akvcam_frame_t  akvcam_driver_load_default_frame(akvcam_settings_t settings)
+{
+    char *file_name;
+    akvcam_frame_t frame;
+    bool loaded;
+
+    akvcam_settings_begin_group(settings, "General");
+    file_name = akvcam_settings_value(settings, "default_frame");
+    frame = akvcam_frame_new(NULL, NULL, 0);
+    loaded = akvcam_frame_load(frame, file_name);
+    akvcam_settings_end_group(settings);
+
+    if (!loaded) {
+        akvcam_frame_delete(frame);
+
+        return NULL;
+    }
+
+    return frame;
 }
 
 akvcam_matrix_t akvcam_driver_read_formats(akvcam_settings_t settings)
@@ -390,7 +424,9 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
                                description,
                                type,
                                mode,
-                               formats);
+                               formats,
+                               akvcam_driver_global->default_frame,
+                               akvcam_driver_global->frame_filter);
     akvcam_list_delete(formats);
 
     if (akvcam_settings_contains(settings, "videonr"))

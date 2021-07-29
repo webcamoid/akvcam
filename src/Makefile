@@ -29,10 +29,10 @@ akvcam-objs := \
 	device.o \
 	driver.o \
 	file_read.o \
-	format.o \
+        format.o \
 	frame.o \
-	global_deleter.o \
-	ioctl.o \
+        frame_filter.o \
+        ioctl.o \
 	list.o \
 	log.o \
 	map.o \
