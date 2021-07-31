@@ -1,3 +1,13 @@
+akvcam 1.2.1:
+
+- Fixed 'Swap Read and Blue' control.
+- Switched top build system from Qmake to Cmake, you can still use make
+  command to build the module.
+- Removed the global_deleter, and all global objects, objects now have a well
+  defined lifetime.
+- Removed dangerous static non-constant variables, this should make the module
+  a bit more stable.
+
 akvcam 1.2.0:
 
 - Added support for linux 5.10.
