@@ -1,3 +1,7 @@
+akvcam 1.2.2:
+
+- Properly mark installer as a GNU/Linux only installer.
+
 akvcam 1.2.1:
 
 - Fixed 'Swap Read and Blue' control.
