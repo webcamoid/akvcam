@@ -31,7 +31,8 @@ Any donation amount is welcome and very appreciated.
 [![Ko-fi](https://img.shields.io/badge/Donate-Ko%20fi-7f7f00.svg)](https://ko-fi.com/hipersayanx)
 [![Liberapay](https://img.shields.io/badge/Donate-Liberapay-7f7f00.svg)](https://liberapay.com/hipersayanx)
 [![Paypal](https://img.shields.io/badge/Donate-Paypal-7f7f00.svg)](https://www.paypal.me/WebcamoidDonations)
-[![Coinbase](https://img.shields.io/badge/Donate-Coinbase-7f7f00.svg)](https://commerce.coinbase.com/checkout/e5396fdc-119a-4287-bab9-383ea6332cdc)
+[![Coinbase](https://img.shields.io/badge/Donate-Coinbase-7f7f00.svg)](https://commerce.coinbase.com/checkout/0287d8a2-0c49-4e8e-9ae1-a3d1e59f3931)
+[![Monero](https://img.shields.io/badge/Donate-Monero-7f7f00.svg)](https://gist.github.com/hipersayanX/0d575fc7b9b36a2e9817027fb50258bd)
 
 ## Status ##
 
