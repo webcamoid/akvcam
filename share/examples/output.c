@@ -206,8 +206,8 @@ int main()
                    && capabilities.capabilities & V4L2_CAP_STREAMING) {
             // Dequeue one buffer.
             struct v4l2_buffer buffer;
-            buffer.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
             memset(&buffer, 0, sizeof(struct v4l2_buffer));
+            buffer.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
             buffer.memory = MEMORY_TYPE;
             ioctl(fd, VIDIOC_DQBUF, &buffer);
 
