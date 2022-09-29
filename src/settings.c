@@ -26,7 +26,6 @@
 #include "list.h"
 #include "log.h"
 #include "map.h"
-#include "rbuffer.h"
 #include "utils.h"
 
 #define akvcam_settings_element_empty(element) \

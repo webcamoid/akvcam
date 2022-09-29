@@ -22,7 +22,6 @@
 
 #include "controls.h"
 #include "frame_types.h"
-#include "log.h"
 
 struct akvcam_controls
 {

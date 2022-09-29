@@ -29,14 +29,12 @@
 #include "attributes.h"
 #include "buffers.h"
 #include "controls.h"
-#include "driver.h"
 #include "format.h"
 #include "frame.h"
 #include "frame_filter.h"
 #include "ioctl.h"
 #include "list.h"
 #include "log.h"
-#include "settings.h"
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 7, 0)
 #define VFL_TYPE_VIDEO VFL_TYPE_GRABBER
@@ -89,9 +87,8 @@ static const struct v4l2_file_operations akvcam_device_fops;
 
 enum v4l2_buf_type akvcam_device_v4l2_from_device_type(AKVCAM_DEVICE_TYPE type,
                                                        bool multiplanar);
-void akvcam_device_controls_updated(akvcam_device_t self, __u32 id, __s32 value);
-void akvcam_device_stop_streaming(akvcam_device_t self);
-int akvcam_device_clock_timeout(akvcam_device_t self);
+int akvcam_device_controls_updated(akvcam_device_t self, __u32 id, __s32 value);
+int akvcam_device_stop_streaming(akvcam_device_t self);
 void akvcam_device_clock_run_once(akvcam_device_t self);
 int akvcam_device_clock_start(akvcam_device_t self);
 void akvcam_device_clock_stop(akvcam_device_t self);
@@ -338,7 +335,7 @@ enum v4l2_buf_type akvcam_device_v4l2_from_device_type(AKVCAM_DEVICE_TYPE type,
     return (enum v4l2_buf_type) 0;
 }
 
-void akvcam_device_controls_updated(akvcam_device_t self, __u32 id, __s32 value)
+int akvcam_device_controls_updated(akvcam_device_t self, __u32 id, __s32 value)
 {
     akvcam_list_element_t it = NULL;
 
@@ -391,25 +388,25 @@ void akvcam_device_controls_updated(akvcam_device_t self, __u32 id, __s32 value)
         break;
     }
 
-    if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE)
-        return;
+    if (self->type != AKVCAM_DEVICE_TYPE_CAPTURE)
+        for (;;) {
+            akvcam_device_t capture_device
+                    = akvcam_list_next(self->connected_devices, &it);
 
-    for (;;) {
-        akvcam_device_t capture_device
-                = akvcam_list_next(self->connected_devices, &it);
+            if (!it)
+                break;
 
-        if (!it)
-            break;
+            capture_device->horizontal_flip = self->horizontal_flip;
+            capture_device->vertical_flip = self->vertical_flip;
+            capture_device->scaling = self->scaling;
+            capture_device->aspect_ratio = self->aspect_ratio;
+            capture_device->swap_rgb = self->swap_rgb;
+        }
 
-        capture_device->horizontal_flip = self->horizontal_flip;
-        capture_device->vertical_flip = self->vertical_flip;
-        capture_device->scaling = self->scaling;
-        capture_device->aspect_ratio = self->aspect_ratio;
-        capture_device->swap_rgb = self->swap_rgb;
-    }
+    return 0;
 }
 
-void akvcam_device_stop_streaming(akvcam_device_t self)
+int akvcam_device_stop_streaming(akvcam_device_t self)
 {
     akvcam_device_clock_stop(self);
 
@@ -418,6 +415,8 @@ void akvcam_device_stop_streaming(akvcam_device_t self)
         self->current_frame = NULL;
         mutex_unlock(&self->frame_mutex);
     }
+
+    return 0;
 }
 
 bool akvcam_device_streaming(akvcam_device_ct self)

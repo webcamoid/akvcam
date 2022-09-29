@@ -21,3 +21,4 @@ modules.order
 __pycache__
 packages_auto
 .kdev4
+CMakeLists.txt.user.*

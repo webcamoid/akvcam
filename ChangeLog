@@ -1,3 +1,7 @@
+akvcam 1.2.3:
+
+- Set v4l2_buffer.type after memset() (Thanks to Hirosam1).
+
 akvcam 1.2.2:
 
 - Properly mark installer as a GNU/Linux only installer.

@@ -3,7 +3,7 @@ name: Linux Ubuntu
 on: [push, pull_request]
 
 env:
-  QTIFWVER: 4.1.1
+  QTIFWVER: 4.4.2
   SYSTEM_ARCH: amd64
 
 jobs:
@@ -14,54 +14,47 @@ jobs:
       fail-fast: false
       matrix:
        include:
-         - system_version: xenial
-           repository: v4.4.267
-           kernel_version: 4.4.267-0404267
-           kernel_version_c: 202104160747
-           unsigned_img: 1
-           need_modules: 1
+         - system_version: bionic
+           repository: v4.9.330
+           kernel_version: 4.9.330-0409330
+           kernel_version_c: 202209280940
            use_qemu: 1
            upload: 1
          - system_version: bionic
-           repository: v4.9.274
-           kernel_version: 4.9.274-0409274
-           kernel_version_c: 202106301447
-           use_qemu: 1
-         - system_version: bionic
-           repository: v4.14.215
-           kernel_version: 4.14.215-0414215
-           kernel_version_c: 202101122110
+           repository: v4.14.295
+           kernel_version: 4.14.295-0414295
+           kernel_version_c: 202209280542
            unsigned_img: 1
            need_modules: 1
            use_qemu: 1
          - system_version: focal
-           repository: v4.19.196
-           kernel_version: 4.19.196-0419196
-           kernel_version_c: 202106301451
+           repository: v4.19.260
+           kernel_version: 4.19.260-0419260
+           kernel_version_c: 202209281119
            unsigned_img: 1
            need_modules: 1
          - system_version: focal
-           repository: v5.4.130
-           kernel_version: 5.4.130-0504130
-           kernel_version_c: 202107071335
+           repository: v5.4.215
+           kernel_version: 5.4.215-0504215
+           kernel_version_c: 202209280647
            unsigned_img: 1
            need_modules: 1
-         - system_version: hirsute
-           repository: v5.10.48
-           kernel_version: 5.10.48-051048
-           kernel_version_c: 202107071338
+         - system_version: jammy
+           repository: v5.10.146
+           kernel_version: 5.10.146-0510146
+           kernel_version_c: 202209281128
            unsigned_img: 1
            need_modules: 1
-         - system_version: impish
-           repository: v5.12.15
-           kernel_version: 5.12.15-051215
-           kernel_version_c: 202107070935
+         - system_version: jammy
+           repository: v5.15.71
+           kernel_version: 5.15.71-051571
+           kernel_version_c: 202209281049
            unsigned_img: 1
            need_modules: 1
-         - system_version: impish
-           repository: v5.13.1
-           kernel_version: 5.13.1-051301
-           kernel_version_c: 202107071335
+         - system_version: kinetic
+           repository: v5.19.12
+           kernel_version: 5.19.12-051912
+           kernel_version_c: 202209281047
            unsigned_img: 1
            need_modules: 1
     steps:
@@ -165,7 +158,7 @@ jobs:
       uses: softprops/action-gh-release@v0.1.6
       if: ${{ startsWith(github.ref, 'refs/tags/') && matrix.upload }}
       with:
-        files: packages-v4.4/*
+        files: packages-v4.9/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Daily Build Upload
@@ -174,7 +167,7 @@ jobs:
       with:
         body: "${{ github.event.head_commit.message }} (commit: ${{ github.sha }})"
         prerelease: true
-        files: packages-v4.4/*
+        files: packages-v4.9/*
         name: Daily Build
         tag_name: daily-build
       env:

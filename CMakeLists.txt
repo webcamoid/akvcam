@@ -64,7 +64,7 @@ include_directories(src
                     ${KERNEL_DIR}/arch/x86/include/generated)
 add_definitions(-D__KERNEL__
                 -DCONFIG_COMPAT
-                -DCONFIG_HZ=0
+                -DCONFIG_HZ=300
                 -DCONFIG_PAGE_OFFSET=0
                 -DCONFIG_PCI
                 -DKBUILD_MODNAME="")
