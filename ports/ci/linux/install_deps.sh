@@ -57,6 +57,7 @@ apt-get -qq -y install \
     libxcb-randr0 \
     libxcb-render-util0 \
     libxcb-shape0 \
+    libxcb-xfixes0 \
     libxext6 \
     libxkbcommon-x11-0 \
     libxrender1 \
