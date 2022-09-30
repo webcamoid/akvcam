@@ -18,6 +18,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 git clone https://github.com/webcamoid/DeployTools.git
+git config --global --add safe.directory /sources
 
 export PATH="${PWD}/.local/bin:${PATH}"
 export INSTALL_PREFIX="${PWD}/package-data-${REPOSITORY%.*}"
