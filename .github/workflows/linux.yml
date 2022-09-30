@@ -39,10 +39,10 @@ jobs:
            kernel_version_c: 202209280647
            unsigned_img: 1
            need_modules: 1
-         - system_version: jammy
-           repository: v5.10.146
-           kernel_version: 5.10.146-0510146
-           kernel_version_c: 202209281128
+         - system_version: impish
+           repository: v5.10.133
+           kernel_version: 5.10.133-0510133
+           kernel_version_c: 202207251031
            unsigned_img: 1
            need_modules: 1
          - system_version: jammy
@@ -52,9 +52,9 @@ jobs:
            unsigned_img: 1
            need_modules: 1
          - system_version: kinetic
-           repository: v5.19.12
-           kernel_version: 5.19.12-051912
-           kernel_version_c: 202209281047
+           repository: v5.19.11
+           kernel_version: 5.19.11-051911
+           kernel_version_c: 202209231341
            unsigned_img: 1
            need_modules: 1
     steps:
