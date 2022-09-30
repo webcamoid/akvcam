@@ -39,7 +39,7 @@ jobs:
            kernel_version_c: 202209280647
            unsigned_img: 1
            need_modules: 1
-         - system_version: impish
+         - system_version: jammy
            repository: v5.10.133
            kernel_version: 5.10.133-0510133
            kernel_version_c: 202207251031
