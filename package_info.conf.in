@@ -9,7 +9,6 @@ outputFormats = QtIFW, Makeself
 hideArch = true
 
 [Makeself]
-verbose = true
 
 [QtIFW]
 organization = org.webcamoidprj
@@ -23,3 +22,4 @@ licenseName = GNU General Public License v2.0 or later
 script = ports/deploy/installscript.posix.qs
 changeLog = ChangeLog
 pkgTargetPlatform = linux
+verbose = true
