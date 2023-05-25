@@ -9,10 +9,19 @@ outputFormats = QtIFW, Makeself
 hideArch = true
 
 [Makeself]
+name = akvcam-installer-cli
+appName = akvcam
+label = Install akvcam
+targetDir = /opt/akvcam
+license = COPYING
+installScript = ports/deploy/install.sh
+uninstallScript = ports/deploy/uninstall.sh
+pkgTargetPlatform = linux
 verbose = true
 
 [QtIFW]
 organization = org.webcamoidprj
+name = akvcam-installer-gui
 appName = akvcam
 title = akvcam, fully compliant V4L2 virtual camera driver for Linux.
 description = Install akvcam
