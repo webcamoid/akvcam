@@ -14,9 +14,9 @@ jobs:
       matrix:
        include:
          - dockerimg: amd64/ubuntu:bionic
-           repository: v4.14.295
-           kernel_version: 4.14.295-0414295
-           kernel_version_c: 202209280542
+           repository: v4.14.215
+           kernel_version: 4.14.215-0414215
+           kernel_version_c: 202101122110
            unsigned_img: 1
            need_modules: 1
            use_qemu: 1

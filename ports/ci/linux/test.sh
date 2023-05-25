@@ -17,7 +17,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-export BUILD_PATH=${PWD}/src-${DOCKERIMG#*:}
+export BUILD_PATH=${PWD}/src-${REPOSITORY%.*}
 DRIVER_FILE=akvcam.ko
 DEFERRED_LOG=1
 system_image=system-image.img

@@ -7,9 +7,9 @@ ubuntu_task:
     - name: Linux 4.14 ARM64
       env:
         DOCKERIMG: arm64v8/ubuntu:bionic
-        REPOSITORY: v4.14.295
-        KERNEL_VERSION: 4.14.295-0414295
-        KERNEL_VERSION_C: 202209280542
+        REPOSITORY: v4.14.315
+        KERNEL_VERSION: 4.14.315-0414315
+        KERNEL_VERSION_C: 202305170705
         UNSIGNED_IMG: 1
         NEED_MODULES: 1
         USE_QEMU: 1
@@ -17,9 +17,9 @@ ubuntu_task:
     - name: Linux 4.14 ARM32
       env:
         DOCKERIMG: arm32v7/ubuntu:bionic
-        REPOSITORY: v4.14.295
-        KERNEL_VERSION: 4.14.295-0414295
-        KERNEL_VERSION_C: 202209280542
+        REPOSITORY: v4.14.315
+        KERNEL_VERSION: 4.14.315-0414315
+        KERNEL_VERSION_C: 202305170705
         UNSIGNED_IMG: 1
         NEED_MODULES: 1
         USE_QEMU: 1
