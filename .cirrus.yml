@@ -1,0 +1,189 @@
+env:
+  GITHUB_TOKEN: ENCRYPTED[80867839ea1cae036c24d6491696b07aeee67dee7e558714d0031f84e338ec415d266fb19e482d7430826121cfe39d2c]
+  NJOBS: 4
+
+ubuntu_task:
+  matrix:
+    - name: Linux 4.14 ARM64
+      env:
+        DOCKERIMG: arm64v8/ubuntu:bionic
+        REPOSITORY: v4.14.295
+        KERNEL_VERSION: 4.14.295-0414295
+        KERNEL_VERSION_C: 202209280542
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 1
+        UPLOAD: 1
+    - name: Linux 4.14 ARM32
+      env:
+        DOCKERIMG: arm32v7/ubuntu:bionic
+        REPOSITORY: v4.14.295
+        KERNEL_VERSION: 4.14.295-0414295
+        KERNEL_VERSION_C: 202209280542
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 1
+        UPLOAD: 1
+    - name: Linux 4.19 ARM64
+      env:
+        DOCKERIMG: arm64v8/ubuntu:focal
+        REPOSITORY: v4.19.283
+        KERNEL_VERSION: 4.19.283-0419283
+        KERNEL_VERSION_C: 202305171050
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 4.19 ARM32
+      env:
+        DOCKERIMG: arm32v7/ubuntu:focal
+        REPOSITORY: v4.19.283
+        KERNEL_VERSION: 4.19.283-0419283
+        KERNEL_VERSION_C: 202305171050
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 5.4 ARM64
+      env:
+        DOCKERIMG: arm64v8/ubuntu:focal
+        REPOSITORY: v5.4.243
+        KERNEL_VERSION: 5.4.243-0504243
+        KERNEL_VERSION_C: 202305171043
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 5.4 ARM32
+      env:
+        DOCKERIMG: arm32v7/ubuntu:focal
+        REPOSITORY: v5.4.243
+        KERNEL_VERSION: 5.4.243-0504243
+        KERNEL_VERSION_C: 202305171043
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 5.10 ARM64
+      env:
+        DOCKERIMG: arm64v8/ubuntu:jammy
+        REPOSITORY: v5.10.180
+        KERNEL_VERSION: 5.10.180-0510180
+        KERNEL_VERSION_C: 202305171050
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 5.10 ARM32
+      env:
+        DOCKERIMG: arm32v7/ubuntu:jammy
+        REPOSITORY: v5.10.180
+        KERNEL_VERSION: 5.10.180-0510180
+        KERNEL_VERSION_C: 202305171050
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 5.15 ARM64
+      env:
+        DOCKERIMG: arm64v8/ubuntu:jammy
+        REPOSITORY: v5.15.113
+        KERNEL_VERSION: 5.15.113-0515113
+        KERNEL_VERSION_C: 202305241341
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 5.15 ARM32
+      env:
+        DOCKERIMG: arm32v7/ubuntu:jammy
+        REPOSITORY: v5.15.113
+        KERNEL_VERSION: 5.15.113-0515113
+        KERNEL_VERSION_C: 202305241341
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 6.1 ARM64
+      env:
+        DOCKERIMG: arm64v8/ubuntu:lunar
+        REPOSITORY: v6.1.30
+        KERNEL_VERSION: 6.1.30-060130
+        KERNEL_VERSION_C: 202305241736
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 6.1 ARM32
+      env:
+        DOCKERIMG: arm32v7/ubuntu:lunar
+        REPOSITORY: v6.1.30
+        KERNEL_VERSION: 6.1.30-060130
+        KERNEL_VERSION_C: 202305241736
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 6.2 ARM64
+      env:
+        DOCKERIMG: arm64v8/ubuntu:lunar
+        REPOSITORY: v6.2.16
+        KERNEL_VERSION: 6.2.16-060216
+        KERNEL_VERSION_C: 202305171336
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 6.2 ARM32
+      env:
+        DOCKERIMG: arm32v7/ubuntu:lunar
+        REPOSITORY: v6.2.16
+        KERNEL_VERSION: 6.2.16-060216
+        KERNEL_VERSION_C: 202305171336
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 6.3 ARM64
+      env:
+        DOCKERIMG: arm64v8/ubuntu:lunar
+        REPOSITORY: v6.3.4
+        KERNEL_VERSION: 6.3.4-060304
+        KERNEL_VERSION_C: 202305241735
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+    - name: Linux 6.3 ARM32
+      env:
+        DOCKERIMG: arm32v7/ubuntu:lunar
+        REPOSITORY: v6.3.4
+        KERNEL_VERSION: 6.3.4-060304
+        KERNEL_VERSION_C: 202305241735
+        UNSIGNED_IMG: 1
+        NEED_MODULES: 1
+        USE_QEMU: 0
+        UPLOAD: 0
+  env:
+    only_if: ${CIRRUS_TAG} == ""
+    DAILY_BUILD: 1
+  env:
+    only_if: ${CIRRUS_TAG} != ""
+    DAILY_BUILD: 0
+  arm_container:
+    image: ${DOCKERIMG}
+    cpu: 2
+    memory: 4G
+  timeout_in: 60m
+  install_script:
+    - chmod +x ports/ci/linux/install_deps.sh
+    - ./ports/ci/linux/install_deps.sh
+  script:
+    - chmod +x ports/ci/linux/build.sh
+    - ./ports/ci/linux/build.sh
+  deploy_script:
+    - chmod +x ports/ci/linux/deploy.sh
+    - ./ports/ci/linux/deploy.sh
+  # upload_script:
+  #   - chmod +x ports/ci/linux/upload.sh
+  #   - ./ports/ci/linux/upload.sh

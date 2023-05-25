@@ -28,7 +28,7 @@
 #include "frame.h"
 #include "log.h"
 
-#define AKVCAM_BUFFERS_MIN 4
+#define AKVCAM_BUFFERS_MIN 2
 
 typedef struct {
     struct vb2_v4l2_buffer vb;

@@ -17,13 +17,27 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-export BUILD_PATH=${PWD}/src-${REPOSITORY%.*}
+export BUILD_PATH=${PWD}/src-${DOCKERIMG#*:}
 DRIVER_FILE=akvcam.ko
 DEFERRED_LOG=1
 system_image=system-image.img
 system_mount_point=system-mount-point
 
 if [ "${USE_QEMU}" = 1 ]; then
+    architecture="${DOCKERIMG%%/*}"
+
+    case "$architecture" in
+        arm64v8)
+            systemArch=arm64
+            ;;
+        arm32v7)
+            systemArch=armhf
+            ;;
+        *)
+            systemArch=amd64
+            ;;
+    esac
+
     # Create the system image to boot with QEMU.
     qemu-img create -f raw ${system_image} 1g
     mkfs.ext4 -F ${system_image}
@@ -36,7 +50,7 @@ if [ "${USE_QEMU}" = 1 ]; then
     debootstrap \
         --components=main,universe,multiverse \
         --include=autofs,kmod,systemd,systemd-sysv,util-linux,v4l-utils \
-        --arch "${SYSTEM_ARCH}" \
+        --arch "${systemArch}" \
         --variant=minbase \
         "${SYSTEM_VERSION}" \
         "${system_mount_point}"
@@ -104,10 +118,22 @@ EOF
     # Patches welcome.
     umount -vf ${system_mount_point}
 
+    case "$architecture" in
+        arm64v8)
+            quemuArch=aarch64
+            ;;
+        arm32v7)
+            quemuArch=arm
+            ;;
+        *)
+            quemuArch=x86_64
+            ;;
+    esac
+
     echo
     echo "Booting system with custom kernel:"
     echo
-    qemu-system-x86_64 \
+    "qemu-system-${quemuArch}" \
         -kernel "/boot/vmlinuz-${KERNEL_VERSION}-generic" \
         -initrd "/boot/initrd.img-${KERNEL_VERSION}-generic" \
         -m 512M \

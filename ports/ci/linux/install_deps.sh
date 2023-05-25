@@ -66,24 +66,29 @@ apt-get -qq -y install \
 
 mkdir -p .local/bin
 
-# Install Qt Installer Framework
 
-qtIFW=QtInstallerFramework-linux-x64-${QTIFWVER}.run
-${DOWNLOAD_CMD} "http://download.qt.io/official_releases/qt-installer-framework/${QTIFWVER}/${qtIFW}" || true
+architecture="${DOCKERIMG%%/*}"
 
-if [ -e "${qtIFW}" ]; then
-    chmod +x "${qtIFW}"
-    QT_QPA_PLATFORM=minimal \
-    ./"${qtIFW}" \
-        --verbose \
-        --root ~/QtIFW \
-        --accept-licenses \
-        --accept-messages \
-        --confirm-command \
-        install
-    cd .local
-    cp -rvf ~/QtIFW/* .
-    cd ..
+if [ "${architecture}" = amd64 ]; then
+    # Install Qt Installer Framework
+
+    qtIFW=QtInstallerFramework-linux-x64-${QTIFWVER}.run
+    ${DOWNLOAD_CMD} "http://download.qt.io/official_releases/qt-installer-framework/${QTIFWVER}/${qtIFW}" || true
+
+    if [ -e "${qtIFW}" ]; then
+        chmod +x "${qtIFW}"
+        QT_QPA_PLATFORM=minimal \
+        ./"${qtIFW}" \
+            --verbose \
+            --root ~/QtIFW \
+            --accept-licenses \
+            --accept-messages \
+            --confirm-command \
+            install
+        cd .local
+        cp -rvf ~/QtIFW/* .
+        cd ..
+    fi
 fi
 
 # Install dev tools
@@ -94,6 +99,7 @@ apt-get -qq -y install \
     kmod \
     libelf-dev \
     make \
+    makeself \
     python3 \
     sparse \
     wget \
@@ -109,24 +115,36 @@ if [ ! -z "${USE_QEMU}" ]; then
         ubuntu-wallpapers
 fi
 
+case "$architecture" in
+    arm64v8)
+        systemArch=arm64
+        ;;
+    arm32v7)
+        systemArch=armhf
+        ;;
+    *)
+        systemArch=amd64
+        ;;
+esac
+
 url=http://kernel.ubuntu.com/~kernel-ppa/mainline/${REPOSITORY}
 headers=linux-headers-${KERNEL_VERSION}_${KERNEL_VERSION}.${KERNEL_VERSION_C}_all.deb
-headers_generic=linux-headers-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${SYSTEM_ARCH}.deb
+headers_generic=linux-headers-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
 
 if [ ! -z "${USE_QEMU}" ]; then
     if [ -z "${UNSIGNED_IMG}" ]; then
-        image=linux-image-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${SYSTEM_ARCH}.deb
+        image=linux-image-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
     else
-        image=linux-image-unsigned-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${SYSTEM_ARCH}.deb
+        image=linux-image-unsigned-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
     fi
 
     if [ ! -z "${NEED_MODULES}" ]; then
-        modules=linux-modules-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${SYSTEM_ARCH}.deb
+        modules=linux-modules-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
     fi
 fi
 
 for package in ${modules} ${image} ${headers} ${headers_generic}; do
-    ${DOWNLOAD_CMD} "${url}/${SYSTEM_ARCH}/${package}"
+    ${DOWNLOAD_CMD} "${url}/${systemArch}/${package}"
     dpkg -i "${package}"
 done
 
