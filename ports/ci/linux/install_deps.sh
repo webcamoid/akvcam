@@ -133,7 +133,7 @@ headers=linux-headers-${KERNEL_VERSION}_${KERNEL_VERSION}.${KERNEL_VERSION_C}_al
 headers_generic=linux-headers-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
 
 if [ "${USE_QEMU}" = 1 ]; then
-    if [ -z "${UNSIGNED_IMG}" ]; then
+    if [ "${UNSIGNED_IMG}" = 0 ]; then
         image=linux-image-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
     else
         image=linux-image-unsigned-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb

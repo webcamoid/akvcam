@@ -202,18 +202,10 @@ size_t akvcam_file_read(akvcam_file_t self, void *data, size_t size)
     while (self->file_bytes_read < self->size
            && akvcam_rbuffer_data_size(self->buffer) < size) {
         offset = (loff_t) self->file_bytes_read;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
         bytes_read = kernel_read(self->filp,
                                  read_block,
                                  AKVCAM_READ_BLOCK,
                                  &offset);
-#else
-        bytes_read = kernel_read(self->filp,
-                                 offset,
-                                 read_block,
-                                 AKVCAM_READ_BLOCK);
-#endif
 
         if (bytes_read < 1)
             break;
@@ -270,19 +262,10 @@ char *akvcam_file_read_line(akvcam_file_t self)
             break;
 
         offset = (loff_t) self->file_bytes_read;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
         bytes_read = kernel_read(self->filp,
                                  read_block,
                                  (size_t) bytes_read,
                                  &offset);
-#else
-        bytes_read = kernel_read(self->filp,
-                                 offset,
-                                 read_block,
-                                 (size_t) bytes_read);
-#endif
-
         akvcam_rbuffer_queue_bytes(self->buffer, read_block, (size_t) bytes_read);
         self->file_bytes_read += (size_t) bytes_read;
     }

@@ -199,11 +199,7 @@ bool akvcam_device_register(akvcam_device_t self)
             self->vdev->ctrl_handler = akvcam_controls_handler(self->controls);
             self->vdev->dev.groups = akvcam_attributes_groups(self->type);
             video_set_drvdata(self->vdev, self);
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
             self->vdev->device_caps = akvcam_device_caps(self);
-#endif
-
             result = video_register_device(self->vdev,
                                            VFL_TYPE_VIDEO,
                                            self->videonr);
