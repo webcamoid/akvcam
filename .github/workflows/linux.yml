@@ -19,7 +19,7 @@ jobs:
            kernel_version_c: 202101122110
            unsigned_img: 1
            need_modules: 1
-           use_qemu: 1
+           use_qemu: 0
            upload: 1
          - dockerimg: amd64/ubuntu:focal
            repository: v4.19.283
@@ -27,42 +27,56 @@ jobs:
            kernel_version_c: 202305171050
            unsigned_img: 1
            need_modules: 1
+           use_qemu: 0
+           upload: 0
          - dockerimg: amd64/ubuntu:focal
            repository: v5.4.243
            kernel_version: 5.4.243-0504243
            kernel_version_c: 202305171043
            unsigned_img: 1
            need_modules: 1
+           use_qemu: 0
+           upload: 0
          - dockerimg: amd64/ubuntu:jammy
            repository: v5.10.180
            kernel_version: 5.10.180-0510180
            kernel_version_c: 202305171050
            unsigned_img: 1
            need_modules: 1
+           use_qemu: 0
+           upload: 0
          - dockerimg: amd64/ubuntu:jammy
            repository: v5.15.113
            kernel_version: 5.15.113-0515113
            kernel_version_c: 202305241341
            unsigned_img: 1
            need_modules: 1
+           use_qemu: 0
+           upload: 0
          - dockerimg: amd64/ubuntu:lunar
            repository: v6.1.30
            kernel_version: 6.1.30-060130
            kernel_version_c: 202305241736
            unsigned_img: 1
            need_modules: 1
+           use_qemu: 0
+           upload: 0
          - dockerimg: amd64/ubuntu:lunar
            repository: v6.2.16
            kernel_version: 6.2.16-060216
            kernel_version_c: 202305171336
            unsigned_img: 1
            need_modules: 1
+           use_qemu: 0
+           upload: 0
          - dockerimg: amd64/ubuntu:lunar
            repository: v6.3.4
            kernel_version: 6.3.4-060304
            kernel_version_c: 202305241735
            unsigned_img: 1
            need_modules: 1
+           use_qemu: 0
+           upload: 0
     steps:
     - uses: actions/checkout@v2
     - name: Release build
