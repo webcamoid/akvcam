@@ -9,6 +9,7 @@ outputFormats = QtIFW, Makeself
 hideArch = true
 
 [Makeself]
+verbose = true
 
 [QtIFW]
 organization = org.webcamoidprj
