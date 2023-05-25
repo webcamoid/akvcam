@@ -5,8 +5,10 @@ sourcesDir = @CMAKE_SOURCE_DIR@
 targetPlatform = posix
 buildInfoFile = share/build-info.txt
 targetArch = any
-outputFormats = QtIFW
+outputFormats = QtIFW, Makeself
 hideArch = true
+
+[Makeself]
 
 [QtIFW]
 organization = org.webcamoidprj
