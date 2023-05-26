@@ -30,7 +30,7 @@ ubuntu_task:
         REPOSITORY: v4.19.283
         KERNEL_VERSION: 4.19.283-0419283
         KERNEL_VERSION_C: 202305171050
-        UNSIGNED_IMG: 0
+        UNSIGNED_IMG: 1
         NEED_MODULES: 1
         USE_QEMU: 1
         UPLOAD: 0
@@ -50,7 +50,7 @@ ubuntu_task:
         REPOSITORY: v5.4.243
         KERNEL_VERSION: 5.4.243-0504243
         KERNEL_VERSION_C: 202305171043
-        UNSIGNED_IMG: 0
+        UNSIGNED_IMG: 1
         NEED_MODULES: 1
         USE_QEMU: 1
         UPLOAD: 0
@@ -70,7 +70,7 @@ ubuntu_task:
         REPOSITORY: v5.10.180
         KERNEL_VERSION: 5.10.180-0510180
         KERNEL_VERSION_C: 202305171050
-        UNSIGNED_IMG: 0
+        UNSIGNED_IMG: 1
         NEED_MODULES: 1
         USE_QEMU: 1
         UPLOAD: 0
@@ -90,7 +90,7 @@ ubuntu_task:
         REPOSITORY: v5.15.113
         KERNEL_VERSION: 5.15.113-0515113
         KERNEL_VERSION_C: 202305241341
-        UNSIGNED_IMG: 0
+        UNSIGNED_IMG: 1
         NEED_MODULES: 1
         USE_QEMU: 1
         UPLOAD: 0
@@ -110,7 +110,7 @@ ubuntu_task:
         REPOSITORY: v6.1.30
         KERNEL_VERSION: 6.1.30-060130
         KERNEL_VERSION_C: 202305241736
-        UNSIGNED_IMG: 0
+        UNSIGNED_IMG: 1
         NEED_MODULES: 1
         USE_QEMU: 1
         UPLOAD: 0
@@ -130,7 +130,7 @@ ubuntu_task:
         REPOSITORY: v6.2.16
         KERNEL_VERSION: 6.2.16-060216
         KERNEL_VERSION_C: 202305171336
-        UNSIGNED_IMG: 0
+        UNSIGNED_IMG: 1
         NEED_MODULES: 1
         USE_QEMU: 1
         UPLOAD: 0
@@ -150,7 +150,7 @@ ubuntu_task:
         REPOSITORY: v6.3.4
         KERNEL_VERSION: 6.3.4-060304
         KERNEL_VERSION_C: 202305241735
-        UNSIGNED_IMG: 0
+        UNSIGNED_IMG: 1
         NEED_MODULES: 1
         USE_QEMU: 1
         UPLOAD: 0

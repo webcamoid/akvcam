@@ -129,23 +129,23 @@ case "$architecture" in
 esac
 
 url=http://kernel.ubuntu.com/~kernel-ppa/mainline/${REPOSITORY}
-headers=linux-headers-${KERNEL_VERSION}_${KERNEL_VERSION}.${KERNEL_VERSION_C}_all.deb
-headers_generic=linux-headers-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
+headers=amd64/linux-headers-${KERNEL_VERSION}_${KERNEL_VERSION}.${KERNEL_VERSION_C}_all.deb
+headers_generic=${systemArch}/linux-headers-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
 
 if [ "${USE_QEMU}" = 1 ]; then
     if [ "${UNSIGNED_IMG}" = 0 ]; then
-        image=linux-image-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
+        image=${systemArch}/linux-image-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
     else
-        image=linux-image-unsigned-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
+        image=${systemArch}/linux-image-unsigned-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
     fi
 
     if [ ! -z "${NEED_MODULES}" ]; then
-        modules=linux-modules-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
+        modules=${systemArch}/linux-modules-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
     fi
 fi
 
 for package in ${modules} ${image} ${headers} ${headers_generic}; do
-    ${DOWNLOAD_CMD} "${url}/${systemArch}/${package}"
+    ${DOWNLOAD_CMD} "${url}/${package}"
     dpkg -i "${package}"
 done
 
