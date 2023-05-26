@@ -15,9 +15,8 @@ label = Install akvcam
 targetDir = /opt/akvcam
 license = COPYING
 installScript = ports/deploy/install.sh
-uninstallScript = ports/deploy/uninstall.sh
+installScriptArgs = akvcam @VERSION@
 pkgTargetPlatform = linux
-verbose = true
 
 [QtIFW]
 organization = org.webcamoidprj
