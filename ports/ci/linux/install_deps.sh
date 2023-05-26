@@ -146,7 +146,7 @@ fi
 
 for package in ${modules} ${image} ${headers} ${headers_generic}; do
     ${DOWNLOAD_CMD} "${url}/${package}"
-    dpkg -i "${package}"
+    dpkg -i "${package#*/}"
 done
 
 if [ "${USE_QEMU}" = 1 ]; then
