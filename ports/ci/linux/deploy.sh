@@ -30,3 +30,8 @@ xvfb-run --auto-servernum python3 \
         -d "${INSTALL_PREFIX}" \
         -c ./package_info.conf \
         -o "${PACKAGES_DIR}"
+
+echo "Makeself Start"
+makeself --xz --target /opt/akvcam --license COPYING "${PWD}/src" akvcam-installer-cli-linux-daily-master.run "Install akvcam"
+ls akvcam-installer-cli-linux-daily-master.run
+echo "Makeself End"
