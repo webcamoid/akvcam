@@ -66,7 +66,6 @@ apt-get -qq -y install \
 
 mkdir -p .local/bin
 
-
 architecture="${DOCKERIMG%%/*}"
 
 if [ "${architecture}" = amd64 ]; then
@@ -103,7 +102,8 @@ apt-get -qq -y install \
     python3 \
     sparse \
     wget \
-    xvfb
+    xvfb \
+    xz-utils
 
 if [ "${USE_QEMU}" = 1 ]; then
     apt-get -qq -y install \
