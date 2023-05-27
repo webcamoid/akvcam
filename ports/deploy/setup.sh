@@ -16,6 +16,7 @@ if [ "$EUID" != 0 ]; then
 fi
 
 echo "${NAME} installation started"
+chmod -v 755 "${TARGET_DIR}"
 
 kernelVersion=$(uname -r)
 linuxSources=/lib/modules/${kernelVersion}/build

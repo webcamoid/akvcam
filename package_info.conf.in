@@ -14,7 +14,7 @@ appName = akvcam
 label = Install akvcam
 targetDir = /opt/akvcam
 license = COPYING
-installScript = ports/deploy/install.sh
+installScript = ports/deploy/setup.sh
 installScriptArgs = akvcam @VERSION@
 pkgTargetPlatform = linux
 
