@@ -16,11 +16,11 @@ if [ "$EUID" != 0 ]; then
 fi
 
 echo "${NAME} installation started"
-chmod -v 755 "${TARGET_DIR}"
+chmod 755 "${TARGET_DIR}"
 
 kernelVersion=$(uname -r)
 linuxSources=/lib/modules/${kernelVersion}/build
-cmds="make gcc kmod"
+cmds="dkms gcc kmod make"
 missing_dependencies="";
 
 for cmd in $cmds; do
@@ -30,7 +30,7 @@ for cmd in $cmds; do
         if [ -z "${missing_dependencies}" ]; then
             missing_dependencies="${cmd}"
         else
-            missing_dependencies="${missing_dependencies} ${cmd}"
+            missing_dependencies="${missing_dependencies}, ${cmd}"
         fi
     fi
 done
@@ -39,7 +39,7 @@ if [ ! -e "${linuxSources}/include/generated/uapi/linux/version.h" ]; then
     if [ -z "${missing_dependencies}" ]; then
         missing_dependencies=linux-headers
     else
-        missing_dependencies="${missing_dependencies} linux-headers"
+        missing_dependencies="${missing_dependencies}, linux-headers"
     fi
 fi
 

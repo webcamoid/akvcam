@@ -3,7 +3,7 @@ function Component()
     let paths = installer.environmentVariable("PATH").split(":");
     let kernelVersion = installer.execute("uname", ["-r"])[0].trim();
     let linuxSources = "/lib/modules/" + kernelVersion + "/build";
-    let cmds = ["make", "gcc", "kmod"]
+    let cmds = ["dkms", "gcc", "kmod", "make"]
 
     for (;;) {
         let missing_dependencies = [];
