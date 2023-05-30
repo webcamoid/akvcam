@@ -37,7 +37,7 @@ fi
 echo
 chmod 755 "${TARGET_DIR}"
 
-function detect_missing_dependencies() {
+detect_missing_dependencies() {
     linuxSources=/lib/modules/$(uname -r)/build
     cmds="dkms gcc kmod make"
     missing_dependencies="";
@@ -65,7 +65,7 @@ function detect_missing_dependencies() {
     echo "${missing_dependencies}"
 }
 
-function distro() {
+distro() {
     distroId=$(grep -h ^ID_LIKE= /etc/*-release | tr -d '"')
 
     if [ -z "${distroId}" ]; then
@@ -85,7 +85,7 @@ function distro() {
     echo "${distroId}"
 }
 
-function distro_package() {
+distro_package() {
     distroId=$1
     package=$2
     depsMap=""
@@ -145,7 +145,7 @@ function distro_package() {
     fi
 }
 
-function distro_packages() {
+distro_packages() {
     distroId=$1
     packages=""
 
@@ -162,7 +162,7 @@ function distro_packages() {
     echo "${packages}"
 }
 
-function install_packages() {
+install_packages() {
     distroId=$1
     missing_dependencies=${@:2}
     SUDO_CMD=
@@ -198,7 +198,7 @@ function install_packages() {
     esac
 }
 
-function is_distro_supported() {
+is_distro_supported() {
     distroId=$1
 
     case "${distroId}" in
