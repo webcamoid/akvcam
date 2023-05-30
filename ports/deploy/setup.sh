@@ -1,6 +1,6 @@
 #!/bin/sh
 
-scriptPath=$(readlink -f "$_")
+scriptPath=$(readlink -f "$0")
 installDataFile=install.data
 NAME=$1
 
@@ -249,7 +249,7 @@ if [ ! -z "${missing_dependencies}" ]; then
 fi
 
 echo "Creating a symlink to the sources"
-${SUDO_CMD} ln -s "${TARGET_DIR}/src" "/usr/src/${NAME}-${VERSION}"
+${SUDO_CMD} ln -sf "${TARGET_DIR}/src" "/usr/src/${NAME}-${VERSION}"
 echo "Runnig DKMS"
 ${SUDO_CMD} dkms install "${NAME}/${VERSION}"
 
