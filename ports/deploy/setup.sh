@@ -147,9 +147,10 @@ distro_package() {
 
 distro_packages() {
     distroId=$1
+    shift
     packages=""
 
-    for package in ${@:2}; do
+    for package in $@; do
         distroPackage=$(distro_package "${distroId}" "${package}")
 
         if [ -z "${packages}" ]; then
@@ -164,7 +165,8 @@ distro_packages() {
 
 install_packages() {
     distroId=$1
-    missing_dependencies=${@:2}
+    shift
+    missing_dependencies=$@
     SUDO_CMD=
 
     if [ "$EUID" != 0 ]; then
