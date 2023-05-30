@@ -1,3 +1,10 @@
+akvcam 1.2.4:
+
+- Minimum supported kernel version: 4.14.
+- Remove deprecated REMAKE_INITRD (Thanks to dkadioglu).
+- Minimum number of buffers decreased to 2 (issue #20).
+- Added makeself as a new install option.
+
 akvcam 1.2.3:
 
 - Set v4l2_buffer.type after memset() (Thanks to Hirosam1).
