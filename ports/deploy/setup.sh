@@ -43,7 +43,7 @@ detect_missing_dependencies() {
     missing_dependencies="";
 
     for cmd in $cmds; do
-        which "${cmd}" &>/dev/null
+        cmdPath=$(which "${cmd}" 2>/dev/null)
 
         if [ "$?" != 0 ]; then
             if [ -z "${missing_dependencies}" ]; then
