@@ -22,9 +22,10 @@ if [ ! -z "$3" ]; then
     TARGET_DIR=$3
 fi
 
+SCRIPT_BASENAME=$(basename "$0")
 SUDO_CMD=
 
-if [ "$EUID" != 0 ]; then
+if [ ! -w "${TARGET_DIR}" ]; then
     SUDO_CMD=sudo
 fi
 
@@ -35,7 +36,188 @@ else
 fi
 
 echo
-chmod 755 "${TARGET_DIR}"
+${SUDO_CMD} chmod 755 "${TARGET_DIR}"
+
+echo "Writting install data"
+installData=${TARGET_DIR}/${installDataFile}
+
+${SUDO_CMD} tee "${installData}" > /dev/null <<EOF
+NAME=${NAME}
+VERSION=${VERSION}
+EOF
+
+${SUDO_CMD} chmod 644 "${installData}"
+
+echo "Writting undo script"
+undoScript=${TARGET_DIR}/undo.sh
+
+${SUDO_CMD} tee "${undoScript}" > /dev/null <<EOF
+#!/bin/sh
+
+scriptPath=\$(readlink -f "\$0")
+NAME=${NAME}
+VERSION=${VERSION}
+
+SUDO_CMD=
+
+if [ "\$EUID" != 0 ]; then
+    SUDO_CMD=sudo
+fi
+
+if [ -z "\${NAME}" ]; then
+    echo "Reverting setup"
+else
+    echo "Reverting \${NAME} setup"
+fi
+
+echo
+echo "Runnig DKMS"
+\${SUDO_CMD} dkms remove "\${NAME}/\${VERSION}" --all
+echo "Removing the symlink to the sources"
+\${SUDO_CMD} rm -f "/usr/src/\${NAME}-\${VERSION}"
+echo
+
+if [ -z "\${NAME}" ]; then
+    echo "Reverted setup"
+else
+    echo "Reverted \${NAME} setup"
+fi
+EOF
+
+${SUDO_CMD} chmod 755 "${undoScript}"
+
+echo "Writting uninstall script"
+uninstallScript=${TARGET_DIR}/uninstall.sh
+
+${SUDO_CMD} tee "${uninstallScript}" > /dev/null <<EOF
+#!/bin/sh
+
+scriptPath=\$(readlink -f "\$0")
+NAME=${NAME}
+VERSION=${VERSION}
+TARGET_DIR=\$(dirname "\${scriptPath}")
+
+SUDO_CMD=
+
+if [ ! -w "\${TARGET_DIR}" ]; then
+    SUDO_CMD=sudo
+fi
+
+if [ -z "\${NAME}" ]; then
+    echo "Uninstallation started"
+else
+    echo "\${NAME} uninstallation started"
+fi
+
+echo
+"\${TARGET_DIR}/undo.sh"
+
+is_sensible_directory() {
+    directory=\$1
+
+    # https://wiki.archlinux.org/title/XDG_user_directories
+    . ~/.config/user-dirs.dirs 2>/dev/null
+
+    # https://refspecs.linuxfoundation.org/FHS_3.0/fhs-3.0.html
+    sensible_directories="
+        /
+        /bin
+        /boot
+        /dev
+        /etc
+        /home
+        \${HOME}
+        /lib
+        /media
+        /mnt
+        /opt
+        /proc
+        /root
+        /run
+        /sbin
+        /svr
+        /sys
+        /tmp
+        /usr
+        /usr/bin
+        /usr/include
+        /usr/lib
+        /usr/libexec
+        /usr/local
+        /usr/local/share
+        /usr/sbin
+        /usr/share
+        /usr/share/color
+        /usr/share/dict
+        /usr/share/man
+        /usr/share/misc
+        /usr/share/ppd
+        /usr/share/sgml
+        /usr/share/xml
+        /usr/src
+        /var
+        /var/account
+        /var/cache
+        /var/cache/fonts
+        /var/cache/man
+        /var/crash
+        /var/games
+        /var/lib
+        /var/lib/color
+        /var/lib/hwclock
+        /var/lib/misc
+        /var/lock
+        /var/log
+        /var/mail
+        /var/opt
+        /var/run
+        /var/spool
+        /var/spool/cron
+        /var/spool/lpd
+        /var/spool/rwho
+        /var/tmp
+        /var/yp
+        \${XDG_DESKTOP_DIR}
+        \${XDG_DOCUMENTS_DIR}
+        \${XDG_DOWNLOAD_DIR}
+        \${XDG_MUSIC_DIR}
+        \${XDG_PICTURES_DIR}
+        \${XDG_PUBLICSHARE_DIR}
+        \${XDG_TEMPLATES_DIR}
+        \${XDG_VIDEOS_DIR}"
+
+    for sdir in \$sensible_directories; do
+        if [ "\$sdir" = "\$directory" ]; then
+            echo true
+
+            return 1
+        fi
+    done
+
+    echo false
+
+    return 0
+}
+
+sensibleDir=\$(is_sensible_directory "\${TARGET_DIR}")
+
+if [ "\${sensibleDir}" = true ]; then
+    echo "'\${TARGET_DIR}' can't be deleted"
+else
+    echo "Deleting '\${TARGET_DIR}'"
+    \${SUDO_CMD} rm -rf "\${TARGET_DIR}" 2>/dev/null
+fi
+
+echo
+
+if [ -z "\${NAME}" ]; then
+    echo "Uninstallation finished"
+else
+    echo "\${NAME} uninstallation finished"
+fi
+EOF
+
+${SUDO_CMD} chmod 755 "${uninstallScript}"
 
 detect_missing_dependencies() {
     linuxSources=/lib/modules/$(uname -r)/build
@@ -232,7 +414,7 @@ missing_dependencies=$(distro_packages "${distroId}" ${missing_dependencies})
 
 if [ ! -z "${missing_dependencies}" ]; then
     if [ "$(is_distro_supported "${distroId}")" = true ]; then
-        echo "Installing missing dependencies"
+        echo "Installing missing dependencies: ${missing_dependencies// /, }"
         echo
         install_packages "${distroId}" ${missing_dependencies}
 
@@ -242,72 +424,47 @@ if [ ! -z "${missing_dependencies}" ]; then
     else
         echo "The following dependencies are missing: ${missing_dependencies// /, }." >&2
         echo >&2
-        echo "Install them and try again" >&2
+        echo "Install them and then run '${TARGET_DIR}/${SCRIPT_BASENAME}' script." >&2
 
         exit -1
     fi
 fi
 
 echo "Creating a symlink to the sources"
-${SUDO_CMD} ln -sf "${TARGET_DIR}/src" "/usr/src/${NAME}-${VERSION}"
-echo "Runnig DKMS"
-${SUDO_CMD} dkms install "${NAME}/${VERSION}"
 
-if [ -w "${TARGET_DIR}" ]; then
+write_link() {
     SUDO_CMD=
-fi
 
-echo "Writting install data"
-installData=${TARGET_DIR}/${installDataFile}
+    if [ "$EUID" != 0 ]; then
+        SUDO_CMD=sudo
+    fi
 
-${SUDO_CMD} tee "${installData}" > /dev/null <<EOF
-NAME=${NAME}
-VERSION=${VERSION}
-EOF
+    ${SUDO_CMD} ln -sf "${TARGET_DIR}/src" "/usr/src/${NAME}-${VERSION}"
 
-${SUDO_CMD} chmod 644 "${installData}"
+    if [ "$?" != 0 ]; then
+        exit $?
+    fi
+}
 
-echo "Writting undo script"
-uninstallScript=${TARGET_DIR}/undo.sh
+write_link
 
-${SUDO_CMD} tee "${uninstallScript}" > /dev/null <<EOF
-#!/bin/sh
-
-scriptPath=\$(readlink -f "\$_")
-NAME=${NAME}
-VERSION=${VERSION}
-TARGET_DIR=\$(dirname "\${scriptPath}")
-
-SUDO_CMD=
-
-if [ "\$EUID" != 0 ]; then
-    SUDO_CMD=sudo
-fi
-
-if [ -z "\${NAME}" ]; then
-    echo "Uninstallation started"
-else
-    echo "\${NAME} uninstallation started"
-fi
-
-echo
 echo "Runnig DKMS"
-\${SUDO_CMD} dkms remove "\${NAME}/\${VERSION}" --all
-echo "Removing the symlink to the sources"
-\${SUDO_CMD} rm -f "/usr/src/\${NAME}-\${VERSION}"
-echo
 
-if [ -z "\${NAME}" ]; then
-    echo "Uninstallation finished"
-else
-    echo "\${NAME} uninstallation finished"
-fi
+run_dkms() {
+    SUDO_CMD=
 
-echo "You can now delete '\$(dirname \$(realpath \$0))' folder"
-EOF
+    if [ "$EUID" != 0 ]; then
+        SUDO_CMD=sudo
+    fi
 
-${SUDO_CMD} chmod 755 "${uninstallScript}"
+    ${SUDO_CMD} dkms install "${NAME}/${VERSION}"
 
+    if [ "$?" != 0 ]; then
+        exit $?
+    fi
+}
+
+run_dkms
 echo
 
 if [ -z "${NAME}" ]; then
