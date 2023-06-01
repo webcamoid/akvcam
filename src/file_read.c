@@ -193,7 +193,6 @@ bool akvcam_file_seek(akvcam_file_t self, ssize_t offset, AKVCAM_FILE_SEEK pos)
 size_t akvcam_file_read(akvcam_file_t self, void *data, size_t size)
 {
     loff_t offset;
-    ssize_t bytes_read;
     char read_block[AKVCAM_READ_BLOCK];
 
     if (!self->is_open || size < 1)
@@ -201,6 +200,8 @@ size_t akvcam_file_read(akvcam_file_t self, void *data, size_t size)
 
     while (self->file_bytes_read < self->size
            && akvcam_rbuffer_data_size(self->buffer) < size) {
+        ssize_t bytes_read;
+
         offset = (loff_t) self->file_bytes_read;
         bytes_read = kernel_read(self->filp,
                                  read_block,

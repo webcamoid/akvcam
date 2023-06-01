@@ -73,7 +73,6 @@ akvcam_driver_rw_mode_strings_ct akvcam_driver_rw_mode_strs(void);
 int akvcam_driver_init(const char *name, const char *description)
 {
     akvcam_settings_t settings;
-    akvcam_matrix_t available_formats;
 
     akpr_function();
 
@@ -91,6 +90,8 @@ int akvcam_driver_init(const char *name, const char *description)
     settings = akvcam_settings_new();
 
     if (akvcam_settings_load(settings, akvcam_settings_file())) {
+        akvcam_matrix_t available_formats;
+
         akvcam_driver_global->default_frame =
                 akvcam_driver_load_default_frame(settings);
         available_formats = akvcam_driver_read_formats(settings);
@@ -483,7 +484,6 @@ akvcam_formats_list_t akvcam_driver_read_device_formats(akvcam_settings_t settin
 void akvcam_driver_connect_devices(akvcam_settings_t settings,
                                    akvcam_devices_list_t devices)
 {
-    akvcam_string_list_t connections;
     akvcam_devices_list_t connected_outputs;
     akvcam_list_element_t it = NULL;
     akvcam_device_t device;
@@ -499,6 +499,7 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
     n_connections = akvcam_settings_begin_array(settings, "connections");
 
     for (i = 0; i < n_connections; i++) {
+        akvcam_string_list_t connections;
         size_t n_nodes;
 
         akvcam_settings_set_array_index(settings, i);
