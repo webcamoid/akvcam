@@ -22,25 +22,6 @@ echo
 ls /usr/src | grep linux-headers- | sort
 echo
 
-if [ "${USE_QEMU}" = 1 ]; then
-    echo "Available kernel images:"
-    echo
-    ls /boot/vmlinuz-* | sort
-    echo
-    echo "Available RAM disk images:"
-    echo
-    ls /boot/initrd.img-* | sort
-    echo
-    echo "Available kernel modules:"
-    echo
-    ls /lib/modules | sort
-    echo
-    echo "Available QEMU images:"
-    echo
-    ls /usr/bin/qemu-system-* | sort
-    echo
-fi
-
 # Build the driver and show it's info.
 
 export INSTALL_PREFIX="${PWD}/package-data-${REPOSITORY%.*}"

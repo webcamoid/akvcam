@@ -105,17 +105,6 @@ apt-get -qq -y install \
     xvfb \
     xz-utils
 
-if [ "${USE_QEMU}" = 1 ]; then
-    apt-get -qq -y install \
-        debootstrap \
-        ffmpeg \
-        initramfs-tools \
-        qemu-system-x86 \
-        qemu-system-arm \
-        qemu-utils \
-        ubuntu-wallpapers
-fi
-
 case "$architecture" in
     arm64v8)
         systemArch=arm64
@@ -132,23 +121,7 @@ url=http://kernel.ubuntu.com/~kernel-ppa/mainline/${REPOSITORY}
 headers=amd64/linux-headers-${KERNEL_VERSION}_${KERNEL_VERSION}.${KERNEL_VERSION_C}_all.deb
 headers_generic=${systemArch}/linux-headers-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
 
-if [ "${USE_QEMU}" = 1 ]; then
-    if [ "${UNSIGNED_IMG}" = 0 ]; then
-        image=${systemArch}/linux-image-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
-    else
-        image=${systemArch}/linux-image-unsigned-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
-    fi
-
-    if [ ! -z "${NEED_MODULES}" ]; then
-        modules=${systemArch}/linux-modules-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
-    fi
-fi
-
-for package in ${modules} ${image} ${headers} ${headers_generic}; do
+for package in ${headers} ${headers_generic}; do
     ${DOWNLOAD_CMD} "${url}/${package}"
     dpkg -i "${package#*/}"
 done
-
-if [ "${USE_QEMU}" = 1 ]; then
-    update-initramfs -c -k "${KERNEL_VERSION}-generic"
-fi

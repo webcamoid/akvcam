@@ -18,66 +18,42 @@ jobs:
            repository: v4.14.215
            kernel_version: 4.14.215-0414215
            kernel_version_c: 202101122110
-           unsigned_img: 1
-           need_modules: 1
-           use_qemu: 0
            upload: 1
          - dockerimg: amd64/ubuntu:focal
            repository: v4.19.283
            kernel_version: 4.19.283-0419283
            kernel_version_c: 202305171050
-           unsigned_img: 1
-           need_modules: 1
-           use_qemu: 0
            upload: 0
          - dockerimg: amd64/ubuntu:focal
            repository: v5.4.243
            kernel_version: 5.4.243-0504243
            kernel_version_c: 202305171043
-           unsigned_img: 1
-           need_modules: 1
-           use_qemu: 0
            upload: 0
          # Do not update
          - dockerimg: amd64/ubuntu:jammy
            repository: v5.10.130
            kernel_version: 5.10.130-0510130
            kernel_version_c: 202207121545
-           unsigned_img: 1
-           need_modules: 1
-           use_qemu: 0
            upload: 0
          - dockerimg: amd64/ubuntu:jammy
            repository: v5.15.113
            kernel_version: 5.15.113-0515113
            kernel_version_c: 202305241341
-           unsigned_img: 1
-           need_modules: 1
-           use_qemu: 0
            upload: 0
          - dockerimg: amd64/ubuntu:lunar
            repository: v6.1.30
            kernel_version: 6.1.30-060130
            kernel_version_c: 202305241736
-           unsigned_img: 1
-           need_modules: 1
-           use_qemu: 0
            upload: 0
          - dockerimg: amd64/ubuntu:lunar
            repository: v6.2.16
            kernel_version: 6.2.16-060216
            kernel_version_c: 202305171336
-           unsigned_img: 1
-           need_modules: 1
-           use_qemu: 0
            upload: 0
          - dockerimg: amd64/ubuntu:lunar
            repository: v6.3.4
            kernel_version: 6.3.4-060304
            kernel_version_c: 202305241735
-           unsigned_img: 1
-           need_modules: 1
-           use_qemu: 0
            upload: 0
     steps:
     - uses: actions/checkout@v2
@@ -100,9 +76,6 @@ jobs:
           -e REPOSITORY=${{ matrix.repository }}
           -e KERNEL_VERSION=${{ matrix.kernel_version }}
           -e KERNEL_VERSION_C=${{ matrix.kernel_version_c }}
-          -e UNSIGNED_IMG=${{ matrix.unsigned_img }}
-          -e NEED_MODULES=${{ matrix.need_modules }}
-          -e USE_QEMU=${{ matrix.use_qemu }}
           -e QTIFWVER=${{ env.QTIFWVER }}
           -e UPLOAD=${{ matrix.upload }}
         run: |
@@ -117,11 +90,6 @@ jobs:
           echo
           chmod +x ports/ci/linux/build.sh
           ./ports/ci/linux/build.sh
-          echo
-          echo Test module
-          echo
-          chmod +x ports/ci/linux/test.sh
-          ./ports/ci/linux/test.sh
           echo
           echo Release Deploy
           echo
@@ -146,9 +114,6 @@ jobs:
           -e REPOSITORY=${{ matrix.repository }}
           -e KERNEL_VERSION=${{ matrix.kernel_version }}
           -e KERNEL_VERSION_C=${{ matrix.kernel_version_c }}
-          -e UNSIGNED_IMG=${{ matrix.unsigned_img }}
-          -e NEED_MODULES=${{ matrix.need_modules }}
-          -e USE_QEMU=${{ matrix.use_qemu }}
           -e QTIFWVER=${{ env.QTIFWVER }}
           -e UPLOAD=${{ matrix.upload }}
           -e DAILY_BUILD=1
@@ -164,11 +129,6 @@ jobs:
           echo
           chmod +x ports/ci/linux/build.sh
           ./ports/ci/linux/build.sh
-          echo
-          echo Test module
-          echo
-          chmod +x ports/ci/linux/test.sh
-          ./ports/ci/linux/test.sh
           echo
           echo Daily Deploy
           echo
