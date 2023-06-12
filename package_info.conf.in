@@ -7,6 +7,7 @@ buildInfoFile = share/build-info.txt
 targetArch = any
 outputFormats = QtIFW, Makeself
 hideArch = true
+dailyBuild = @DAILY_BUILD@
 
 [Makeself]
 name = akvcam-installer-cli

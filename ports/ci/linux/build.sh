@@ -30,6 +30,7 @@ version=$(grep '^MODULE_VERSION' src/Makefile | awk -F= '{print $2}' | tr -d ' '
 sed -i "s|@VERSION@|${version}|g" package_info.conf
 sed -i "s|@CMAKE_SOURCE_DIR@|${PWD}|g" package_info.conf
 sed -i "s|@QTIFW_TARGET_DIR@|@ApplicationsDir@/akvcam|g" package_info.conf
+sed -i "s|@DAILY_BUILD@|${DAILY_BUILD}|g" package_info.conf
 buildDir=src-${REPOSITORY%.*}
 cp -rvf src "${buildDir}"
 cd "${buildDir}"

@@ -25,7 +25,8 @@ execute_process(COMMAND uname -r
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 set(KERNEL_DIR /lib/modules/${KERNEL_RELEASE}/build CACHE PATH "Kernel sources")
 set(USE_SPARSE OFF CACHE BOOL "Use sparse for bug catching")
-set(SPARSE_MODE 2 CACHE STRING "sparse mode")
+set(SPARSE_MODE 2 CACHE STRING "Sparse mode")
+set(DAILY_BUILD OFF CACHE BOOL "Mark this as a daily build")
 
 if (USE_SPARSE)
     set(MAKE_CMD make KERNEL_DIR=${KERNEL_DIR} USE_SPARSE=1 SPARSE_MODE=${SPARSE_MODE})
