@@ -414,7 +414,7 @@ missing_dependencies=$(distro_packages "${distroId}" ${missing_dependencies})
 
 if [ ! -z "${missing_dependencies}" ]; then
     if [ "$(is_distro_supported "${distroId}")" = true ]; then
-        echo "Installing missing dependencies: ${missing_dependencies// /, }"
+        echo "Installing missing dependencies:" $(echo "${missing_dependencies}" | sed 's/ /, /g')
         echo
         install_packages "${distroId}" ${missing_dependencies}
 
@@ -422,7 +422,7 @@ if [ ! -z "${missing_dependencies}" ]; then
             exit $?
         fi
     else
-        echo "The following dependencies are missing: ${missing_dependencies// /, }." >&2
+        echo "The following dependencies are missing:" $(echo "${missing_dependencies}" | sed 's/ /, /g') >&2
         echo >&2
         echo "Install them and then run '${TARGET_DIR}/${SCRIPT_BASENAME}' script." >&2
 
