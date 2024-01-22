@@ -130,7 +130,7 @@ akvcam_device_t akvcam_device_new(const char *name,
     akvcam_buffers_set_format(self->buffers, self->format);
     memset(&self->v4l2_dev, 0, sizeof(struct v4l2_device));
     snprintf(self->v4l2_dev.name,
-             V4L2_DEVICE_NAME_SIZE,
+             sizeof(self->v4l2_dev.name),
              "akvcam-device-%u", (uint) akvcam_id());
     akvcam_connect(controls, self->controls, updated, self, akvcam_device_controls_updated);
     akvcam_connect(buffers, self->buffers, streaming_started, self, akvcam_device_clock_start);
