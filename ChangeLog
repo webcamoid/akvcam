@@ -1,3 +1,7 @@
+akvcam 1.2.5:
+
+- Fixed missing V4L2_DEVICE_NAME_SIZE variable in Linux version > 6.7.
+
 akvcam 1.2.4:
 
 - Minimum supported kernel version: 4.14.
