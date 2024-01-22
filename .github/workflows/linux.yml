@@ -3,7 +3,7 @@ name: Linux Ubuntu
 on: [push, pull_request]
 
 env:
-  QTIFWVER: 4.5.2
+  QTIFWVER: 4.6.1
 
 jobs:
   build:
@@ -20,14 +20,14 @@ jobs:
            kernel_version_c: 202101122110
            upload: 1
          - dockerimg: amd64/ubuntu:focal
-           repository: v4.19.283
-           kernel_version: 4.19.283-0419283
-           kernel_version_c: 202305171050
+           repository: v4.19.305
+           kernel_version: 4.19.305-0419305
+           kernel_version_c: 202401151235
            upload: 0
          - dockerimg: amd64/ubuntu:focal
-           repository: v5.4.243
-           kernel_version: 5.4.243-0504243
-           kernel_version_c: 202305171043
+           repository: v5.4.267
+           kernel_version: 5.4.267-0504267
+           kernel_version_c: 202401151734
            upload: 0
          # Do not update
          - dockerimg: amd64/ubuntu:jammy
@@ -36,24 +36,24 @@ jobs:
            kernel_version_c: 202207121545
            upload: 0
          - dockerimg: amd64/ubuntu:jammy
-           repository: v5.15.113
-           kernel_version: 5.15.113-0515113
-           kernel_version_c: 202305241341
+           repository: v5.15.147
+           kernel_version: 5.15.147-0515147
+           kernel_version_c: 202401151339
            upload: 0
          - dockerimg: amd64/ubuntu:lunar
-           repository: v6.1.30
-           kernel_version: 6.1.30-060130
-           kernel_version_c: 202305241736
+           repository: v6.1.74
+           kernel_version: 6.1.74-060174
+           kernel_version_c: 202401200635
            upload: 0
-         - dockerimg: amd64/ubuntu:lunar
-           repository: v6.2.16
-           kernel_version: 6.2.16-060216
-           kernel_version_c: 202305171336
+         - dockerimg: amd64/ubuntu:noble
+           repository: v6.6.13
+           kernel_version: 6.6.13-060613
+           kernel_version_c: 202401201133
            upload: 0
-         - dockerimg: amd64/ubuntu:lunar
-           repository: v6.3.4
-           kernel_version: 6.3.4-060304
-           kernel_version_c: 202305241735
+         - dockerimg: amd64/ubuntu:noble
+           repository: v6.7.1
+           kernel_version: 6.7.1-060701
+           kernel_version_c: 202401201133
            upload: 0
     steps:
     - uses: actions/checkout@v2
