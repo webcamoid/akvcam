@@ -40,6 +40,10 @@
 #define VFL_TYPE_VIDEO VFL_TYPE_GRABBER
 #endif
 
+#ifndef V4L2_DEVICE_NAME_SIZE
+#define V4L2_DEVICE_NAME_SIZE (20 + 16)
+#endif
+
 struct akvcam_device
 {
     struct kref ref;
