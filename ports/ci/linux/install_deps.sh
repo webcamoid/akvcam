@@ -68,11 +68,17 @@ mkdir -p .local/bin
 
 architecture="${DOCKERIMG%%/*}"
 
-if [ "${architecture}" = amd64 ]; then
-    # Install Qt Installer Framework
+# Install Qt Installer Framework
 
-    qtIFW=QtInstallerFramework-linux-x64-${QTIFWVER}.run
-    ${DOWNLOAD_CMD} "http://download.qt.io/official_releases/qt-installer-framework/${QTIFWVER}/${qtIFW}" || true
+if [[ "${architecture}" = amd64 || "${architecture}" = arm64v8 ]]; then
+    if [ "${architecture}" = amd64 ]; then
+        ifwArch=x64
+    else
+        ifwArch=arm64
+    fi
+
+    qtIFW=QtInstallerFramework-linux-${ifwArch}-${QTIFWVER}.run
+    ${DOWNLOAD_CMD} "https://download.qt.io/official_releases/qt-installer-framework/${QTIFWVER}/${qtIFW}" || true
 
     if [ -e "${qtIFW}" ]; then
         chmod +x "${qtIFW}"
