@@ -1,5 +1,5 @@
 MODULE_NAME = akvcam
-MODULE_VERSION = 1.2.5
+MODULE_VERSION = 1.2.6
 KERNEL_ROOT ?= $(shell realpath /lib/modules/$(shell uname -r))
 KERNEL_DIR ?= $(KERNEL_ROOT)/build
 COPY = cp -f
