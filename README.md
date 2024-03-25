@@ -35,4 +35,4 @@ If you are interested in donating to the project you can look at all available m
 
 ## Reporting Bugs ##
 
-👉 [Become a sponsor now](https://github.com/sponsors/hipersayanX) and receive exclusive support. 👈
+Report all issues in the [issues tracker](http://github.com/webcamoid/akvcam/issues).

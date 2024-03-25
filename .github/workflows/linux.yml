@@ -13,21 +13,15 @@ jobs:
       fail-fast: false
       matrix:
        include:
-         # Do not update
-         - dockerimg: amd64/ubuntu:bionic
-           repository: v4.14.215
-           kernel_version: 4.14.215-0414215
-           kernel_version_c: 202101122110
+         - dockerimg: amd64/ubuntu:focal
+           repository: v4.19.310
+           kernel_version: 4.19.310-0419310
+           kernel_version_c: 202403152006
            upload: 1
          - dockerimg: amd64/ubuntu:focal
-           repository: v4.19.305
-           kernel_version: 4.19.305-0419305
-           kernel_version_c: 202401151235
-           upload: 0
-         - dockerimg: amd64/ubuntu:focal
-           repository: v5.4.267
-           kernel_version: 5.4.267-0504267
-           kernel_version_c: 202401151734
+           repository: v5.4.272
+           kernel_version: 5.4.272-0504272
+           kernel_version_c: 202403151601
            upload: 0
          # Do not update
          - dockerimg: amd64/ubuntu:jammy
@@ -36,24 +30,29 @@ jobs:
            kernel_version_c: 202207121545
            upload: 0
          - dockerimg: amd64/ubuntu:jammy
-           repository: v5.15.147
-           kernel_version: 5.15.147-0515147
-           kernel_version_c: 202401151339
+           repository: v5.15.152
+           kernel_version: 5.15.152-0515152
+           kernel_version_c: 202403152001
            upload: 0
          - dockerimg: amd64/ubuntu:lunar
-           repository: v6.1.74
-           kernel_version: 6.1.74-060174
-           kernel_version_c: 202401200635
+           repository: v6.1.82
+           kernel_version: 6.1.82-060182
+           kernel_version_c: 202403151941
            upload: 0
          - dockerimg: amd64/ubuntu:noble
-           repository: v6.6.13
-           kernel_version: 6.6.13-060613
-           kernel_version_c: 202401201133
+           repository: v6.6.22
+           kernel_version: 6.6.22-060622
+           kernel_version_c: 202403151938
            upload: 0
          - dockerimg: amd64/ubuntu:noble
-           repository: v6.7.1
-           kernel_version: 6.7.1-060701
-           kernel_version_c: 202401201133
+           repository: v6.7.10
+           kernel_version: 6.7.10-0607010
+           kernel_version_c: 202403151538
+           upload: 0
+         - dockerimg: amd64/ubuntu:noble
+           repository: v6.8.1
+           kernel_version: 6.8.1-060801
+           kernel_version_c: 202403151937
            upload: 0
     steps:
     - uses: actions/checkout@v2
