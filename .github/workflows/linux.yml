@@ -137,7 +137,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       if: ${{ startsWith(github.ref, 'refs/tags/') && matrix.upload }}
       with:
-        files: packages-v4.14/*
+        files: packages-v4.19/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Daily Build Upload
