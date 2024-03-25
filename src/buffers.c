@@ -67,12 +67,6 @@ void akvcam_buffers_buffer_queue(struct vb2_buffer *buffer);
 int akvcam_buffers_start_streaming(struct vb2_queue *queue, unsigned int count);
 void akvcam_buffers_stop_streaming(struct vb2_queue *queue);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION( 6, 8, 0)
-#define V4L2_MIN_QUEUED_BUFFERS min_buffers_needed
-#else
-#define V4L2_MIN_QUEUED_BUFFERS min_queued_buffers
-#endif
-
 akvcam_buffers_t akvcam_buffers_new(AKVCAM_RW_MODE rw_mode,
                                     enum v4l2_buf_type type)
 {
@@ -95,7 +89,8 @@ akvcam_buffers_t akvcam_buffers_new(AKVCAM_RW_MODE rw_mode,
     self->queue.mem_ops = &vb2_vmalloc_memops;
     self->queue.ops = &akvcam_akvcam_buffers_queue_ops;
     self->queue.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
-    self->queue.V4L2_MIN_QUEUED_BUFFERS = AKVCAM_BUFFERS_MIN;
+
+    akvcam_buffers_set_count(self, AKVCAM_BUFFERS_MIN);
 
     return self;
 }
@@ -133,12 +128,20 @@ void akvcam_buffers_set_format(akvcam_buffers_t self, akvcam_format_ct format)
 
 size_t akvcam_buffers_count(akvcam_buffers_ct self)
 {
-    return self->queue.V4L2_MIN_QUEUED_BUFFERS;
+#if LINUX_VERSION_CODE < KERNEL_VERSION( 6, 8, 0)
+    return self->queue.min_buffers_needed;
+#else
+    return self->queue.min_queued_buffers;
+#endif
 }
 
 void akvcam_buffers_set_count(akvcam_buffers_t self, size_t nbuffers)
 {
-    self->queue.V4L2_MIN_QUEUED_BUFFERS = nbuffers;
+#if LINUX_VERSION_CODE < KERNEL_VERSION( 6, 8, 0)
+    self->queue.min_buffers_needed = nbuffers;
+#else
+    self->queue.min_queued_buffers = nbuffers;
+#endif
 }
 
 akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
