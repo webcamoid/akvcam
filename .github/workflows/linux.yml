@@ -3,10 +3,11 @@ name: Linux Ubuntu
 on: [push, pull_request]
 
 env:
-  QTIFWVER: 4.7.0
+  QTIFWVER: 4.8.0
 
 jobs:
   build:
+    name: Ubuntu x86_64
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 10
@@ -14,14 +15,14 @@ jobs:
       matrix:
        include:
          - dockerimg: amd64/ubuntu:focal
-           repository: v4.19.310
-           kernel_version: 4.19.310-0419310
-           kernel_version_c: 202403152006
+           repository: v4.19.316
+           kernel_version: 4.19.316-0419316
+           kernel_version_c: 202406161134
            upload: 1
          - dockerimg: amd64/ubuntu:focal
-           repository: v5.4.272
-           kernel_version: 5.4.272-0504272
-           kernel_version_c: 202403151601
+           repository: v5.4.278
+           kernel_version: 5.4.278-0504278
+           kernel_version_c: 202406161242
            upload: 0
          # Do not update
          - dockerimg: amd64/ubuntu:jammy
@@ -30,29 +31,29 @@ jobs:
            kernel_version_c: 202207121545
            upload: 0
          - dockerimg: amd64/ubuntu:jammy
-           repository: v5.15.152
-           kernel_version: 5.15.152-0515152
-           kernel_version_c: 202403152001
+           repository: v5.15.161
+           kernel_version: 5.15.161-0515161
+           kernel_version_c: 202406161242
            upload: 0
-         - dockerimg: amd64/ubuntu:lunar
-           repository: v6.1.82
-           kernel_version: 6.1.82-060182
-           kernel_version_c: 202403151941
+         - dockerimg: amd64/ubuntu:mantic
+           repository: v6.1.95
+           kernel_version: 6.1.95-060195
+           kernel_version_c: 202406211343
            upload: 0
-         - dockerimg: amd64/ubuntu:noble
-           repository: v6.6.22
-           kernel_version: 6.6.22-060622
-           kernel_version_c: 202403151938
-           upload: 0
-         - dockerimg: amd64/ubuntu:noble
-           repository: v6.7.10
-           kernel_version: 6.7.10-0607010
-           kernel_version_c: 202403151538
+         - dockerimg: amd64/ubuntu:oracular
+           repository: v6.6.35
+           kernel_version: 6.6.35-060635
+           kernel_version_c: 202406210941
            upload: 0
          - dockerimg: amd64/ubuntu:noble
-           repository: v6.8.1
-           kernel_version: 6.8.1-060801
-           kernel_version_c: 202403151937
+           repository: v6.8.12
+           kernel_version: 6.8.12-0608012
+           kernel_version_c: 202405300722
+           upload: 0
+         - dockerimg: amd64/ubuntu:noble
+           repository: v6.9.3
+           kernel_version: 6.9.3-060903
+           kernel_version_c: 202405300957
            upload: 0
     steps:
     - uses: actions/checkout@v2
@@ -151,3 +152,130 @@ jobs:
         tag_name: daily-build
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  multiarch:
+    name: Ubuntu ARM 64 v8
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 10
+      fail-fast: false
+      matrix:
+       include:
+         - dockerimg: amd64/ubuntu:focal
+           repository: v4.19.316
+           kernel_version: 4.19.316-0419316
+           kernel_version_c: 202406161134
+           upload: 1
+         - dockerimg: amd64/ubuntu:focal
+           repository: v5.4.278
+           kernel_version: 5.4.278-0504278
+           kernel_version_c: 202406161242
+           upload: 0
+         # Do not update
+         - dockerimg: amd64/ubuntu:jammy
+           repository: v5.10.130
+           kernel_version: 5.10.130-0510130
+           kernel_version_c: 202207121545
+           upload: 0
+         - dockerimg: amd64/ubuntu:jammy
+           repository: v5.15.161
+           kernel_version: 5.15.161-0515161
+           kernel_version_c: 202406161242
+           upload: 0
+         - dockerimg: amd64/ubuntu:mantic
+           repository: v6.1.95
+           kernel_version: 6.1.95-060195
+           kernel_version_c: 202406211343
+           upload: 0
+         - dockerimg: amd64/ubuntu:oracular
+           repository: v6.6.35
+           kernel_version: 6.6.35-060635
+           kernel_version_c: 202406210941
+           upload: 0
+         - dockerimg: amd64/ubuntu:noble
+           repository: v6.8.12
+           kernel_version: 6.8.12-0608012
+           kernel_version_c: 202405300722
+           upload: 0
+         - dockerimg: amd64/ubuntu:noble
+           repository: v6.9.3
+           kernel_version: 6.9.3-060903
+           kernel_version_c: 202405300957
+           upload: 0
+    steps:
+    - uses: actions/checkout@v2
+    - name: Release build
+      uses: uraimo/run-on-arch-action@v2
+      if: ${{ startsWith(github.ref, 'refs/tags/') }}
+      with:
+        arch: ${{ matrix.architecture }}
+        distro: ${{ matrix.distro }}
+        githubToken: ${{ github.token }}
+        dockerRunArgs: |
+          --privileged
+          -v "${{ github.workspace }}:/sources"
+        env: |
+          GITHUB_REF: "${{ env.GITHUB_REF }}"
+          GITHUB_SERVER_URL: "${{ env.GITHUB_SERVER_URL }}"
+          GITHUB_REPOSITORY: "${{ env.GITHUB_REPOSITORY }}"
+          GITHUB_RUN_ID: "${{ env.GITHUB_RUN_ID }}"
+          DOCKERIMG: ${{ matrix.dockerimg }}
+          REPOSITORY: ${{ matrix.repository }}
+          KERNEL_VERSION: ${{ matrix.kernel_version }}
+          KERNEL_VERSION_C: ${{ matrix.kernel_version_c }}
+          QTIFWVER: ${{ env.QTIFWVER }}
+          UPLOAD: ${{ matrix.upload }}
+        run: |
+          cd /sources
+          echo
+          echo Install dependencies
+          echo
+          chmod +x ports/ci/linux/install_deps.sh
+          ./ports/ci/linux/install_deps.sh
+          echo
+          echo Daily Build
+          echo
+          chmod +x ports/ci/linux/build.sh
+          ./ports/ci/linux/build.sh
+          echo
+          echo Daily Deploy
+          echo
+          chmod +x ports/ci/linux/deploy.sh
+          ./ports/ci/linux/deploy.sh
+    - name: Daily build
+      uses: uraimo/run-on-arch-action@v2
+      if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      with:
+        arch: ${{ matrix.architecture }}
+        distro: ${{ matrix.distro }}
+        githubToken: ${{ github.token }}
+        dockerRunArgs: |
+          --privileged
+          -v "${{ github.workspace }}:/sources"
+        env: |
+          GITHUB_REF: "${{ env.GITHUB_REF }}"
+          GITHUB_SERVER_URL: "${{ env.GITHUB_SERVER_URL }}"
+          GITHUB_REPOSITORY: "${{ env.GITHUB_REPOSITORY }}"
+          GITHUB_RUN_ID: "${{ env.GITHUB_RUN_ID }}"
+          DOCKERIMG: ${{ matrix.dockerimg }}
+          REPOSITORY: ${{ matrix.repository }}
+          KERNEL_VERSION: ${{ matrix.kernel_version }}
+          KERNEL_VERSION_C: ${{ matrix.kernel_version_c }}
+          QTIFWVER: ${{ env.QTIFWVER }}
+          DAILY_BUILD: 1
+        run: |
+          cd /sources
+          echo
+          echo Install dependencies
+          echo
+          chmod +x ports/ci/linux/install_deps.sh
+          ./ports/ci/linux/install_deps.sh
+          echo
+          echo Daily Build
+          echo
+          chmod +x ports/ci/linux/build.sh
+          ./ports/ci/linux/build.sh
+          echo
+          echo Daily Deploy
+          echo
+          chmod +x ports/ci/linux/deploy.sh
+          ./ports/ci/linux/deploy.sh

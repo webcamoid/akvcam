@@ -123,7 +123,7 @@ case "$architecture" in
         ;;
 esac
 
-url=http://kernel.ubuntu.com/~kernel-ppa/mainline/${REPOSITORY}
+url=https://kernel.ubuntu.com/mainline/${REPOSITORY}
 headers=amd64/linux-headers-${KERNEL_VERSION}_${KERNEL_VERSION}.${KERNEL_VERSION_C}_all.deb
 headers_generic=${systemArch}/linux-headers-${KERNEL_VERSION}-generic_${KERNEL_VERSION}.${KERNEL_VERSION_C}_${systemArch}.deb
 
