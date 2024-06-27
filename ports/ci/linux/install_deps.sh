@@ -66,21 +66,43 @@ apt-get -qq -y install \
 
 mkdir -p .local/bin
 
-architecture="${DOCKERIMG%%/*}"
+if [ -z "${ARCHITECTURE}" ]; then
+    architecture="${DOCKERIMG%%/*}"
+else
+    case "${ARCHITECTURE}" in
+        aarch64)
+            architecture=arm64v8
+            ;;
+        armv7)
+            architecture=arm32v7
+            ;;
+        *)
+            architecture=${ARCHITECTURE}
+            ;;
+    esac
+fi
 
-# Install Qt Installer Framework
+if [[ ( "${architecture}" = amd64 || "${architecture}" = arm64v8 ) && ! -z "${QTIFWVER}" ]]; then
+    # Install Qt Installer Framework
 
-if [[ "${architecture}" = amd64 || "${architecture}" = arm64v8 ]]; then
-    if [ "${architecture}" = amd64 ]; then
-        ifwArch=x64
-    else
-        ifwArch=arm64
-    fi
+    case "${architecture}" in
+        arm64v8)
+            qtArch=arm64
+            ;;
+        *)
+            qtArch=x64
+            ;;
+    esac
 
-    qtIFW=QtInstallerFramework-linux-${ifwArch}-${QTIFWVER}.run
-    ${DOWNLOAD_CMD} "https://download.qt.io/official_releases/qt-installer-framework/${QTIFWVER}/${qtIFW}" || true
+    qtIFW=QtInstallerFramework-linux-${qtArch}-${QTIFWVER}.run
+    ${DOWNLOAD_CMD} "http://download.qt.io/official_releases/qt-installer-framework/${QTIFWVER}/${qtIFW}" || true
 
     if [ -e "${qtIFW}" ]; then
+        if [ "${architecture}" = arm64v8 ]; then
+            ln -svf libtiff.so.6 /usr/lib/aarch64-linux-gnu/libtiff.so.5
+            ln -svf libwebp.so.7 /usr/lib/aarch64-linux-gnu/libwebp.so.6
+        fi
+
         chmod +x "${qtIFW}"
         QT_QPA_PLATFORM=minimal \
         ./"${qtIFW}" \

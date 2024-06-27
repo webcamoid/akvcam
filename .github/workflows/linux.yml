@@ -76,6 +76,7 @@ jobs:
           -e REPOSITORY=${{ matrix.repository }}
           -e KERNEL_VERSION=${{ matrix.kernel_version }}
           -e KERNEL_VERSION_C=${{ matrix.kernel_version_c }}
+          -e ARCHITECTURE=amd64
           -e QTIFWVER=${{ env.QTIFWVER }}
           -e UPLOAD=${{ matrix.upload }}
         run: |
@@ -114,6 +115,7 @@ jobs:
           -e REPOSITORY=${{ matrix.repository }}
           -e KERNEL_VERSION=${{ matrix.kernel_version }}
           -e KERNEL_VERSION_C=${{ matrix.kernel_version_c }}
+          -e ARCHITECTURE=amd64
           -e QTIFWVER=${{ env.QTIFWVER }}
           -e UPLOAD=${{ matrix.upload }}
           -e DAILY_BUILD=1
@@ -153,50 +155,21 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   multiarch:
-    name: Ubuntu ARM 64 v8
+    name: Ubuntu Multiarch
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 10
       fail-fast: false
       matrix:
        include:
-         - dockerimg: amd64/ubuntu:focal
-           repository: v4.19.316
-           kernel_version: 4.19.316-0419316
-           kernel_version_c: 202406161134
-           upload: 1
-         - dockerimg: amd64/ubuntu:focal
-           repository: v5.4.278
-           kernel_version: 5.4.278-0504278
-           kernel_version_c: 202406161242
-           upload: 0
-         # Do not update
-         - dockerimg: amd64/ubuntu:jammy
-           repository: v5.10.130
-           kernel_version: 5.10.130-0510130
-           kernel_version_c: 202207121545
-           upload: 0
-         - dockerimg: amd64/ubuntu:jammy
-           repository: v5.15.161
-           kernel_version: 5.15.161-0515161
-           kernel_version_c: 202406161242
-           upload: 0
-         - dockerimg: amd64/ubuntu:mantic
-           repository: v6.1.95
-           kernel_version: 6.1.95-060195
-           kernel_version_c: 202406211343
-           upload: 0
-         - dockerimg: amd64/ubuntu:oracular
-           repository: v6.6.35
-           kernel_version: 6.6.35-060635
-           kernel_version_c: 202406210941
-           upload: 0
-         - dockerimg: amd64/ubuntu:noble
+         - dockerimg: ubuntu_latest
+           architecture: aarch64
            repository: v6.8.12
            kernel_version: 6.8.12-0608012
            kernel_version_c: 202405300722
-           upload: 0
-         - dockerimg: amd64/ubuntu:noble
+           upload: 1
+         - dockerimg: ubuntu_latest
+           architecture: aarch64
            repository: v6.9.3
            kernel_version: 6.9.3-060903
            kernel_version_c: 202405300957
@@ -218,8 +191,8 @@ jobs:
           GITHUB_SERVER_URL: "${{ env.GITHUB_SERVER_URL }}"
           GITHUB_REPOSITORY: "${{ env.GITHUB_REPOSITORY }}"
           GITHUB_RUN_ID: "${{ env.GITHUB_RUN_ID }}"
-          DOCKERIMG: ${{ matrix.dockerimg }}
           REPOSITORY: ${{ matrix.repository }}
+          ARCHITECTURE: ${{ matrix.architecture }}
           KERNEL_VERSION: ${{ matrix.kernel_version }}
           KERNEL_VERSION_C: ${{ matrix.kernel_version_c }}
           QTIFWVER: ${{ env.QTIFWVER }}
@@ -256,8 +229,8 @@ jobs:
           GITHUB_SERVER_URL: "${{ env.GITHUB_SERVER_URL }}"
           GITHUB_REPOSITORY: "${{ env.GITHUB_REPOSITORY }}"
           GITHUB_RUN_ID: "${{ env.GITHUB_RUN_ID }}"
-          DOCKERIMG: ${{ matrix.dockerimg }}
           REPOSITORY: ${{ matrix.repository }}
+          ARCHITECTURE: ${{ matrix.architecture }}
           KERNEL_VERSION: ${{ matrix.kernel_version }}
           KERNEL_VERSION_C: ${{ matrix.kernel_version_c }}
           QTIFWVER: ${{ env.QTIFWVER }}
