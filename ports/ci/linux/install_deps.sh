@@ -133,7 +133,7 @@ apt-get -qq -y install \
     xvfb \
     xz-utils
 
-case "$architecture" in
+case "${architecture}" in
     arm64v8)
         systemArch=arm64
         ;;

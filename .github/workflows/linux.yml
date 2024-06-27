@@ -154,101 +154,101 @@ jobs:
         tag_name: daily-build
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  multiarch:
-    name: Ubuntu Multiarch
-    runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 10
-      fail-fast: false
-      matrix:
-       include:
-         - distro: ubuntu_latest
-           architecture: aarch64
-           repository: v6.8.12
-           kernel_version: 6.8.12-060812
-           kernel_version_c: 202405300722
-           upload: 1
-         - distro: ubuntu_latest
-           architecture: aarch64
-           repository: v6.9.3
-           kernel_version: 6.9.3-060903
-           kernel_version_c: 202405300957
-           upload: 0
-    steps:
-    - uses: actions/checkout@v2
-    - name: Release build
-      uses: uraimo/run-on-arch-action@v2
-      if: ${{ startsWith(github.ref, 'refs/tags/') }}
-      with:
-        arch: ${{ matrix.architecture }}
-        distro: ${{ matrix.distro }}
-        githubToken: ${{ github.token }}
-        dockerRunArgs: |
-          --privileged
-          -v "${{ github.workspace }}:/sources"
-        env: |
-          GITHUB_REF: "${{ env.GITHUB_REF }}"
-          GITHUB_SERVER_URL: "${{ env.GITHUB_SERVER_URL }}"
-          GITHUB_REPOSITORY: "${{ env.GITHUB_REPOSITORY }}"
-          GITHUB_RUN_ID: "${{ env.GITHUB_RUN_ID }}"
-          REPOSITORY: ${{ matrix.repository }}
-          ARCHITECTURE: ${{ matrix.architecture }}
-          KERNEL_VERSION: ${{ matrix.kernel_version }}
-          KERNEL_VERSION_C: ${{ matrix.kernel_version_c }}
-          QTIFWVER: ${{ env.QTIFWVER }}
-          UPLOAD: ${{ matrix.upload }}
-        run: |
-          cd /sources
-          echo
-          echo Install dependencies
-          echo
-          chmod +x ports/ci/linux/install_deps.sh
-          ./ports/ci/linux/install_deps.sh
-          echo
-          echo Daily Build
-          echo
-          chmod +x ports/ci/linux/build.sh
-          ./ports/ci/linux/build.sh
-          echo
-          echo Daily Deploy
-          echo
-          chmod +x ports/ci/linux/deploy.sh
-          ./ports/ci/linux/deploy.sh
-    - name: Daily build
-      uses: uraimo/run-on-arch-action@v2
-      if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-      with:
-        arch: ${{ matrix.architecture }}
-        distro: ${{ matrix.distro }}
-        githubToken: ${{ github.token }}
-        dockerRunArgs: |
-          --privileged
-          -v "${{ github.workspace }}:/sources"
-        env: |
-          GITHUB_REF: "${{ env.GITHUB_REF }}"
-          GITHUB_SERVER_URL: "${{ env.GITHUB_SERVER_URL }}"
-          GITHUB_REPOSITORY: "${{ env.GITHUB_REPOSITORY }}"
-          GITHUB_RUN_ID: "${{ env.GITHUB_RUN_ID }}"
-          REPOSITORY: ${{ matrix.repository }}
-          ARCHITECTURE: ${{ matrix.architecture }}
-          KERNEL_VERSION: ${{ matrix.kernel_version }}
-          KERNEL_VERSION_C: ${{ matrix.kernel_version_c }}
-          QTIFWVER: ${{ env.QTIFWVER }}
-          DAILY_BUILD: 1
-        run: |
-          cd /sources
-          echo
-          echo Install dependencies
-          echo
-          chmod +x ports/ci/linux/install_deps.sh
-          ./ports/ci/linux/install_deps.sh
-          echo
-          echo Daily Build
-          echo
-          chmod +x ports/ci/linux/build.sh
-          ./ports/ci/linux/build.sh
-          echo
-          echo Daily Deploy
-          echo
-          chmod +x ports/ci/linux/deploy.sh
-          ./ports/ci/linux/deploy.sh
+  # multiarch:
+  #   name: Ubuntu Multiarch
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     max-parallel: 10
+  #     fail-fast: false
+  #     matrix:
+  #      include:
+  #        - distro: ubuntu_latest
+  #          architecture: aarch64
+  #          repository: v6.8.12
+  #          kernel_version: 6.8.12-060812
+  #          kernel_version_c: 202405300722
+  #          upload: 1
+  #        - distro: ubuntu_latest
+  #          architecture: aarch64
+  #          repository: v6.9.3
+  #          kernel_version: 6.9.3-060903
+  #          kernel_version_c: 202405300957
+  #          upload: 0
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: Release build
+  #     uses: uraimo/run-on-arch-action@v2
+  #     if: ${{ startsWith(github.ref, 'refs/tags/') }}
+  #     with:
+  #       arch: ${{ matrix.architecture }}
+  #       distro: ${{ matrix.distro }}
+  #       githubToken: ${{ github.token }}
+  #       dockerRunArgs: |
+  #         --privileged
+  #         -v "${{ github.workspace }}:/sources"
+  #       env: |
+  #         GITHUB_REF: "${{ env.GITHUB_REF }}"
+  #         GITHUB_SERVER_URL: "${{ env.GITHUB_SERVER_URL }}"
+  #         GITHUB_REPOSITORY: "${{ env.GITHUB_REPOSITORY }}"
+  #         GITHUB_RUN_ID: "${{ env.GITHUB_RUN_ID }}"
+  #         REPOSITORY: ${{ matrix.repository }}
+  #         ARCHITECTURE: ${{ matrix.architecture }}
+  #         KERNEL_VERSION: ${{ matrix.kernel_version }}
+  #         KERNEL_VERSION_C: ${{ matrix.kernel_version_c }}
+  #         QTIFWVER: ${{ env.QTIFWVER }}
+  #         UPLOAD: ${{ matrix.upload }}
+  #       run: |
+  #         cd /sources
+  #         echo
+  #         echo Install dependencies
+  #         echo
+  #         chmod +x ports/ci/linux/install_deps.sh
+  #         ./ports/ci/linux/install_deps.sh
+  #         echo
+  #         echo Daily Build
+  #         echo
+  #         chmod +x ports/ci/linux/build.sh
+  #         ./ports/ci/linux/build.sh
+  #         echo
+  #         echo Daily Deploy
+  #         echo
+  #         chmod +x ports/ci/linux/deploy.sh
+  #         ./ports/ci/linux/deploy.sh
+  #   - name: Daily build
+  #     uses: uraimo/run-on-arch-action@v2
+  #     if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  #     with:
+  #       arch: ${{ matrix.architecture }}
+  #       distro: ${{ matrix.distro }}
+  #       githubToken: ${{ github.token }}
+  #       dockerRunArgs: |
+  #         --privileged
+  #         -v "${{ github.workspace }}:/sources"
+  #       env: |
+  #         GITHUB_REF: "${{ env.GITHUB_REF }}"
+  #         GITHUB_SERVER_URL: "${{ env.GITHUB_SERVER_URL }}"
+  #         GITHUB_REPOSITORY: "${{ env.GITHUB_REPOSITORY }}"
+  #         GITHUB_RUN_ID: "${{ env.GITHUB_RUN_ID }}"
+  #         REPOSITORY: ${{ matrix.repository }}
+  #         ARCHITECTURE: ${{ matrix.architecture }}
+  #         KERNEL_VERSION: ${{ matrix.kernel_version }}
+  #         KERNEL_VERSION_C: ${{ matrix.kernel_version_c }}
+  #         QTIFWVER: ${{ env.QTIFWVER }}
+  #         DAILY_BUILD: 1
+  #       run: |
+  #         cd /sources
+  #         echo
+  #         echo Install dependencies
+  #         echo
+  #         chmod +x ports/ci/linux/install_deps.sh
+  #         ./ports/ci/linux/install_deps.sh
+  #         echo
+  #         echo Daily Build
+  #         echo
+  #         chmod +x ports/ci/linux/build.sh
+  #         ./ports/ci/linux/build.sh
+  #         echo
+  #         echo Daily Deploy
+  #         echo
+  #         chmod +x ports/ci/linux/deploy.sh
+  #         ./ports/ci/linux/deploy.sh
