@@ -162,13 +162,13 @@ jobs:
       fail-fast: false
       matrix:
        include:
-         - dockerimg: ubuntu_latest
+         - distro: ubuntu_latest
            architecture: aarch64
            repository: v6.8.12
            kernel_version: 6.8.12-0608012
            kernel_version_c: 202405300722
            upload: 1
-         - dockerimg: ubuntu_latest
+         - distro: ubuntu_latest
            architecture: aarch64
            repository: v6.9.3
            kernel_version: 6.9.3-060903
