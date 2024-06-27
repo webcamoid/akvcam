@@ -47,7 +47,7 @@ jobs:
            upload: 0
          - dockerimg: amd64/ubuntu:noble
            repository: v6.8.12
-           kernel_version: 6.8.12-0608012
+           kernel_version: 6.8.12-060812
            kernel_version_c: 202405300722
            upload: 0
          - dockerimg: amd64/ubuntu:noble
@@ -165,7 +165,7 @@ jobs:
          - distro: ubuntu_latest
            architecture: aarch64
            repository: v6.8.12
-           kernel_version: 6.8.12-0608012
+           kernel_version: 6.8.12-060812
            kernel_version_c: 202405300722
            upload: 1
          - distro: ubuntu_latest
