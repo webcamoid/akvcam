@@ -72,7 +72,7 @@ fi
 
 echo
 echo "Runnig DKMS"
-\${SUDO_CMD} dkms remove "\${NAME}/\${VERSION}" --all
+\${SUDO_CMD} dkms remove "\${NAME}/\${VERSION}" --all --force
 echo "Removing the symlink to the sources"
 \${SUDO_CMD} rm -f "/usr/src/\${NAME}-\${VERSION}"
 echo
