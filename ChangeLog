@@ -1,3 +1,9 @@
+akvcam 1.2.7:
+
+- Use sizeof(self->v4l2_dev.name) instead of V4L2_DEVICE_NAME_SIZE (issue #83).
+- Use CLEAN=true instead of CLEAN="make clean" in dkms.conf.
+- Force the removal of the module when uninstalling.
+
 akvcam 1.2.6:
 
 - Minimum supported kernel version: 4.19.
