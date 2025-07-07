@@ -28,6 +28,7 @@
 #include "frame_filter.h"
 #include "list.h"
 #include "log.h"
+#include "proc.h"
 #include "settings.h"
 
 typedef struct
@@ -107,6 +108,7 @@ int akvcam_driver_init(const char *name, const char *description)
 
     akvcam_settings_delete(settings);
     akvcam_driver_register();
+    proc_create(akvcam_proc_file_name(), 0, NULL, akvcam_proc_info());
     akvcam_driver_print_devices();
 
     return 0;
@@ -119,6 +121,7 @@ void akvcam_driver_uninit(void)
     if (!akvcam_driver_global)
         return;
 
+    remove_proc_entry(akvcam_proc_file_name(), NULL);
     akvcam_driver_unregister();
     akvcam_list_delete(akvcam_driver_global->devices);
     akvcam_frame_delete(akvcam_driver_global->default_frame);

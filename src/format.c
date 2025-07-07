@@ -300,7 +300,7 @@ __u32 akvcam_format_fourcc_from_string(const char *fourcc_str)
 {
     size_t i;
 
-    for (i = 0; akvcam_format_globals_formats[i].fourcc; i++)
+    for (i = 0; akvcam_format_globals_formats[i].fourcc; ++i)
         if (strcasecmp(akvcam_format_globals_formats[i].str, fourcc_str) == 0)
             return (akvcam_format_globals_formats + i)->fourcc;
 
@@ -367,6 +367,31 @@ static bool akvcam_format_fourcc_are_equal(__u32 *fourcc1, __u32 *fourcc2)
 static __u32 *akvcam_format_fourcc_copy(__u32 *fourcc)
 {
     return kmemdup(fourcc, sizeof(__u32), GFP_KERNEL);
+}
+
+__u32 akvcam_format_default_input_pixel_format(void)
+{
+    return V4L2_PIX_FMT_RGB24;
+}
+
+__u32 akvcam_format_default_output_pixel_format(void)
+{
+    return V4L2_PIX_FMT_YUYV;
+}
+
+akvcam_pixel_formats_list_t akvcam_format_supported_pixel_formats(void)
+{
+    akvcam_pixel_formats_list_t supported_formats = akvcam_list_new();
+
+    for (size_t i = 0; akvcam_format_globals_formats[i].fourcc; i++) {
+        __u32 fourcc = akvcam_format_globals_formats[i].fourcc;
+        akvcam_list_push_back(supported_formats,
+                              &fourcc,
+                              (akvcam_copy_t) akvcam_format_fourcc_copy,
+                              (akvcam_delete_t) kfree);
+    }
+
+    return supported_formats;
 }
 
 akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_ct formats)

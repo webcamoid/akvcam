@@ -1,5 +1,5 @@
 MODULE_NAME = akvcam
-MODULE_VERSION = 1.2.7
+MODULE_VERSION = 1.3.0
 KERNEL_ROOT ?= $(shell realpath /lib/modules/$(shell uname -r))
 KERNEL_DIR ?= $(KERNEL_ROOT)/build
 COPY = cp -f
@@ -29,13 +29,14 @@ akvcam-objs := \
 	device.o \
 	driver.o \
 	file_read.o \
-        format.o \
+	format.o \
 	frame.o \
-        frame_filter.o \
-        ioctl.o \
+	frame_filter.o \
+	ioctl.o \
 	list.o \
 	log.o \
 	map.o \
+	proc.o \
 	rbuffer.o \
 	settings.o \
 	utils.o

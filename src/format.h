@@ -64,6 +64,9 @@ __u32 akvcam_format_fourcc_from_string(const char *fourcc_str);
 const char *akvcam_format_string_from_fourcc(__u32 fourcc);
 akvcam_format_t akvcam_format_nearest(akvcam_formats_list_ct formats,
                                       akvcam_format_ct format);
+__u32 akvcam_format_default_input_pixel_format(void);
+__u32 akvcam_format_default_output_pixel_format(void);
+akvcam_pixel_formats_list_t akvcam_format_supported_pixel_formats(void);
 akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_ct formats);
 akvcam_resolutions_list_t akvcam_format_resolutions(akvcam_formats_list_t formats,
                                                     __u32 fourcc);
