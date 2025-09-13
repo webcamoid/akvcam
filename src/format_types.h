@@ -31,7 +31,8 @@ typedef akvcam_list_ctt(__u32) akvcam_pixel_formats_list_ct;
 struct akvcam_format;
 typedef struct akvcam_format *akvcam_format_t;
 typedef const struct akvcam_format *akvcam_format_ct;
-typedef akvcam_list_tt(akvcam_formats_t) akvcam_formats_list_t;
-typedef akvcam_list_ctt(akvcam_formats_t) akvcam_formats_list_ct;
+
+typedef akvcam_list_tt(akvcam_format_t) akvcam_formats_list_t;
+typedef akvcam_list_ctt(akvcam_format_t) akvcam_formats_list_ct;
 
 #endif // AKVCAM_FORMAT_TYPES_H
