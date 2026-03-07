@@ -37,36 +37,26 @@ akvcam_format_t akvcam_format_ref(akvcam_format_t self);
 
 void akvcam_format_copy(akvcam_format_t self, akvcam_format_ct other);
 __u32 akvcam_format_fourcc(akvcam_format_ct self);
-void akvcam_format_set_fourcc(akvcam_format_t self, __u32 fourcc);
-const char *akvcam_format_fourcc_str(akvcam_format_ct self);
-void akvcam_format_set_fourcc_str(akvcam_format_t self, const char *fourcc);
 size_t akvcam_format_width(akvcam_format_ct self);
-void akvcam_format_set_width(akvcam_format_t self, size_t width);
 size_t akvcam_format_height(akvcam_format_ct self);
-void akvcam_format_set_height(akvcam_format_t self, size_t height);
 struct v4l2_fract akvcam_format_frame_rate(akvcam_format_ct self);
-void akvcam_format_set_frame_rate(akvcam_format_t self, const struct v4l2_fract frame_rate);
-size_t akvcam_format_bpp(akvcam_format_ct self);
-size_t akvcam_format_bypl(akvcam_format_ct self, size_t plane);
 size_t akvcam_format_size(akvcam_format_ct self);
 size_t akvcam_format_planes(akvcam_format_ct self);
-size_t akvcam_format_offset(akvcam_format_ct self, size_t plane);
+size_t akvcam_format_bpp(akvcam_format_ct self);
 size_t akvcam_format_plane_size(akvcam_format_ct self, size_t plane);
+size_t akvcam_format_pixel_size(akvcam_format_ct self, size_t plane);
+size_t akvcam_format_line_size(akvcam_format_ct self, size_t plane);
+size_t akvcam_format_offset(akvcam_format_ct self, size_t plane);
+size_t akvcam_format_bytes_used(akvcam_format_ct self, size_t plane);
+size_t akvcam_format_width_div(akvcam_format_ct self, size_t plane);
+size_t akvcam_format_height_div(akvcam_format_ct self, size_t plane);
 bool akvcam_format_is_valid(akvcam_format_ct self);
-void akvcam_format_clear(akvcam_format_t self);
+bool akvcam_format_is_same_format(akvcam_format_ct self, akvcam_format_ct other);
 const char *akvcam_format_to_string(akvcam_format_t self);
 
 // public static
-void akvcam_format_round_nearest(int width, int height,
-                                 int *owidth, int *oheight,
-                                 int align);
-__u32 akvcam_format_fourcc_from_string(const char *fourcc_str);
-const char *akvcam_format_string_from_fourcc(__u32 fourcc);
 akvcam_format_t akvcam_format_nearest(akvcam_formats_list_ct formats,
                                       akvcam_format_ct format);
-__u32 akvcam_format_default_input_pixel_format(void);
-__u32 akvcam_format_default_output_pixel_format(void);
-akvcam_pixel_formats_list_t akvcam_format_supported_pixel_formats(void);
 akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_ct formats);
 akvcam_resolutions_list_t akvcam_format_resolutions(akvcam_formats_list_t formats,
                                                     __u32 fourcc);

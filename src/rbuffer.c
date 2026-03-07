@@ -52,8 +52,13 @@ akvcam_rbuffer_t akvcam_rbuffer_new_copy(akvcam_rbuffer_ct other)
 {
     akvcam_rbuffer_t self = kzalloc(sizeof(struct akvcam_rbuffer), GFP_KERNEL);
     kref_init(&self->ref);
-    self->data = kzalloc(other->size, GFP_KERNEL);
-    memcpy(self->data, other->data, other->size);
+
+    if (other->size > 0)
+        self->data = kzalloc(other->size, GFP_KERNEL);
+
+    if (other->data && other->size > 0)
+        memcpy(self->data, other->data, other->size);
+
     self->size = other->size;
     self->data_size = other->data_size;
     self->read = other->read;
@@ -93,13 +98,19 @@ void akvcam_rbuffer_copy(akvcam_rbuffer_t self, akvcam_rbuffer_ct other)
     if (self->data)
         akvcam_rbuffer_free_data(self->memory_type, self->data);
 
-    self->data = kzalloc(other->size, GFP_KERNEL);
+    if (other->size > 0)
+        self->data = kzalloc(other->size, GFP_KERNEL);
+
+    if (other->data && other->size > 0)
+        memcpy(self->data, other->data, other->size);
+
     memcpy(self->data, other->data, other->size);
     self->size = other->size;
     self->data_size = other->data_size;
     self->read = other->read;
     self->write = other->write;
     self->step = other->step;
+    self->memory_type = other->memory_type;
 }
 
 void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
@@ -131,7 +142,7 @@ void akvcam_rbuffer_resize(akvcam_rbuffer_t self,
 
     new_data = akvcam_rbuffer_alloc_data(memory_type, new_size);
 
-    if (self->data) {
+    if (new_data && self->data) {
         size_t left_size = akvcam_min(self->size - self->read, data_size);
 
         if (left_size > 0)
@@ -238,9 +249,20 @@ void *akvcam_rbuffer_queue_bytes(akvcam_rbuffer_t self,
                    size - right_size);
     }
 
-    move_read =
-            akvcam_between(self->write, self->read, self->write + size - 1)
-            && self->data_size > 0;
+    if (self->data_size > 0) {
+        size_t write_end = (self->write + size) % self->size;
+
+        if (self->write < write_end) {
+            move_read = self->read >= self->write
+                     && self->read < write_end;
+        } else {
+            move_read = self->read >= self->write
+                     || self->read < write_end;
+        }
+    } else {
+        move_read = false;
+    }
+
     self->write = (self->write + size) % self->size;
     self->data_size = akvcam_min(self->data_size + size, self->size);
 

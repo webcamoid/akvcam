@@ -22,92 +22,84 @@
 #include <linux/vmalloc.h>
 
 #include "frame.h"
+#include "color_convert.h"
 #include "file_read.h"
 #include "format.h"
+#include "format_specs.h"
 #include "log.h"
 #include "utils.h"
 
-// FIXME: This is endianness dependent.
+#define MAX_PLANES 4
+
+typedef enum
+{
+    AKVCAM_FILL_TYPE_VECTOR,
+    AKVCAM_FILL_TYPE_1,
+    AKVCAM_FILL_TYPE_3,
+} AKVCAM_FILL_TYPE;
+
+typedef enum
+{
+    AKVCAM_FILL_DATA_TYPES_8,
+    AKVCAM_FILL_DATA_TYPES_16,
+    AKVCAM_FILL_DATA_TYPES_32,
+    AKVCAM_FILL_DATA_TYPES_64,
+} AKVCAM_FILL_DATA_TYPES;
+
+typedef enum
+{
+    AKVCAM_ALPHA_MODE_AO,
+    AKVCAM_ALPHA_MODE_O,
+} AKVCAM_ALPHA_MODE;
 
 typedef struct
 {
-    uint8_t x;
-    uint8_t b;
-    uint8_t g;
-    uint8_t r;
-} akvcam_RGB32, *akvcam_RGB32_t;
+    struct kref ref;
 
-typedef struct
-{
-    uint8_t b;
-    uint8_t g;
-    uint8_t r;
-} akvcam_RGB24, *akvcam_RGB24_t;
+    akvcam_color_convert_t color_convert;
+    AKVCAM_FILL_TYPE fill_type;
+    AKVCAM_FILL_DATA_TYPES fill_data_types;
+    AKVCAM_ALPHA_MODE alpha_mode;
 
-typedef struct
-{
-    uint16_t b: 5;
-    uint16_t g: 6;
-    uint16_t r: 5;
-} akvcam_RGB16, *akvcam_RGB16_t;
+    int endianess;
 
-typedef struct
-{
-    uint16_t b: 5;
-    uint16_t g: 5;
-    uint16_t r: 5;
-    uint16_t x: 1;
-} akvcam_RGB15, *akvcam_RGB15_t;
+    int width;
+    int height;
+    size_t read_width;
 
-typedef struct
-{
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-    uint8_t x;
-} akvcam_BGR32, *akvcam_BGR32_t;
+    int *dst_width_offset_x;
+    int *dst_width_offset_y;
+    int *dst_width_offset_z;
+    int *dst_width_offset_a;
 
-typedef struct
-{
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-} akvcam_BGR24, *akvcam_BGR24_t;
+    int plane_xo;
+    int plane_yo;
+    int plane_zo;
+    int plane_ao;
 
-typedef struct
-{
-    uint16_t r: 5;
-    uint16_t g: 6;
-    uint16_t b: 5;
-} akvcam_BGR16, *akvcam_BGR16_t;
+    akvcam_color_component_ct comp_xo;
+    akvcam_color_component_ct comp_yo;
+    akvcam_color_component_ct comp_zo;
+    akvcam_color_component_ct comp_ao;
 
-typedef struct
-{
-    uint8_t v0;
-    uint8_t y0;
-    uint8_t u0;
-    uint8_t y1;
-} akvcam_UYVY, *akvcam_UYVY_t;
+    size_t xo_offset;
+    size_t yo_offset;
+    size_t zo_offset;
+    size_t ao_offset;
 
-typedef struct
-{
-    uint8_t y0;
-    uint8_t v0;
-    uint8_t y1;
-    uint8_t u0;
-} akvcam_YUY2, *akvcam_YUY2_t;
+    size_t xo_shift;
+    size_t yo_shift;
+    size_t zo_shift;
+    size_t ao_shift;
 
-typedef struct
-{
-    uint8_t u;
-    uint8_t v;
-} akvcam_UV, *akvcam_UV_t;
+    uint64_t mask_xo;
+    uint64_t mask_yo;
+    uint64_t mask_zo;
+    uint64_t mask_ao;
+} akvcam_fill_parameters;
 
-typedef struct
-{
-    uint8_t v;
-    uint8_t u;
-} akvcam_VU, *akvcam_VU_t;
+typedef akvcam_fill_parameters *akvcam_fill_parameters_t;
+typedef const akvcam_fill_parameters *akvcam_fill_parameters_ct;
 
 typedef struct
 {
@@ -134,150 +126,357 @@ typedef struct
 
 typedef struct
 {
-    AKVCAM_SCALING scaling;
-    char  str[32];
-} akvcam_frame_scaling_strings, *akvcam_frame_scaling_strings_t;
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} akvcam_palette_pixel, *akvcam_palette_pixel_t;
 
-typedef struct
-{
-    AKVCAM_ASPECT_RATIO aspect_ratio;
-    char  str[32];
-} akvcam_frame_aspect_ratio_strings, *akvcam_frame_aspect_ratio_strings_t;
-
-typedef void (*akvcam_extrapolate_t)(size_t dstCoord,
-                                     size_t num, size_t den, size_t s,
-                                     size_t *srcCoordMin, size_t *srcCoordMax,
-                                     size_t *kNum, size_t *kDen);
-
-// YUV utility functions
-uint8_t akvcam_rgb_y(int r, int g, int b);
-uint8_t akvcam_rgb_u(int r, int g, int b);
-uint8_t akvcam_rgb_v(int r, int g, int b);
-uint8_t akvcam_yuv_r(int y, int u, int v);
-uint8_t akvcam_yuv_g(int y, int u, int v);
-uint8_t akvcam_yuv_b(int y, int u, int v);
-
-// BGR to RGB formats
-void akvcam_bgr24_to_rgb32(akvcam_frame_t dst, akvcam_frame_ct src);
-void akvcam_bgr24_to_rgb24(akvcam_frame_t dst, akvcam_frame_ct src);
-void akvcam_bgr24_to_rgb16(akvcam_frame_t dst, akvcam_frame_ct src);
-void akvcam_bgr24_to_rgb15(akvcam_frame_t dst, akvcam_frame_ct src);
-
-// BGR to BGR formats
-void akvcam_bgr24_to_bgr32(akvcam_frame_t dst, akvcam_frame_ct src);
-void akvcam_bgr24_to_bgr16(akvcam_frame_t dst, akvcam_frame_ct src);
-
-// BGR to Luminance+Chrominance formats
-void akvcam_bgr24_to_uyvy(akvcam_frame_t dst, akvcam_frame_ct src);
-void akvcam_bgr24_to_yuy2(akvcam_frame_t dst, akvcam_frame_ct src);
-
-// BGR to two planes -- one Y, one Cr + Cb interleaved
-void akvcam_bgr24_to_nv12(akvcam_frame_t dst, akvcam_frame_ct src);
-void akvcam_bgr24_to_nv21(akvcam_frame_t dst, akvcam_frame_ct src);
-
-// RGB to RGB formats
-void akvcam_rgb24_to_rgb32(akvcam_frame_t dst, akvcam_frame_ct src);
-void akvcam_rgb24_to_rgb16(akvcam_frame_t dst, akvcam_frame_ct src);
-void akvcam_rgb24_to_rgb15(akvcam_frame_t dst, akvcam_frame_ct src);
-
-// RGB to BGR formats
-void akvcam_rgb24_to_bgr32(akvcam_frame_t dst, akvcam_frame_ct src);
-void akvcam_rgb24_to_bgr24(akvcam_frame_t dst, akvcam_frame_ct src);
-void akvcam_rgb24_to_bgr16(akvcam_frame_t dst, akvcam_frame_ct src);
-
-// RGB to Luminance+Chrominance formats
-void akvcam_rgb24_to_uyvy(akvcam_frame_t dst, akvcam_frame_ct src);
-void akvcam_rgb24_to_yuy2(akvcam_frame_t dst, akvcam_frame_ct src);
-
-// RGB to two planes -- one Y, one Cr + Cb interleaved
-void akvcam_rgb24_to_nv12(akvcam_frame_t dst, akvcam_frame_ct src);
-void akvcam_rgb24_to_nv21(akvcam_frame_t dst, akvcam_frame_ct src);
-
-void akvcam_extrapolate_up(size_t dstCoord,
-                           size_t num, size_t den, size_t s,
-                           size_t *src_coord_min, size_t *src_coord_max,
-                           size_t *k_num, size_t *k_den);
-void akvcam_extrapolate_down(size_t dst_coord,
-                             size_t num, size_t den, size_t s,
-                             size_t *src_coord_min, size_t *src_coord_max,
-                             size_t *k_num, size_t *k_den);
-uint8_t akvcam_extrapolate_component(uint8_t min, uint8_t max,
-                                     size_t k_num, size_t k_Den);
-akvcam_RGB24 akvcam_extrapolate_color(const akvcam_RGB24_t color_min,
-                                      const akvcam_RGB24_t color_max,
-                                      size_t k_num,
-                                      size_t k_den);
-akvcam_RGB24 akvcam_extrapolated_color(akvcam_frame_t self,
-                                       size_t x_min, size_t x_max,
-                                       size_t k_num_x, size_t k_den_x,
-                                       size_t y_min, size_t y_max,
-                                       size_t k_num_y, size_t k_den_y);
-
-typedef void (*akvcam_video_convert_funtion_t)(akvcam_frame_t dst,
-                                               akvcam_frame_ct src);
-
-typedef struct
-{
-    __u32 from;
-    __u32 to;
-    akvcam_video_convert_funtion_t convert;
-} akvcam_video_convert, *akvcam_video_convert_t;
-typedef const akvcam_video_convert *akvcam_video_convert_ct;
-
-static const akvcam_video_convert akvcam_frame_convert_table[] = {
-    {V4L2_PIX_FMT_BGR24, V4L2_PIX_FMT_RGB32 , akvcam_bgr24_to_rgb32},
-    {V4L2_PIX_FMT_BGR24, V4L2_PIX_FMT_RGB24 , akvcam_bgr24_to_rgb24},
-    {V4L2_PIX_FMT_BGR24, V4L2_PIX_FMT_RGB565, akvcam_bgr24_to_rgb16},
-    {V4L2_PIX_FMT_BGR24, V4L2_PIX_FMT_RGB555, akvcam_bgr24_to_rgb15},
-    {V4L2_PIX_FMT_BGR24, V4L2_PIX_FMT_BGR32 , akvcam_bgr24_to_bgr32},
-    {V4L2_PIX_FMT_BGR24, V4L2_PIX_FMT_UYVY  , akvcam_bgr24_to_uyvy },
-    {V4L2_PIX_FMT_BGR24, V4L2_PIX_FMT_YUYV  , akvcam_bgr24_to_yuy2 },
-    {V4L2_PIX_FMT_BGR24, V4L2_PIX_FMT_NV12  , akvcam_bgr24_to_nv12 },
-    {V4L2_PIX_FMT_BGR24, V4L2_PIX_FMT_NV21  , akvcam_bgr24_to_nv21 },
-
-    {V4L2_PIX_FMT_RGB24, V4L2_PIX_FMT_RGB32 , akvcam_rgb24_to_rgb32},
-    {V4L2_PIX_FMT_RGB24, V4L2_PIX_FMT_RGB565, akvcam_rgb24_to_rgb16},
-    {V4L2_PIX_FMT_RGB24, V4L2_PIX_FMT_BGR32 , akvcam_rgb24_to_bgr32},
-    {V4L2_PIX_FMT_RGB24, V4L2_PIX_FMT_BGR24 , akvcam_rgb24_to_bgr24},
-    {V4L2_PIX_FMT_RGB24, V4L2_PIX_FMT_UYVY  , akvcam_rgb24_to_uyvy },
-    {V4L2_PIX_FMT_RGB24, V4L2_PIX_FMT_YUYV  , akvcam_rgb24_to_yuy2 },
-    {V4L2_PIX_FMT_RGB24, V4L2_PIX_FMT_NV12  , akvcam_rgb24_to_nv12 },
-    {V4L2_PIX_FMT_RGB24, V4L2_PIX_FMT_NV21  , akvcam_rgb24_to_nv21 },
-    {0                 , 0                  , NULL                 }
-};
-
-akvcam_video_convert_funtion_t akvcam_convert_func(__u32 from, __u32 to);
+typedef const akvcam_palette_pixel *akvcam_palette_pixel_ct;
 
 struct akvcam_frame
 {
     struct kref ref;
     akvcam_format_t format;
-    void *data;
-    size_t size;
+    uint8_t *data;
+    uint8_t *planes[MAX_PLANES];
+    akvcam_fill_parameters_t fc;
 };
 
-bool akvcam_frame_adjust_format_supported(__u32 fourcc);
+/* Fill functions */
 
-akvcam_frame_t akvcam_frame_new(akvcam_format_t format,
-                                const void *data,
-                                size_t size)
+#define AKVCAM_FILL3(data_type) \
+    static inline void akvcam_frame_private_fill3_##data_type(akvcam_frame_t self, \
+                                                              akvcam_fill_parameters_ct fc, \
+                                                              uint32_t color) \
+    { \
+        int xi = (int)((color >> 16) & 0xff); \
+        int yi = (int)((color >>  8) & 0xff); \
+        int zi = (int)((color >>  0) & 0xff); \
+        int ai = (int)((color >> 24) & 0xff); \
+        \
+        int64_t xo_ = 0; \
+        int64_t yo_ = 0; \
+        int64_t zo_ = 0; \
+        akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo_, &yo_, &zo_); \
+        akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo_, &yo_, &zo_); \
+        \
+        uint8_t *line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
+        uint8_t *line_y = self->planes[fc->plane_yo] + fc->yo_offset; \
+        uint8_t *line_z = self->planes[fc->plane_zo] + fc->zo_offset; \
+        \
+        for (size_t x = 0; x < fc->read_width; ++x) { \
+            int xd_x = fc->dst_width_offset_x[x]; \
+            int xd_y = fc->dst_width_offset_y[x]; \
+            int xd_z = fc->dst_width_offset_z[x]; \
+            \
+            data_type *xo = (data_type *)(line_x + xd_x); \
+            data_type *yo = (data_type *)(line_y + xd_y); \
+            data_type *zo = (data_type *)(line_z + xd_z); \
+            \
+            *xo = (*xo & (data_type)(fc->mask_xo)) | ((data_type)(xo_) << fc->xo_shift); \
+            *yo = (*yo & (data_type)(fc->mask_yo)) | ((data_type)(yo_) << fc->yo_shift); \
+            *zo = (*zo & (data_type)(fc->mask_zo)) | ((data_type)(zo_) << fc->zo_shift); \
+        } \
+    }
+
+#define AKVCAM_FILL3A(data_type) \
+    static inline void akvcam_frame_private_fill3a_##data_type(akvcam_frame_t self, \
+                                                               akvcam_fill_parameters_ct fc, \
+                                                               uint32_t color) \
+    { \
+        int xi = (int)((color >> 16) & 0xff); \
+        int yi = (int)((color >>  8) & 0xff); \
+        int zi = (int)((color >>  0) & 0xff); \
+        int ai = (int)((color >> 24) & 0xff); \
+        \
+        int64_t xo_ = 0; \
+        int64_t yo_ = 0; \
+        int64_t zo_ = 0; \
+        akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo_, &yo_, &zo_); \
+        \
+        uint8_t *line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
+        uint8_t *line_y = self->planes[fc->plane_yo] + fc->yo_offset; \
+        uint8_t *line_z = self->planes[fc->plane_zo] + fc->zo_offset; \
+        uint8_t *line_a = self->planes[fc->plane_ao] + fc->ao_offset; \
+        \
+        for (size_t x = 0; x < fc->read_width; ++x) { \
+            int xd_x = fc->dst_width_offset_x[x]; \
+            int xd_y = fc->dst_width_offset_y[x]; \
+            int xd_z = fc->dst_width_offset_z[x]; \
+            int xd_a = fc->dst_width_offset_a[x]; \
+            \
+            data_type *xo = (data_type *)(line_x + xd_x); \
+            data_type *yo = (data_type *)(line_y + xd_y); \
+            data_type *zo = (data_type *)(line_z + xd_z); \
+            data_type *ao = (data_type *)(line_a + xd_a); \
+            \
+            *xo = (*xo & (data_type)(fc->mask_xo)) | ((data_type)(xo_) << fc->xo_shift); \
+            *yo = (*yo & (data_type)(fc->mask_yo)) | ((data_type)(yo_) << fc->yo_shift); \
+            *zo = (*zo & (data_type)(fc->mask_zo)) | ((data_type)(zo_) << fc->zo_shift); \
+            *ao = (*ao & (data_type)(fc->mask_ao)) | ((data_type)(ai)  << fc->ao_shift); \
+        } \
+    }
+
+#define AKVCAM_FILL1(data_type) \
+    static inline void akvcam_frame_private_fill1_##data_type(akvcam_frame_t self, \
+                                                              akvcam_fill_parameters_ct fc, \
+                                                              uint32_t color) \
+    { \
+        int xi = (int)((color >> 16) & 0xff); \
+        int yi = (int)((color >>  8) & 0xff); \
+        int zi = (int)((color >>  0) & 0xff); \
+        int ai = (int)((color >> 24) & 0xff); \
+        \
+        int64_t xo_ = 0; \
+        akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo_); \
+        akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo_); \
+        \
+        uint8_t *line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
+        \
+        for (size_t x = 0; x < fc->read_width; ++x) { \
+            int xd_x = fc->dst_width_offset_x[x]; \
+            data_type *xo = (data_type *)(line_x + xd_x); \
+            *xo = (*xo & (data_type)(fc->mask_xo)) | ((data_type)(xo_) << fc->xo_shift); \
+        } \
+    }
+
+#define AKVCAM_FILL1A(data_type) \
+    static inline void akvcam_frame_private_fill1a_##data_type(akvcam_frame_t self, \
+                                                               akvcam_fill_parameters_ct fc, \
+                                                               uint32_t color) \
+    { \
+        int xi = (int)((color >> 16) & 0xff); \
+        int yi = (int)((color >>  8) & 0xff); \
+        int zi = (int)((color >>  0) & 0xff); \
+        int ai = (int)((color >> 24) & 0xff); \
+        \
+        int64_t xo_ = 0; \
+        akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo_); \
+        \
+        uint8_t *line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
+        uint8_t *line_a = self->planes[fc->plane_ao] + fc->ao_offset; \
+        \
+        for (size_t x = 0; x < fc->read_width; ++x) { \
+            int xd_x = fc->dst_width_offset_x[x]; \
+            int xd_a = fc->dst_width_offset_a[x]; \
+            \
+            data_type *xo = (data_type *)(line_x + xd_x); \
+            data_type *ao = (data_type *)(line_a + xd_a); \
+            \
+            *xo = (*xo & (data_type)(fc->mask_xo)) | ((data_type)(xo_) << fc->xo_shift); \
+            *ao = (*ao & (data_type)(fc->mask_ao)) | ((data_type)(ai)  << fc->ao_shift); \
+        } \
+    }
+
+/* Vectorized fill functions */
+
+#define AKVCAM_FILLV3(data_type) \
+    static inline void akvcam_frame_private_fillv3_##data_type(akvcam_frame_t self, \
+                                                               akvcam_fill_parameters_ct fc, \
+                                                               uint32_t color) \
+    { \
+        int xi = (int)((color >> 16) & 0xff); \
+        int yi = (int)((color >>  8) & 0xff); \
+        int zi = (int)((color >>  0) & 0xff); \
+        int ai = (int)((color >> 24) & 0xff); \
+        \
+        int64_t xo_ = 0; \
+        int64_t yo_ = 0; \
+        int64_t zo_ = 0; \
+        akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo_, &yo_, &zo_); \
+        akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo_, &yo_, &zo_); \
+        \
+        uint8_t *line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
+        uint8_t *line_y = self->planes[fc->plane_yo] + fc->yo_offset; \
+        uint8_t *line_z = self->planes[fc->plane_zo] + fc->zo_offset; \
+        \
+        for (size_t x = 0; x < fc->read_width; ++x) { \
+            int xd_x = fc->dst_width_offset_x[x]; \
+            int xd_y = fc->dst_width_offset_y[x]; \
+            int xd_z = fc->dst_width_offset_z[x]; \
+            \
+            data_type *xo = (data_type *)(line_x + xd_x); \
+            data_type *yo = (data_type *)(line_y + xd_y); \
+            data_type *zo = (data_type *)(line_z + xd_z); \
+            \
+            *xo = (*xo & (data_type)(fc->mask_xo)) | ((data_type)(xo_) << fc->xo_shift); \
+            *yo = (*yo & (data_type)(fc->mask_yo)) | ((data_type)(yo_) << fc->yo_shift); \
+            *zo = (*zo & (data_type)(fc->mask_zo)) | ((data_type)(zo_) << fc->zo_shift); \
+        } \
+    }
+
+#define AKVCAM_FILLV3A(data_type) \
+    static inline void akvcam_frame_private_fillv3a_##data_type(akvcam_frame_t self, \
+                                                                akvcam_fill_parameters_ct fc, \
+                                                                uint32_t color) \
+    { \
+        int xi = (int)((color >> 16) & 0xff); \
+        int yi = (int)((color >>  8) & 0xff); \
+        int zi = (int)((color >>  0) & 0xff); \
+        int ai = (int)((color >> 24) & 0xff); \
+        \
+        int64_t xo_ = 0; \
+        int64_t yo_ = 0; \
+        int64_t zo_ = 0; \
+        akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo_, &yo_, &zo_); \
+        \
+        uint8_t *line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
+        uint8_t *line_y = self->planes[fc->plane_yo] + fc->yo_offset; \
+        uint8_t *line_z = self->planes[fc->plane_zo] + fc->zo_offset; \
+        uint8_t *line_a = self->planes[fc->plane_ao] + fc->ao_offset; \
+        \
+        for (size_t x = 0; x < fc->read_width; ++x) { \
+            int xd_x = fc->dst_width_offset_x[x]; \
+            int xd_y = fc->dst_width_offset_y[x]; \
+            int xd_z = fc->dst_width_offset_z[x]; \
+            int xd_a = fc->dst_width_offset_a[x]; \
+            \
+            data_type *xo = (data_type *)(line_x + xd_x); \
+            data_type *yo = (data_type *)(line_y + xd_y); \
+            data_type *zo = (data_type *)(line_z + xd_z); \
+            data_type *ao = (data_type *)(line_a + xd_a); \
+            \
+            *xo = (*xo & (data_type)(fc->mask_xo)) | ((data_type)(xo_) << fc->xo_shift); \
+            *yo = (*yo & (data_type)(fc->mask_yo)) | ((data_type)(yo_) << fc->yo_shift); \
+            *zo = (*zo & (data_type)(fc->mask_zo)) | ((data_type)(zo_) << fc->zo_shift); \
+            *ao = (*ao & (data_type)(fc->mask_ao)) | ((data_type)(ai)  << fc->ao_shift); \
+        } \
+    }
+
+#define AKVCAM_FILL_FRAME3(data_type) \
+    static inline void akvcam_frame_private_fill_frame3_##data_type(akvcam_frame_t self, \
+                                                                    akvcam_fill_parameters_ct fc, \
+                                                                    uint32_t color) \
+    { \
+        switch (fc->alpha_mode) { \
+        case AKVCAM_ALPHA_MODE_AO: \
+            akvcam_frame_private_fill3a_##data_type(self, fc, color); \
+            break; \
+        case AKVCAM_ALPHA_MODE_O: \
+            akvcam_frame_private_fill3_##data_type(self, fc, color); \
+            break; \
+        } \
+    }
+
+#define AKVCAM_FILL_FRAME1(data_type) \
+    static inline void akvcam_frame_private_fill_frame1_##data_type(akvcam_frame_t self, \
+                                                                    akvcam_fill_parameters_ct fc, \
+                                                                    uint32_t color) \
+    { \
+        switch (fc->alpha_mode) { \
+        case AKVCAM_ALPHA_MODE_AO: \
+            akvcam_frame_private_fill1a_##data_type(self, fc, color); \
+            break; \
+        case AKVCAM_ALPHA_MODE_O: \
+            akvcam_frame_private_fill1_##data_type(self, fc, color); \
+            break; \
+        } \
+    }
+
+#define AKVCAM_FILLV_FRAME3(data_type) \
+    static inline void akvcam_frame_private_fillv_frame3_##data_type(akvcam_frame_t self, \
+                                                                     akvcam_fill_parameters_ct fc, \
+                                                                     uint32_t color) \
+    { \
+        switch (fc->alpha_mode) { \
+        case AKVCAM_ALPHA_MODE_AO: \
+            akvcam_frame_private_fillv3a_##data_type(self, fc, color); \
+            break; \
+        case AKVCAM_ALPHA_MODE_O: \
+            akvcam_frame_private_fillv3_##data_type(self, fc, color); \
+            break; \
+        } \
+    }
+
+#define AKVCAM_FILL(data_type) \
+    static inline void akvcam_frame_private_fill_##data_type(akvcam_frame_t self, \
+                                                             akvcam_fill_parameters_ct fc, \
+                                                             uint32_t color) \
+    { \
+        switch (fc->fill_type) { \
+        case AKVCAM_FILL_TYPE_VECTOR: \
+            akvcam_frame_private_fillv_frame3_##data_type(self, fc, color); \
+            break; \
+        case AKVCAM_FILL_TYPE_3: \
+            akvcam_frame_private_fill_frame3_##data_type(self, fc, color); \
+            break; \
+        case AKVCAM_FILL_TYPE_1: \
+            akvcam_frame_private_fill_frame1_##data_type(self, fc, color); \
+            break; \
+        } \
+    }
+
+AKVCAM_FILL3(uint8_t)
+AKVCAM_FILL3(uint16_t)
+AKVCAM_FILL3(uint32_t)
+
+AKVCAM_FILL3A(uint8_t)
+AKVCAM_FILL3A(uint16_t)
+AKVCAM_FILL3A(uint32_t)
+
+AKVCAM_FILL1(uint8_t)
+AKVCAM_FILL1(uint16_t)
+AKVCAM_FILL1(uint32_t)
+
+AKVCAM_FILL1A(uint8_t)
+AKVCAM_FILL1A(uint16_t)
+AKVCAM_FILL1A(uint32_t)
+
+AKVCAM_FILLV3(uint8_t)
+AKVCAM_FILLV3(uint16_t)
+AKVCAM_FILLV3(uint32_t)
+
+AKVCAM_FILLV3A(uint8_t)
+AKVCAM_FILLV3A(uint16_t)
+AKVCAM_FILLV3A(uint32_t)
+
+AKVCAM_FILL_FRAME3(uint8_t)
+AKVCAM_FILL_FRAME3(uint16_t)
+AKVCAM_FILL_FRAME3(uint32_t)
+
+AKVCAM_FILL_FRAME1(uint8_t)
+AKVCAM_FILL_FRAME1(uint16_t)
+AKVCAM_FILL_FRAME1(uint32_t)
+
+AKVCAM_FILLV_FRAME3(uint8_t)
+AKVCAM_FILLV_FRAME3(uint16_t)
+AKVCAM_FILLV_FRAME3(uint32_t)
+
+AKVCAM_FILL(uint8_t)
+AKVCAM_FILL(uint16_t)
+AKVCAM_FILL(uint32_t)
+
+static bool akvcam_frame_load_rle8(akvcam_frame_t self,
+                                   akvcam_file_t bmp_file,
+                                   const akvcam_bmp_image_header *image_header,
+                                   const akvcam_palette_pixel *palette,
+                                   bool top_down);
+static void akvcam_frame_private_update_planes(akvcam_frame_t self);
+void akvcam_frame_private_clear(akvcam_frame_t self);
+static akvcam_fill_parameters_t akvcam_fill_parameters_new(void);
+static void akvcam_fill_parameters_free(struct kref *ref);
+static void akvcam_fill_parameters_allocate_buffers(akvcam_fill_parameters_t self,
+                                                    akvcam_format_ct format);
+static void akvcam_fill_parameters_clear_buffers(akvcam_fill_parameters_t self);
+static void akvcam_fill_parameters_configure(akvcam_fill_parameters_t self,
+                                             akvcam_format_ct format,
+                                             akvcam_color_convert_t color_convert);
+static void akvcam_fill_parameters_configure_fill(akvcam_fill_parameters_t self,
+                                                  akvcam_format_ct format);
+
+akvcam_frame_t akvcam_frame_new(akvcam_format_t format)
 {
     akvcam_frame_t self = kzalloc(sizeof(struct akvcam_frame), GFP_KERNEL);
     kref_init(&self->ref);
-    self->format = akvcam_format_new(0, 0, 0, NULL);
-    akvcam_format_copy(self->format, format);
+    self->format = format?
+                    akvcam_format_new_copy(format):
+                    akvcam_format_new(0, 0, 0, NULL);
+    size_t data_size = akvcam_format_size(self->format);
 
-    if (size < 1)
-        size = akvcam_format_size(format);
+    if (data_size > 0)
+        self->data = vzalloc(data_size);
 
-    self->size = size;
-
-    if (size > 0) {
-        self->data = vzalloc(size);
-
-        if (data)
-            memcpy(self->data, data, size);
-    }
+    akvcam_frame_private_update_planes(self);
 
     return self;
 }
@@ -287,14 +486,19 @@ akvcam_frame_t akvcam_frame_new_copy(akvcam_frame_ct other)
     akvcam_frame_t self = kzalloc(sizeof(struct akvcam_frame), GFP_KERNEL);
     kref_init(&self->ref);
     self->format = akvcam_format_new_copy(other->format);
-    self->size = other->size;
+    size_t data_size = akvcam_format_size(self->format);
 
-    if (self->size > 0) {
-        self->data = vzalloc(self->size);
-
-        if (self->data)
-            memcpy(self->data, other->data, self->size);
+    if (other->data && data_size > 0) {
+        self->data = vzalloc(data_size);
+        memcpy(self->data, other->data, data_size);
     }
+
+    self->fc = other->fc;
+
+    if (self->fc)
+        kref_get(&self->fc->ref);
+
+    akvcam_frame_private_update_planes(self);
 
     return self;
 }
@@ -302,6 +506,9 @@ akvcam_frame_t akvcam_frame_new_copy(akvcam_frame_ct other)
 static void akvcam_frame_free(struct kref *ref)
 {
     akvcam_frame_t self = container_of(ref, struct akvcam_frame, ref);
+
+    if (self->fc)
+        kref_put(&self->fc->ref, akvcam_fill_parameters_free);
 
     if (self->data)
         vfree(self->data);
@@ -327,84 +534,79 @@ akvcam_frame_t akvcam_frame_ref(akvcam_frame_t self)
 void akvcam_frame_copy(akvcam_frame_t self, akvcam_frame_ct other)
 {
     akvcam_format_copy(self->format, other->format);
-    self->size = other->size;
 
     if (self->data) {
         vfree(self->data);
         self->data = NULL;
     }
 
-    if (self->size > 0) {
-        self->data = vzalloc(self->size);
+    size_t data_size = akvcam_format_size(self->format);
 
-        if (other->data)
-            memcpy(self->data, other->data, other->size);
+    if (other->data && data_size > 0) {
+        self->data = vzalloc(data_size);
+        memcpy(self->data, other->data, data_size);
     }
+
+    if (self->fc)
+        kref_put(&self->fc->ref, akvcam_fill_parameters_free);
+
+    self->fc = other->fc;
+
+    if (self->fc)
+        kref_get(&self->fc->ref);
+
+    akvcam_frame_private_update_planes(self);
+}
+
+akvcam_format_t akvcam_frame_format_nr(akvcam_frame_ct self)
+{
+    return self->format;
 }
 
 akvcam_format_t akvcam_frame_format(akvcam_frame_ct self)
 {
-    return akvcam_format_new_copy(self->format);
-}
-
-void *akvcam_frame_data(akvcam_frame_ct self)
-{
-    return self->data;
-}
-
-void *akvcam_frame_line(akvcam_frame_ct self, size_t plane, size_t y)
-{
-    return (char *) self->data
-            + akvcam_format_offset(self->format, plane)
-            + y * akvcam_format_bypl(self->format, plane);
-}
-
-const void *akvcam_frame_const_line(akvcam_frame_ct self, size_t plane, size_t y)
-{
-    return akvcam_frame_line(self, plane, y);
-}
-
-void *akvcam_frame_plane_data(akvcam_frame_ct self, size_t plane)
-{
-    return (char *) self->data + akvcam_format_offset(self->format, plane);
-}
-
-const void *akvcam_frame_plane_const_data(akvcam_frame_ct self, size_t plane)
-{
-    return akvcam_frame_plane_data(self, plane);
+    return akvcam_format_ref(self->format);
 }
 
 size_t akvcam_frame_size(akvcam_frame_ct self)
 {
-    return self->size;
+    return akvcam_format_size(self->format);
 }
 
-void akvcam_frame_resize(akvcam_frame_t self, size_t size)
+const char *akvcam_frame_const_data(akvcam_frame_ct self)
 {
-    if (size < 1)
-        size = akvcam_format_size(self->format);
-
-    self->size = size;
-
-    if (self->data) {
-        vfree(self->data);
-        self->data = NULL;
-    }
-
-    if (size > 0)
-        self->data = vzalloc(size);
+    return (char *) self->data;
 }
 
-void akvcam_frame_clear(akvcam_frame_t self)
+char *akvcam_frame_data(akvcam_frame_ct self)
 {
-    akvcam_format_clear(self->format);
+    return (char *) self->data;
+}
 
-    if (self->data) {
-        vfree(self->data);
-        self->data = NULL;
-    }
+const uint8_t *akvcam_frame_plane_const_data(akvcam_frame_ct self, size_t plane)
+{
+    return self->planes[plane];
+}
 
-    self->size = 0;
+uint8_t *akvcam_frame_plane_data(akvcam_frame_ct self, size_t plane)
+{
+    return self->planes[plane];
+}
+
+const uint8_t *akvcam_frame_const_line(akvcam_frame_ct self,
+                                       size_t plane,
+                                       size_t y)
+{
+    return self->planes[plane]
+            + (y >> akvcam_format_height_div(self->format, plane))
+            * akvcam_format_line_size(self->format, plane);
+}
+
+uint8_t *akvcam_frame_line(akvcam_frame_ct self, size_t plane, size_t y)
+{
+    return self->planes[plane]
+            + (y >> akvcam_format_height_div(self->format, plane))
+            * akvcam_format_line_size(self->format, plane);
 }
 
 bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
@@ -413,13 +615,13 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
     char type[2];
     akvcam_bmp_header header;
     akvcam_bmp_image_header image_header;
-    akvcam_RGB24_t line;
-    akvcam_BGR24 pixel24;
-    akvcam_BGR32 pixel32;
+    akvcam_palette_pixel palette[256];
+    uint8_t *line;
     uint32_t x;
     uint32_t y;
+    uint8_t pixel[4];
 
-    akvcam_frame_clear(self);
+    akvcam_frame_private_clear(self);
 
     if (akvcam_strlen(file_name) < 1) {
         akpr_err("Bitmap file name not valid\n");
@@ -449,32 +651,124 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
     akvcam_file_read(bmp_file,
                      (char *) &image_header,
                      sizeof(akvcam_bmp_image_header));
-    akvcam_file_seek(bmp_file, header.offBits, AKVCAM_FILE_SEEK_BEG);
-    akvcam_format_set_fourcc(self->format, V4L2_PIX_FMT_RGB24);
-    akvcam_format_set_width(self->format, image_header.width);
-    akvcam_format_set_height(self->format, image_header.height);
-    self->size = akvcam_format_size(self->format);
 
-    if (!self->size) {
+
+    // Fix the endianness of the used fields
+    image_header.width       = le32_to_cpu(image_header.width);
+    image_header.height      = le32_to_cpu(image_header.height);
+    image_header.bitCount    = le16_to_cpu(image_header.bitCount);
+    image_header.compression = le32_to_cpu(image_header.compression);
+    header.offBits           = le32_to_cpu(header.offBits);
+
+    bool top_down = (int32_t)image_header.height < 0;
+
+    if (top_down)
+        image_header.height = (uint32_t)(-(int32_t)image_header.height);
+
+    // Read the palette if required by the format
+    memset(palette, 0, sizeof(palette));
+
+    if (image_header.bitCount <= 8) {
+        uint32_t palette_offset = 14u + image_header.size;
+        uint32_t palette_size = header.offBits - palette_offset;
+        uint32_t n_colors = palette_size / 4u;
+        uint32_t i;
+        uint8_t  raw[4];
+
+        if (n_colors > 256)
+            n_colors = 256;
+
+        for (i = 0; i < n_colors; i++) {
+            akvcam_file_read(bmp_file, raw, 4);
+            palette[i].r = raw[2];
+            palette[i].g = raw[1];
+            palette[i].b = raw[0];
+        }
+    }
+
+    akvcam_file_seek(bmp_file, header.offBits, AKVCAM_FILE_SEEK_BEG);
+    struct v4l2_fract frame_rate = {0, 0};
+
+    if (self->format) {
+        frame_rate = akvcam_format_frame_rate(self->format);
+        akvcam_format_delete(self->format);
+    }
+
+    self->format = akvcam_format_new(V4L2_PIX_FMT_ARGB32,
+                                     image_header.width,
+                                     image_header.height,
+                                     &frame_rate);
+    size_t data_size = akvcam_format_size(self->format);
+
+    if (data_size < 1) {
         akpr_err("Bitmap format is invalid\n");
 
         goto akvcam_frame_load_failed;
     }
 
-    self->data = vmalloc(self->size);
+    self->data = vzalloc(data_size);
+    akvcam_frame_private_update_planes(self);
+
+    if (self->fc) {
+        kref_put(&self->fc->ref, akvcam_fill_parameters_free);
+        self->fc = NULL;
+    }
 
     switch (image_header.bitCount) {
+        case 8:
+             if (image_header.compression == 1) {
+                 if (!akvcam_frame_load_rle8(self,
+                                             bmp_file,
+                                             &image_header,
+                                             palette,
+                                             top_down)) {
+                     goto akvcam_frame_load_failed;
+                 }
+             } else if (image_header.compression == 0) {
+                 uint32_t row_size = (image_header.width + 3u) & ~3u;
+                 uint8_t *row_buf = kvmalloc(row_size, GFP_KERNEL);
+
+                 if (!row_buf) {
+                     akpr_err("Failed to allocate row buffer\n");
+
+                     goto akvcam_frame_load_failed;
+                 }
+
+                 for (y = 0; y < image_header.height; y++) {
+                     uint32_t line_y = top_down? y: image_header.height - y - 1;
+                     line = akvcam_frame_line(self, 0, line_y);
+                     akvcam_file_read(bmp_file, row_buf, row_size);
+
+                     for (x = 0; x < image_header.width; x++) {
+                         uint8_t index = row_buf[x];
+                         line[4 * x + 0] = 0xff;
+                         line[4 * x + 1] = palette[index].r;
+                         line[4 * x + 2] = palette[index].g;
+                         line[4 * x + 3] = palette[index].b;
+                     }
+                 }
+
+                 kvfree(row_buf);
+             } else {
+                 akpr_err("Unsupported compression for 8-bit bitmap: %u\n",
+                          image_header.compression);
+
+                 goto akvcam_frame_load_failed;
+             }
+
+             break;
+
         case 24:
             for (y = 0; y < image_header.height; y++) {
-                line = akvcam_frame_line(self, 0, image_header.height - y - 1);
+                uint32_t line_y = top_down? y: image_header.height - y - 1;
+                line = akvcam_frame_line(self, 0, line_y);
 
                 for (x = 0; x < image_header.width; x++) {
-                    akvcam_file_read(bmp_file,
-                                     (char *) &pixel24,
-                                     sizeof(akvcam_BGR24));
-                    line[x].r = pixel24.r;
-                    line[x].g = pixel24.g;
-                    line[x].b = pixel24.b;
+                    akvcam_file_read(bmp_file, (char *) pixel, 3);
+                    line[4 * x + 0] = 0xff;     // A
+                    line[4 * x + 1] = pixel[2]; // R
+                    line[4 * x + 2] = pixel[1]; // G
+                    line[4 * x + 3] = pixel[0]; // B
                 }
             }
 
@@ -482,15 +776,15 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
 
         case 32:
             for (y = 0; y < image_header.height; y++) {
-                line = akvcam_frame_line(self, 0, image_header.height - y - 1);
+                uint32_t line_y = top_down? y: image_header.height - y - 1;
+                line = akvcam_frame_line(self, 0, line_y);
 
                 for (x = 0; x < image_header.width; x++) {
-                    akvcam_file_read(bmp_file,
-                                     (char *) &pixel32,
-                                     sizeof(akvcam_BGR32));
-                    line[x].r = pixel32.r;
-                    line[x].g = pixel32.g;
-                    line[x].b = pixel32.b;
+                    akvcam_file_read(bmp_file, (char *) pixel, 4);
+                    line[4 * x + 0] = pixel[3]; // A
+                    line[4 * x + 1] = pixel[2]; // R
+                    line[4 * x + 2] = pixel[1]; // G
+                    line[4 * x + 3] = pixel[0]; // B
                 }
             }
 
@@ -508,967 +802,425 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
     return true;
 
 akvcam_frame_load_failed:
-    akvcam_frame_clear(self);
+    akvcam_frame_private_clear(self);
     akvcam_file_delete(bmp_file);
 
     return false;
 }
 
-void akvcam_frame_mirror(akvcam_frame_t self,
-                         bool horizontalMirror,
-                         bool verticalMirror)
+#define DEFINE_FILL_FUNC(size) \
+    case AKVCAM_FILL_DATA_TYPES_##size: \
+        akvcam_frame_private_fill_uint##size##_t(self, self->fc, color); \
+        \
+        if (self->fc->endianess != __BYTE_ORDER__) { \
+            size_t nplanes = akvcam_format_planes(self->format); \
+            \
+            for (size_t plane = 0; plane < nplanes; ++plane) \
+                akvcam_swap_data_bytes_uint##size##_t((uint##size##_t *)self->planes[plane], \
+                                                      akvcam_format_plane_size(self->format, plane)); \
+        } \
+        \
+        break;
+
+void akvcam_frame_fill_rgba(akvcam_frame_t self, uint32_t color)
 {
-    __u32 fourcc;
-    size_t width;
-    size_t height;
-
-    if (!horizontalMirror && !verticalMirror)
-        return;
-
-    fourcc = akvcam_format_fourcc(self->format);
-
-    if (!akvcam_frame_adjust_format_supported(fourcc))
-        return;
-
-    width = akvcam_format_width(self->format);
-    height = akvcam_format_height(self->format);
-
-    if (horizontalMirror) {
-        size_t y;
-
-        for (y = 0; y < height; y++) {
-            size_t x;
-            akvcam_RGB24_t src_line = akvcam_frame_line(self, 0, y);
-
-            for (x = 0; x < width / 2; x++) {
-                akvcam_RGB24 tmp_pixel = src_line[x];
-                src_line[x] = src_line[width - x - 1];
-                src_line[width - x - 1] = tmp_pixel;
-            }
-        }
+    if (!self->fc) {
+        self->fc = akvcam_fill_parameters_new();
+        akvcam_fill_parameters_configure(self->fc, self->format, self->fc->color_convert);
+        akvcam_fill_parameters_configure_fill(self->fc, self->format);
     }
 
-    if (verticalMirror) {
-        size_t y;
-        size_t line_size = akvcam_format_bypl(self->format, 0);
-        akvcam_RGB24_t tmp_line = vmalloc(line_size);
+    switch (self->fc->fill_data_types) {
+    DEFINE_FILL_FUNC(8)
+    DEFINE_FILL_FUNC(16)
+    DEFINE_FILL_FUNC(32)
+    default:
+        break;
+    }
 
-        for (y = 0; y < height / 2; y++) {
-            akvcam_RGB24_t src_line = akvcam_frame_line(self, 0, height - y - 1);
-            akvcam_RGB24_t dst_line = akvcam_frame_line(self, 0, y);
-            memcpy(tmp_line, dst_line, line_size);
-            memcpy(dst_line, src_line, line_size);
-            memcpy(src_line, tmp_line, line_size);
+    size_t nplanes = akvcam_format_planes(self->format);
+
+    for (size_t plane = 0; plane < nplanes; plane++) {
+        size_t line_size = akvcam_format_line_size(self->format, plane);
+        size_t pixel_size = akvcam_format_pixel_size(self->format, plane);
+        uint8_t *line0 = self->planes[plane];
+        uint8_t *line = line0 + pixel_size;
+        size_t width = pixel_size > 0? line_size / pixel_size: 0;
+        size_t height = self->fc->height >> akvcam_format_height_div(self->format, plane);
+
+        for (int x = 1; x < width; ++x) {
+            memcpy(line, line0, pixel_size);
+            line += pixel_size;
         }
 
-        vfree(tmp_line);
+        line = line0 + line_size;
+
+        for (int y = 1; y < height; ++y) {
+            memcpy(line, line0, line_size);
+            line += line_size;
+        }
     }
 }
 
-bool akvcam_frame_scaled(akvcam_frame_t self,
-                         size_t width,
-                         size_t height,
-                         AKVCAM_SCALING mode,
-                         AKVCAM_ASPECT_RATIO aspectRatio)
+static bool akvcam_frame_load_rle8(akvcam_frame_t self,
+                                   akvcam_file_t bmp_file,
+                                   const akvcam_bmp_image_header *image_header,
+                                   const akvcam_palette_pixel *palette,
+                                   bool top_down)
 {
-    __u32 fourcc;
-    akvcam_format_t format;
-    size_t x_dst_min;
-    size_t y_dst_min;
-    size_t x_dst_max;
-    size_t y_dst_max;
-    size_t i_width;
-    size_t i_height;
-    size_t o_width;
-    size_t o_height;
-    size_t x_num;
-    size_t x_den;
-    size_t xs;
-    size_t y_num;
-    size_t y_den;
-    size_t ys;
-    size_t x;
-    size_t y;
-    void *data;
+    uint32_t x = 0;
+    uint32_t y = 0;
+    uint8_t *line;
+    uint8_t pair[2];
+    bool done = false;
 
-    if (akvcam_format_width(self->format) == width
-        && akvcam_format_height(self->format) == height)
-        return true;
+    uint32_t line_y = top_down? y: image_header->height - y - 1;
+    line = akvcam_frame_line(self, 0, line_y);
 
-    fourcc = akvcam_format_fourcc(self->format);
+    while (!done) {
+        if (akvcam_file_read(bmp_file, pair, 2) < 2) {
+            akpr_err("RLE8: unexpected end of file\n");
 
-    if (!akvcam_frame_adjust_format_supported(fourcc))
-        return false;
-
-    x_dst_min = 0;
-    y_dst_min = 0;
-    x_dst_max = width;
-    y_dst_max = height;
-
-    if (aspectRatio == AKVCAM_ASPECT_RATIO_KEEP) {
-        if (width * akvcam_format_height(self->format)
-            > akvcam_format_width(self->format) * height) {
-            // Right and left black bars
-            x_dst_min = (width * akvcam_format_height(self->format)
-                         - akvcam_format_width(self->format) * height)
-                         / (2 * akvcam_format_height(self->format));
-            x_dst_max = (width * akvcam_format_height(self->format)
-                         + akvcam_format_width(self->format) * height)
-                         / (2 * akvcam_format_height(self->format));
-        } else if (width * akvcam_format_height(self->format)
-                   < akvcam_format_width(self->format) * height) {
-            // Top and bottom black bars
-            y_dst_min = (akvcam_format_width(self->format) * height
-                         - width * akvcam_format_height(self->format))
-                         / (2 * akvcam_format_width(self->format));
-            y_dst_max = (akvcam_format_width(self->format) * height
-                         + width * akvcam_format_height(self->format))
-                         / (2 * akvcam_format_width(self->format));
-        }
-    }
-
-    i_width = akvcam_format_width(self->format) - 1;
-    i_height = akvcam_format_height(self->format) - 1;
-    o_width = x_dst_max - x_dst_min - 1;
-    o_height = y_dst_max - y_dst_min - 1;
-    x_num = i_width;
-    x_den = o_width;
-    xs = 0;
-    y_num = i_height;
-    y_den = o_height;
-    ys = 0;
-
-    if (aspectRatio == AKVCAM_ASPECT_RATIO_EXPANDING) {
-        if (mode == AKVCAM_SCALING_LINEAR) {
-            i_width--;
-            i_height--;
-            o_width--;
-            o_height--;
+            return false;
         }
 
-        if (width * akvcam_format_height(self->format)
-            < akvcam_format_width(self->format) * height) {
-            // Right and left cut
-            x_num = 2 * i_height;
-            x_den = 2 * o_height;
-            xs = i_width * o_height - o_width * i_height;
-        } else if (width * akvcam_format_height(self->format)
-                   > akvcam_format_width(self->format) * height) {
-            // Top and bottom cut
-            y_num = 2 * i_width;
-            y_den = 2 * o_width;
-            ys = o_width * i_height - i_width * o_height;
-        }
-    }
+        if (pair[0] != 0) {
+            // Encoded mode: repeat pair[1] (índex) pair[0] times
+            uint8_t count = pair[0];
+            uint8_t index = pair[1];
 
-    format = akvcam_format_new(fourcc, width, height, NULL);
-    data = vzalloc(akvcam_format_size(format));
+            while (count--) {
+                if (x >= image_header->width) {
+                    akpr_err("RLE8: pixel out of bounds at (%u, %u)\n", x, y);
 
-    switch (mode) {
-        case AKVCAM_SCALING_FAST:
-            for (y = y_dst_min; y < y_dst_max; y++) {
-                size_t srcY = (y_num * (y - y_dst_min) + ys) / y_den;
-                akvcam_RGB24_t src_line = akvcam_frame_line(self, 0, srcY);
-                akvcam_RGB24_t dst_line = (akvcam_RGB24_t)
-                           ((char *) data + y * akvcam_format_bypl(format, 0));
+                    return false;
+                }
 
-                for (x = x_dst_min; x < x_dst_max; x++) {
-                    size_t srcX = (x_num * (x - x_dst_min) + xs) / x_den;
-                    dst_line[x] = src_line[srcX];
+                line[4 * x + 0] = 0xff;
+                line[4 * x + 1] = palette[index].r;
+                line[4 * x + 2] = palette[index].g;
+                line[4 * x + 3] = palette[index].b;
+
+                x++;
+            }
+        } else {
+            switch (pair[1]) {
+                case 0: // End of line
+                    x = 0;
+                    y++;
+
+                    if (y >= image_header->height) {
+                        akpr_err("RLE8: line index out of bounds\n");
+
+                        return false;
+                    }
+
+                    uint32_t line_y = top_down? y: image_header->height - y - 1;
+                    line = akvcam_frame_line(self, 0, line_y);
+
+                    break;
+
+                case 1: // End of picture
+                    done = true;
+
+                    break;
+
+                case 2: { // Delta: seek to the current position
+                    uint8_t delta[2];
+
+                    if (akvcam_file_read(bmp_file, delta, 2) < 2) {
+                        akpr_err("RLE8: unexpected end of file in delta\n");
+
+                        return false;
+                    }
+
+                    x += delta[0];
+                    y += delta[1];
+
+                    if (x >= image_header->width || y >= image_header->height) {
+                        akpr_err("RLE8: delta out of bounds (%u, %u)\n", x, y);
+
+                        return false;
+                    }
+
+                    uint32_t line_y = top_down? y: image_header->height - y - 1;
+                    line = akvcam_frame_line(self, 0, line_y);
+
+                    break;
+                }
+
+                default: { // Absolute mode: literally pair[1] pixels
+                    uint8_t count = pair[1];
+                    uint8_t index;
+                    uint8_t i;
+
+                    for (i = 0; i < count; i++) {
+                        if (akvcam_file_read(bmp_file, &index, 1) < 1) {
+                            akpr_err("RLE8: unexpected end of file in absolute run\n");
+
+                            return false;
+                        }
+
+                        if (x >= image_header->width) {
+                            akpr_err("RLE8: pixel out of bounds at (%u, %u)\n", x, y);
+
+                            return false;
+                        }
+
+                        line[4 * x + 0] = 0xff;
+                        line[4 * x + 1] = palette[index].r;
+                        line[4 * x + 2] = palette[index].g;
+                        line[4 * x + 3] = palette[index].b;
+
+                        x++;
+                    }
+
+                    // Seek 1 byte of padding if count is odd
+                    if (count & 1)
+                        akvcam_file_seek(bmp_file, 1, AKVCAM_FILE_SEEK_CUR);
+
+                    break;
                 }
             }
-
-            break;
-
-        case AKVCAM_SCALING_LINEAR: {
-            akvcam_extrapolate_t extrapolate_x =
-                    akvcam_format_width(self->format) < width?
-                        &akvcam_extrapolate_up:
-                        &akvcam_extrapolate_down;
-            akvcam_extrapolate_t extrapolate_y =
-                    akvcam_format_height(self->format) < height?
-                        &akvcam_extrapolate_up:
-                        &akvcam_extrapolate_down;
-
-            for (y = y_dst_min; y < y_dst_max; y++) {
-                akvcam_RGB24_t dst_line =
-                        (akvcam_RGB24_t) ((char *) data + y * akvcam_format_bypl(format, 0));
-                size_t y_min;
-                size_t y_max;
-                size_t k_num_y;
-                size_t k_den_y;
-
-                extrapolate_y(y - y_dst_min,
-                              y_num, y_den, ys,
-                              &y_min, &y_max,
-                              &k_num_y, &k_den_y);
-
-                for (x = x_dst_min; x < x_dst_max; x++) {
-                    size_t x_min;
-                    size_t x_max;
-                    size_t k_num_x;
-                    size_t k_den_x;
-
-                    extrapolate_x(x - x_dst_min,
-                                  x_num, x_den, xs,
-                                  &x_min, &x_max,
-                                  &k_num_x, &k_den_x);
-
-                    dst_line[x] =
-                            akvcam_extrapolated_color(self,
-                                                      x_min, x_max,
-                                                      k_num_x, k_den_x,
-                                                      y_min, y_max,
-                                                      k_num_y, k_den_y);
-                }
-            }
-
-            break;
         }
     }
 
-    akvcam_format_copy(self->format, format);
-    akvcam_format_delete(format);
+    return true;
+}
 
-    if (self->data)
+void akvcam_frame_private_update_planes(akvcam_frame_t self)
+{
+    size_t nplanes = akvcam_format_planes(self->format);
+
+    for (int i = 0; i < nplanes; ++i)
+        self->planes[i] = self->data + akvcam_format_offset(self->format, i);
+}
+
+void akvcam_frame_private_clear(akvcam_frame_t self)
+{
+    if (self->format)
+        akvcam_format_delete(self->format);
+
+    self->format = akvcam_format_new(0, 0, 0, NULL);
+
+    if (self->data) {
         vfree(self->data);
+        self->data = NULL;
+    }
 
-    self->data = data;
-    self->size = akvcam_format_size(self->format);
+    if (self->fc) {
+        kref_put(&self->fc->ref, akvcam_fill_parameters_free);
+        self->fc = NULL;
+    }
 
-    return true;
+    akvcam_frame_private_update_planes(self);
 }
 
-bool akvcam_frame_convert(akvcam_frame_t self, __u32 fourcc)
+static akvcam_fill_parameters_t akvcam_fill_parameters_new(void)
 {
-    akvcam_format_t format;
-    akvcam_frame_t frame;
-    akvcam_video_convert_funtion_t convert;
+    akvcam_fill_parameters_t self = kzalloc(sizeof(akvcam_fill_parameters), GFP_KERNEL);
+    kref_init(&self->ref);
 
-    if (akvcam_format_fourcc(self->format) == fourcc)
-        return true;
+    self->color_convert = akvcam_color_convert_new();
+    self->fill_type = AKVCAM_FILL_TYPE_3;
+    self->fill_data_types = AKVCAM_FILL_DATA_TYPES_8;
+    self->alpha_mode = AKVCAM_ALPHA_MODE_AO;
 
-    convert = akvcam_convert_func(akvcam_format_fourcc(self->format), fourcc);
+    self->endianess = __BYTE_ORDER__;
 
-    if (!convert)
-        return false;
+    self->width = 0;
+    self->height = 0;
+    self->read_width = 0;
 
-    format = akvcam_format_new(0, 0, 0, NULL);
-    akvcam_format_copy(format, self->format);
-    akvcam_format_set_fourcc(format, fourcc);
-    frame = akvcam_frame_new(format, NULL, 0);
+    self->dst_width_offset_x = NULL;
+    self->dst_width_offset_y = NULL;
+    self->dst_width_offset_z = NULL;
+    self->dst_width_offset_a = NULL;
 
-    convert(frame, self);
-    akvcam_frame_copy(self, frame);
+    self->plane_xo = 0;
+    self->plane_yo = 0;
+    self->plane_zo = 0;
+    self->plane_ao = 0;
 
-    akvcam_frame_delete(frame);
-    akvcam_format_delete(format);
+    self->comp_xo = NULL;
+    self->comp_yo = NULL;
+    self->comp_zo = NULL;
+    self->comp_ao = NULL;
 
-    return true;
+    self->xo_offset = 0;
+    self->yo_offset = 0;
+    self->zo_offset = 0;
+    self->ao_offset = 0;
+
+    self->xo_shift = 0;
+    self->yo_shift = 0;
+    self->zo_shift = 0;
+    self->ao_shift = 0;
+
+    self->mask_xo = 0;
+    self->mask_yo = 0;
+    self->mask_zo = 0;
+    self->mask_ao = 0;
+
+    return self;
 }
 
-const char *akvcam_frame_scaling_to_string(AKVCAM_SCALING scaling)
+static void akvcam_fill_parameters_free(struct kref *ref)
 {
-    size_t i;
-    static char scaling_str[AKVCAM_MAX_STRING_SIZE];
-    static const akvcam_frame_scaling_strings scaling_strings[] = {
-        {AKVCAM_SCALING_FAST  , "Fast"  },
-        {AKVCAM_SCALING_LINEAR, "Linear"},
-        {-1                   , ""      },
-    };
+    akvcam_fill_parameters_t self =
+            container_of(ref, akvcam_fill_parameters, ref);
 
-    memset(scaling_str, 0, AKVCAM_MAX_STRING_SIZE);
-
-    for (i = 0; scaling_strings[i].scaling >= 0; i++)
-        if (scaling_strings[i].scaling == scaling) {
-            snprintf(scaling_str,
-                     AKVCAM_MAX_STRING_SIZE,
-                     "%s",
-                     scaling_strings[i].str);
-
-            return scaling_str;
-        }
-
-    snprintf(scaling_str, AKVCAM_MAX_STRING_SIZE, "AKVCAM_SCALING(%d)", scaling);
-
-    return scaling_str;
+    akvcam_fill_parameters_clear_buffers(self);
+    akvcam_color_convert_delete(self->color_convert);
+    kfree(self);
 }
 
-const char *akvcam_frame_aspect_ratio_to_string(AKVCAM_ASPECT_RATIO aspect_ratio)
+static void akvcam_fill_parameters_clear_buffers(akvcam_fill_parameters_t self)
 {
-    size_t i;
-    static char aspect_ratio_str[AKVCAM_MAX_STRING_SIZE];
-    static const akvcam_frame_aspect_ratio_strings aspect_ratio_strings[] = {
-        {AKVCAM_ASPECT_RATIO_IGNORE   , "Ignore"   },
-        {AKVCAM_ASPECT_RATIO_KEEP     , "Keep"     },
-        {AKVCAM_ASPECT_RATIO_EXPANDING, "Expanding"},
-        {-1                           , ""         },
-    };
+    if (self->dst_width_offset_x) {
+        kfree(self->dst_width_offset_x);
+        self->dst_width_offset_x = NULL;
+    }
 
-    memset(aspect_ratio_str, 0, AKVCAM_MAX_STRING_SIZE);
+    if (self->dst_width_offset_y) {
+        kfree(self->dst_width_offset_y);
+        self->dst_width_offset_y = NULL;
+    }
 
-    for (i = 0; aspect_ratio_strings[i].aspect_ratio >= 0; i++)
-        if (aspect_ratio_strings[i].aspect_ratio == aspect_ratio) {
-            snprintf(aspect_ratio_str,
-                     AKVCAM_MAX_STRING_SIZE,
-                     "%s",
-                     aspect_ratio_strings[i].str);
+    if (self->dst_width_offset_z) {
+        kfree(self->dst_width_offset_z);
+        self->dst_width_offset_z = NULL;
+    }
 
-            return aspect_ratio_str;
-        }
-
-    snprintf(aspect_ratio_str, AKVCAM_MAX_STRING_SIZE, "AKVCAM_ASPECT_RATIO(%d)", aspect_ratio);
-
-    return aspect_ratio_str;
-}
-
-bool akvcam_frame_can_convert(__u32 in_fourcc, __u32 out_fourcc)
-{
-    size_t i;
-
-    if (in_fourcc == out_fourcc)
-        return true;
-
-    for (i = 0; akvcam_frame_convert_table[i].from; i++)
-        if (akvcam_frame_convert_table[i].from == in_fourcc
-            && akvcam_frame_convert_table[i].to == out_fourcc) {
-            return true;
-        }
-
-    return false;
-}
-
-uint8_t akvcam_rgb_y(int r, int g, int b)
-{
-    return (uint8_t) (((66 * r + 129 * g + 25 * b + 128) >> 8) + 16);
-}
-
-uint8_t akvcam_rgb_u(int r, int g, int b)
-{
-    return (uint8_t) (((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128);
-}
-
-uint8_t akvcam_rgb_v(int r, int g, int b)
-{
-    return (uint8_t) (((112 * r - 94 * g - 18 * b + 128) >> 8) + 128);
-}
-
-uint8_t akvcam_yuv_r(int y, int u, int v)
-{
-    int r;
-    UNUSED(u);
-    r = (298 * (y - 16) + 409 * (v - 128) + 128) >> 8;
-
-    return (uint8_t) (akvcam_bound(0, r, 255));
-}
-
-uint8_t akvcam_yuv_g(int y, int u, int v)
-{
-    int g = (298 * (y - 16) - 100 * (u - 128) - 208 * (v - 128) + 128) >> 8;
-
-    return (uint8_t) (akvcam_bound(0, g, 255));
-}
-
-uint8_t akvcam_yuv_b(int y, int u, int v)
-{
-    int b;
-    UNUSED(v);
-    b = (298 * (y - 16) + 516 * (u - 128) + 128) >> 8;
-
-    return (uint8_t) (akvcam_bound(0, b, 255));
-}
-
-void akvcam_bgr24_to_rgb32(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_RGB32_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            dst_line[x].x = 255;
-            dst_line[x].r = src_line[x].r;
-            dst_line[x].g = src_line[x].g;
-            dst_line[x].b = src_line[x].b;
-        }
+    if (self->dst_width_offset_a) {
+        kfree(self->dst_width_offset_a);
+        self->dst_width_offset_a = NULL;
     }
 }
 
-void akvcam_bgr24_to_rgb24(akvcam_frame_t dst, akvcam_frame_ct src)
+static void akvcam_fill_parameters_allocate_buffers(akvcam_fill_parameters_t self,
+                                                    akvcam_format_ct format)
 {
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
+    akvcam_fill_parameters_clear_buffers(self);
+    int width = akvcam_format_width(format);
 
-    for (y = 0; y < height; y++) {
-        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_RGB24_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            dst_line[x].r = src_line[x].r;
-            dst_line[x].g = src_line[x].g;
-            dst_line[x].b = src_line[x].b;
-        }
+    if (width > 0) {
+        size_t buffer_size = width * sizeof(int);
+        self->dst_width_offset_x = kzalloc(buffer_size, GFP_KERNEL);
+        self->dst_width_offset_y = kzalloc(buffer_size, GFP_KERNEL);
+        self->dst_width_offset_z = kzalloc(buffer_size, GFP_KERNEL);
+        self->dst_width_offset_a = kzalloc(buffer_size, GFP_KERNEL);
     }
 }
 
-void akvcam_bgr24_to_rgb16(akvcam_frame_t dst, akvcam_frame_ct src)
+#define DEFINE_FILL_TYPES(size) \
+    if (ospecs_depth == size) \
+        self->fill_data_types = AKVCAM_FILL_DATA_TYPES_##size;
+
+static void akvcam_fill_parameters_configure(akvcam_fill_parameters_t self,
+                                             akvcam_format_ct format,
+                                             akvcam_color_convert_t color_convert)
 {
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
+    akvcam_format_specs_ct ispecs = akvcam_format_specs_from_fixel_format(V4L2_PIX_FMT_ARGB32);
+    akvcam_format_specs_ct ospecs = akvcam_format_specs_from_fixel_format(akvcam_format_fourcc(format));
+    size_t ospecs_depth = akvcam_format_specs_depth(ospecs);
 
-    for (y = 0; y < height; y++) {
-        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_RGB16_t dst_line = akvcam_frame_line(dst, 0, y);
+    DEFINE_FILL_TYPES(8);
+    DEFINE_FILL_TYPES(16);
+    DEFINE_FILL_TYPES(32);
+    DEFINE_FILL_TYPES(64);
 
-        for (x = 0; x < width; x++) {
-            dst_line[x].r = src_line[x].r >> 3;
-            dst_line[x].g = src_line[x].g >> 2;
-            dst_line[x].b = src_line[x].b >> 3;
-        }
-    }
-}
+    size_t components = akvcam_format_specs_main_components(ospecs);
 
-void akvcam_bgr24_to_rgb15(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
+    switch (components) {
+    case 3:
+        self->fill_type =
+            ospecs->type == AKVCAM_VIDEO_FORMAT_TYPE_RGB?
+                                AKVCAM_FILL_TYPE_VECTOR:
+                                AKVCAM_FILL_TYPE_3;
 
-    for (y = 0; y < height; y++) {
-        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_RGB15_t dst_line = akvcam_frame_line(dst, 0, y);
+        break;
 
-        for (x = 0; x < width; x++) {
-            dst_line[x].x = 1;
-            dst_line[x].r = src_line[x].r >> 3;
-            dst_line[x].g = src_line[x].g >> 3;
-            dst_line[x].b = src_line[x].b >> 3;
-        }
-    }
-}
+    case 1:
+        self->fill_type = AKVCAM_FILL_TYPE_1;
 
-void akvcam_bgr24_to_bgr32(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
+        break;
 
-    for (y = 0; y < height; y++) {
-        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_BGR32_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            dst_line[x].x = 255;
-            dst_line[x].r = src_line[x].r;
-            dst_line[x].g = src_line[x].g;
-            dst_line[x].b = src_line[x].b;
-        }
-    }
-}
-
-void akvcam_bgr24_to_bgr16(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_BGR16_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            dst_line[x].r = src_line[x].r >> 3;
-            dst_line[x].g = src_line[x].g >> 2;
-            dst_line[x].b = src_line[x].b >> 3;
-        }
-    }
-}
-
-void akvcam_bgr24_to_uyvy(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t x_yuv;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-    uint8_t r0;
-    uint8_t g0;
-    uint8_t b0;
-    uint8_t r1;
-    uint8_t g1;
-    uint8_t b1;
-
-    for (y = 0; y < height; y++) {
-        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_UYVY_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            x_yuv = x / 2;
-
-            r0 = src_line[x].r;
-            g0 = src_line[x].g;
-            b0 = src_line[x].b;
-
-            x++;
-
-            r1 = src_line[x].r;
-            g1 = src_line[x].g;
-            b1 = src_line[x].b;
-
-            dst_line[x_yuv].u0 = akvcam_rgb_u(r0, g0, b0);
-            dst_line[x_yuv].y0 = akvcam_rgb_y(r0, g0, b0);
-            dst_line[x_yuv].v0 = akvcam_rgb_v(r0, g0, b0);
-            dst_line[x_yuv].y1 = akvcam_rgb_y(r1, g1, b1);
-        }
-    }
-}
-
-void akvcam_bgr24_to_yuy2(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t x_yuv;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-    uint8_t r0;
-    uint8_t g0;
-    uint8_t b0;
-    uint8_t r1;
-    uint8_t g1;
-    uint8_t b1;
-
-    for (y = 0; y < height; y++) {
-        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_YUY2_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            x_yuv = x / 2;
-
-            r0 = src_line[x].r;
-            g0 = src_line[x].g;
-            b0 = src_line[x].b;
-
-            x++;
-
-            r1 = src_line[x].r;
-            g1 = src_line[x].g;
-            b1 = src_line[x].b;
-
-            dst_line[x_yuv].y0 = akvcam_rgb_y(r0, g0, b0);
-            dst_line[x_yuv].u0 = akvcam_rgb_u(r0, g0, b0);
-            dst_line[x_yuv].y1 = akvcam_rgb_y(r1, g1, b1);
-            dst_line[x_yuv].v0 = akvcam_rgb_v(r0, g0, b0);
-        }
-    }
-}
-
-void akvcam_bgr24_to_nv12(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
-        uint8_t *dst_line_y = akvcam_frame_line(dst, 0, y);
-        akvcam_VU_t dst_line_vu = akvcam_frame_line(dst, 1, y / 2);
-
-        for (x = 0; x < width; x++) {
-            uint8_t r = src_line[x].r;
-            uint8_t g = src_line[x].g;
-            uint8_t b = src_line[x].b;
-
-            dst_line_y[y] = akvcam_rgb_y(r, g, b);
-
-            if (!(x & 0x1) && !(y & 0x1)) {
-                dst_line_vu[x / 2].v = akvcam_rgb_v(r, g, b);
-                dst_line_vu[x / 2].u = akvcam_rgb_u(r, g, b);
-            }
-        }
-    }
-}
-
-void akvcam_bgr24_to_nv21(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_BGR24_t src_line = akvcam_frame_line(src, 0, y);
-        uint8_t *dst_line_y = akvcam_frame_line(dst, 0, y);
-        akvcam_UV_t dst_line_vu = akvcam_frame_line(dst, 1, y / 2);
-
-        for (x = 0; x < width; x++) {
-            uint8_t r = src_line[x].r;
-            uint8_t g = src_line[x].g;
-            uint8_t b = src_line[x].b;
-
-            dst_line_y[y] = akvcam_rgb_y(r, g, b);
-
-            if (!(x & 0x1) && !(y & 0x1)) {
-                dst_line_vu[x / 2].v = akvcam_rgb_v(r, g, b);
-                dst_line_vu[x / 2].u = akvcam_rgb_u(r, g, b);
-            }
-        }
-    }
-}
-
-void akvcam_rgb24_to_rgb32(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_RGB32_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            dst_line[x].x = 255;
-            dst_line[x].r = src_line[x].r;
-            dst_line[x].g = src_line[x].g;
-            dst_line[x].b = src_line[x].b;
-        }
-    }
-}
-
-void akvcam_rgb24_to_rgb16(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_RGB16_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            dst_line[x].r = src_line[x].r >> 3;
-            dst_line[x].g = src_line[x].g >> 2;
-            dst_line[x].b = src_line[x].b >> 3;
-        }
-    }
-}
-
-void akvcam_rgb24_to_rgb15(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_RGB15_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            dst_line[x].x = 1;
-            dst_line[x].r = src_line[x].r >> 3;
-            dst_line[x].g = src_line[x].g >> 3;
-            dst_line[x].b = src_line[x].b >> 3;
-        }
-    }
-}
-
-void akvcam_rgb24_to_bgr32(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_BGR32_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            dst_line[x].x = 255;
-            dst_line[x].r = src_line[x].r;
-            dst_line[x].g = src_line[x].g;
-            dst_line[x].b = src_line[x].b;
-        }
-    }
-}
-
-void akvcam_rgb24_to_bgr24(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_BGR24_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            dst_line[x].r = src_line[x].r;
-            dst_line[x].g = src_line[x].g;
-            dst_line[x].b = src_line[x].b;
-        }
-    }
-}
-
-void akvcam_rgb24_to_bgr16(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_BGR16_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            dst_line[x].r = src_line[x].r >> 3;
-            dst_line[x].g = src_line[x].g >> 2;
-            dst_line[x].b = src_line[x].b >> 3;
-        }
-    }
-}
-
-void akvcam_rgb24_to_uyvy(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-    uint8_t r0;
-    uint8_t g0;
-    uint8_t b0;
-    uint8_t r1;
-    uint8_t g1;
-    uint8_t b1;
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_UYVY_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            size_t x_yuv = x / 2;
-
-            r0 = src_line[x].r;
-            g0 = src_line[x].g;
-            b0 = src_line[x].b;
-
-            x++;
-
-            r1 = src_line[x].r;
-            g1 = src_line[x].g;
-            b1 = src_line[x].b;
-
-            dst_line[x_yuv].u0 = akvcam_rgb_u(r0, g0, b0);
-            dst_line[x_yuv].y0 = akvcam_rgb_y(r0, g0, b0);
-            dst_line[x_yuv].v0 = akvcam_rgb_v(r0, g0, b0);
-            dst_line[x_yuv].y1 = akvcam_rgb_y(r1, g1, b1);
-        }
-    }
-}
-
-void akvcam_rgb24_to_yuy2(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-    uint8_t r0;
-    uint8_t g0;
-    uint8_t b0;
-    uint8_t r1;
-    uint8_t g1;
-    uint8_t b1;
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
-        akvcam_YUY2_t dst_line = akvcam_frame_line(dst, 0, y);
-
-        for (x = 0; x < width; x++) {
-            size_t x_yuv = x / 2;
-
-            r0 = src_line[x].r;
-            g0 = src_line[x].g;
-            b0 = src_line[x].b;
-
-            x++;
-
-            r1 = src_line[x].r;
-            g1 = src_line[x].g;
-            b1 = src_line[x].b;
-
-            dst_line[x_yuv].y0 = akvcam_rgb_y(r0, g0, b0);
-            dst_line[x_yuv].u0 = akvcam_rgb_u(r0, g0, b0);
-            dst_line[x_yuv].y1 = akvcam_rgb_y(r1, g1, b1);
-            dst_line[x_yuv].v0 = akvcam_rgb_v(r0, g0, b0);
-        }
-    }
-}
-
-void akvcam_rgb24_to_nv12(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
-        uint8_t *dst_line_y = akvcam_frame_line(dst, 0, y);
-        akvcam_VU_t dst_line_vu = akvcam_frame_line(dst, 1, y / 2);
-
-        for (x = 0; x < width; x++) {
-            uint8_t r = src_line[x].r;
-            uint8_t g = src_line[x].g;
-            uint8_t b = src_line[x].b;
-
-            dst_line_y[y] = akvcam_rgb_y(r, g, b);
-
-            if (!(x & 0x1) && !(y & 0x1)) {
-                dst_line_vu[x / 2].v = akvcam_rgb_v(r, g, b);
-                dst_line_vu[x / 2].u = akvcam_rgb_u(r, g, b);
-            }
-        }
-    }
-}
-
-void akvcam_rgb24_to_nv21(akvcam_frame_t dst, akvcam_frame_ct src)
-{
-    size_t x;
-    size_t y;
-    size_t width = akvcam_format_width(src->format);
-    size_t height = akvcam_format_height(src->format);
-
-    for (y = 0; y < height; y++) {
-        akvcam_RGB24_t src_line = akvcam_frame_line(src, 0, y);
-        uint8_t *dst_line_y = akvcam_frame_line(dst, 0, y);
-        akvcam_UV_t dst_line_vu = akvcam_frame_line(dst, 1, y / 2);
-
-        for (x = 0; x < width; x++) {
-            uint8_t r = src_line[x].r;
-            uint8_t g = src_line[x].g;
-            uint8_t b = src_line[x].b;
-
-            dst_line_y[y] = akvcam_rgb_y(r, g, b);
-
-            if (!(x & 0x1) && !(y & 0x1)) {
-                dst_line_vu[x / 2].v = akvcam_rgb_v(r, g, b);
-                dst_line_vu[x / 2].u = akvcam_rgb_u(r, g, b);
-            }
-        }
-    }
-}
-
-void akvcam_extrapolate_up(size_t dst_coord,
-                           size_t num, size_t den, size_t s,
-                           size_t *src_coord_min, size_t *src_coord_max,
-                           size_t *k_num, size_t *k_den)
-{
-    size_t dst_coord_min;
-    size_t dst_coord_max;
-    *src_coord_min = (num * dst_coord + s) / den;
-    *src_coord_max = *src_coord_min + 1;
-    dst_coord_min = (den * *src_coord_min - s) / num;
-    dst_coord_max = (den * *src_coord_max - s) / num;
-    *k_num = dst_coord - dst_coord_min;
-    *k_den = dst_coord_max - dst_coord_min;
-}
-
-void akvcam_extrapolate_down(size_t dst_coord,
-                             size_t num, size_t den, size_t s,
-                             size_t *src_coord_min, size_t *src_coord_max,
-                             size_t *k_num, size_t *k_den)
-{
-    *src_coord_min = (num * dst_coord + s) / den;
-    *src_coord_max = *src_coord_min;
-    *k_num = 0;
-    *k_den = 1;
-}
-
-uint8_t akvcam_extrapolate_component(uint8_t min, uint8_t max,
-                                     size_t k_num, size_t k_Den)
-{
-    return (uint8_t) ((k_num * (max - min) + k_Den * min) / k_Den);
-}
-
-akvcam_RGB24 akvcam_extrapolate_color(const akvcam_RGB24_t color_min,
-                                      const akvcam_RGB24_t color_max,
-                                      size_t k_num,
-                                      size_t k_den)
-{
-    akvcam_RGB24 color = {
-        .r = akvcam_extrapolate_component(color_min->r, color_max->r, k_num, k_den),
-        .g = akvcam_extrapolate_component(color_min->g, color_max->g, k_num, k_den),
-        .b = akvcam_extrapolate_component(color_min->b, color_max->b, k_num, k_den),
-    };
-
-    return color;
-}
-
-akvcam_RGB24 akvcam_extrapolated_color(akvcam_frame_t self,
-                                       size_t x_min, size_t x_max,
-                                       size_t k_num_x, size_t k_den_x,
-                                       size_t y_min, size_t y_max,
-                                       size_t k_num_y, size_t k_den_y)
-{
-    size_t line_size = akvcam_format_bypl(self->format, 0);
-    akvcam_RGB24_t min_line =
-            (akvcam_RGB24_t) ((char *) self->data + y_min * line_size);
-    akvcam_RGB24_t max_line =
-            (akvcam_RGB24_t) ((char *) self->data + y_max * line_size);
-    akvcam_RGB24 color_min = akvcam_extrapolate_color(min_line + x_min,
-                                                      min_line + x_max,
-                                                      k_num_x,
-                                                      k_den_x);
-    akvcam_RGB24 color_max = akvcam_extrapolate_color(max_line + x_min,
-                                                      max_line + x_max,
-                                                      k_num_x,
-                                                      k_den_x);
-
-    return akvcam_extrapolate_color(&color_min, &color_max, k_num_y, k_den_y);
-}
-
-akvcam_video_convert_funtion_t akvcam_convert_func(__u32 from, __u32 to)
-{
-    size_t i;
-
-    for (i = 0; akvcam_frame_convert_table[i].from; i++) {
-        akvcam_video_convert_ct convert = akvcam_frame_convert_table + i;
-
-        if (convert->from == from && convert->to == to)
-            return convert->convert;
+    default:
+        break;
     }
 
-    return NULL;
+    self->endianess = ospecs->endianness;
+    akvcam_color_convert_load_matrix(color_convert, ispecs, ospecs);
+
+    switch (ospecs->type) {
+    case AKVCAM_VIDEO_FORMAT_TYPE_RGB:
+        self->plane_xo = akvcam_format_specs_component_plane(ospecs, AKVCAM_COMPONENT_TYPE_R);
+        self->plane_yo = akvcam_format_specs_component_plane(ospecs, AKVCAM_COMPONENT_TYPE_G);
+        self->plane_zo = akvcam_format_specs_component_plane(ospecs, AKVCAM_COMPONENT_TYPE_B);
+
+        self->comp_xo = akvcam_format_specs_component(ospecs, AKVCAM_COMPONENT_TYPE_R);
+        self->comp_yo = akvcam_format_specs_component(ospecs, AKVCAM_COMPONENT_TYPE_G);
+        self->comp_zo = akvcam_format_specs_component(ospecs, AKVCAM_COMPONENT_TYPE_B);
+
+        break;
+
+    case AKVCAM_VIDEO_FORMAT_TYPE_YUV:
+        self->plane_xo = akvcam_format_specs_component_plane(ospecs, AKVCAM_COMPONENT_TYPE_Y);
+        self->plane_yo = akvcam_format_specs_component_plane(ospecs, AKVCAM_COMPONENT_TYPE_U);
+        self->plane_zo = akvcam_format_specs_component_plane(ospecs, AKVCAM_COMPONENT_TYPE_V);
+
+        self->comp_xo = akvcam_format_specs_component(ospecs, AKVCAM_COMPONENT_TYPE_Y);
+        self->comp_yo = akvcam_format_specs_component(ospecs, AKVCAM_COMPONENT_TYPE_U);
+        self->comp_zo = akvcam_format_specs_component(ospecs, AKVCAM_COMPONENT_TYPE_V);
+
+        break;
+
+    case AKVCAM_VIDEO_FORMAT_TYPE_GRAY:
+        self->plane_xo = akvcam_format_specs_component_plane(ospecs, AKVCAM_COMPONENT_TYPE_Y);
+        self->comp_xo = akvcam_format_specs_component(ospecs, AKVCAM_COMPONENT_TYPE_Y);
+
+        break;
+
+    default:
+        break;
+    }
+
+    self->plane_ao = akvcam_format_specs_component_plane(ospecs, AKVCAM_COMPONENT_TYPE_A);
+    self->comp_ao = akvcam_format_specs_component(ospecs, AKVCAM_COMPONENT_TYPE_A);
+
+    self->xo_offset = self->comp_xo? self->comp_xo->offset: 0;
+    self->yo_offset = self->comp_yo? self->comp_yo->offset: 0;
+    self->zo_offset = self->comp_zo? self->comp_zo->offset: 0;
+    self->ao_offset = self->comp_ao? self->comp_ao->offset: 0;
+
+    self->xo_shift = self->comp_xo? self->comp_xo->shift: 0;
+    self->yo_shift = self->comp_yo? self->comp_yo->shift: 0;
+    self->zo_shift = self->comp_zo? self->comp_zo->shift: 0;
+    self->ao_shift = self->comp_ao? self->comp_ao->shift: 0;
+
+    self->mask_xo = self->comp_xo? ~(akvcam_color_component_max(self->comp_xo) << self->comp_xo->shift): 0;
+    self->mask_yo = self->comp_yo? ~(akvcam_color_component_max(self->comp_yo) << self->comp_yo->shift): 0;
+    self->mask_zo = self->comp_zo? ~(akvcam_color_component_max(self->comp_zo) << self->comp_zo->shift): 0;
+    self->mask_ao = self->comp_ao? ~(akvcam_color_component_max(self->comp_ao) << self->comp_ao->shift): 0;
+
+    self->alpha_mode = akvcam_format_specs_contains(ospecs, AKVCAM_COMPONENT_TYPE_A)?
+                          AKVCAM_ALPHA_MODE_AO:
+                          AKVCAM_ALPHA_MODE_O;
 }
 
-bool akvcam_frame_adjust_format_supported(__u32 fourcc)
+static void akvcam_fill_parameters_configure_fill(akvcam_fill_parameters_t self,
+                                                  akvcam_format_ct format)
 {
-    size_t i;
-    static const __u32 adjust_formats[] = {
-        V4L2_PIX_FMT_BGR24,
-        V4L2_PIX_FMT_RGB24,
-        0
-    };
+    akvcam_fill_parameters_allocate_buffers(self, format);
+    self->width = akvcam_format_width(format);
+    self->height = akvcam_format_height(format);
+    self->read_width = akvcam_max(8 * akvcam_format_pixel_size(format, 0) / akvcam_format_bpp(format), 1);
 
-    for (i = 0; adjust_formats[i]; i++)
-        if (adjust_formats[i] == fourcc)
-            return true;
-
-    return false;
+    for (int x = 0; x < self->width; ++x) {
+        self->dst_width_offset_x[x] = self->comp_xo? (x >> self->comp_xo->width_div) * self->comp_xo->step: 0;
+        self->dst_width_offset_y[x] = self->comp_yo? (x >> self->comp_yo->width_div) * self->comp_yo->step: 0;
+        self->dst_width_offset_z[x] = self->comp_zo? (x >> self->comp_zo->width_div) * self->comp_zo->step: 0;
+        self->dst_width_offset_a[x] = self->comp_ao? (x >> self->comp_ao->width_div) * self->comp_ao->step: 0;
+    }
 }

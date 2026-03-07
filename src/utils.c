@@ -26,7 +26,6 @@
 
 static struct akvcam_utils
 {
-    uint64_t id;
     int last_error;
 } akvcam_utils_private;
 
@@ -103,9 +102,11 @@ typedef struct
     char str[AKVCAM_MAX_STRING_SIZE];
 } akvcam_utils_ctrl_which_class_strings, *akvcam_utils_ctrl_which_class_strings_t;
 
+static atomic64_t akvcam_id_counter = ATOMIC64_INIT(0);
+
 uint64_t akvcam_id(void)
 {
-    return akvcam_utils_private.id++;
+    return (uint64_t) atomic64_inc_return(&akvcam_id_counter);
 }
 
 int akvcam_get_last_error(void)
@@ -215,6 +216,9 @@ char *akvcam_strdup(const char *str, AKVCAM_MEMORY_TYPE type)
     else
         str_dup = vmalloc(len + 1);
 
+    if (!str_dup)
+        return NULL;
+
     str_dup[len] = 0;
 
     if (str)
@@ -270,6 +274,9 @@ char *akvcam_strip_str_sub(const char *str,
         stripped_str = kmalloc(stripped_len + 1, GFP_KERNEL);
     else
         stripped_str = vmalloc(stripped_len + 1);
+
+    if (!stripped_str)
+        return NULL;
 
     stripped_str[stripped_len] = 0;
 

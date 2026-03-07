@@ -145,7 +145,18 @@ akvcam_map_element_t akvcam_map_set_value(akvcam_map_t self,
         akvcam_list_erase(self->elements, it);
 
     element.key = akvcam_strdup(key, AKVCAM_MEMORY_TYPE_KMALLOC);
+
+    if (!element.key)
+        return NULL;
+
     element.value = copier? copier(value): value;
+
+    if (copier && !element.value) {
+        kfree(element.key);
+
+        return NULL;
+    }
+
     element.copier = copier;
     element.deleter = deleter;
     element.it = akvcam_list_push_back(self->elements,
@@ -153,12 +164,21 @@ akvcam_map_element_t akvcam_map_set_value(akvcam_map_t self,
                                        (akvcam_copy_t) akvcam_map_element_copy,
                                        (akvcam_delete_t) kfree);
 
+    if (!element.it) {
+        kfree(element.key);
+
+        if (copier && element.value && deleter)
+            deleter(element.value);
+
+        return NULL;
+    }
+
     return akvcam_list_back(self->elements);
 }
 
 bool akvcam_map_contains(akvcam_map_ct self, const char *key)
 {
-    return akvcam_map_value(self, key) != NULL;
+    return akvcam_map_it(self, key) != NULL;
 }
 
 static char *akvcam_map_key_copy(const char *str)
@@ -219,7 +239,7 @@ akvcam_map_element_t akvcam_map_it(akvcam_map_ct self, const char *key)
         if (!element)
             break;
 
-        if (strcmp(map_element->key, key) == 0)
+        if (map_element->key && strcmp(map_element->key, key) == 0)
             return map_element;
     }
 

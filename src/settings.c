@@ -48,7 +48,7 @@ struct akvcam_settings
     size_t array_index;
 };
 
-static struct akvcam_log
+static struct akvcam_settings_private_t
 {
     char file_name[4096];
 } akvcam_settings_private;
@@ -231,6 +231,9 @@ size_t akvcam_settings_begin_array(akvcam_settings_t self, const char *prefix)
     array_size_str = akvcam_map_value(group_configs, array_key);
     vfree(array_key);
 
+    if (!array_size_str)
+        return 0;
+
     if (kstrtou32(array_size_str, 10, (u32 *) &array_size) != 0)
         return 0;
 
@@ -314,6 +317,7 @@ bool akvcam_settings_contains(akvcam_settings_ct self, const char *key)
                  array_key_size,
                  "%s/%zu/%s", self->current_array, self->array_index + 1, key);
         contains = akvcam_map_contains(group_configs, array_key);
+        vfree(array_key);
     } else {
         contains = akvcam_map_contains(group_configs, key);
     }
@@ -453,10 +457,11 @@ akvcam_string_list_t akvcam_settings_to_list(const char *value,
 struct v4l2_fract akvcam_settings_to_frac(const char *value)
 {
     struct v4l2_fract frac = {0, 1};
-    akvcam_string_list_t frac_list = akvcam_settings_to_list(value, "/");
 
     if (!value)
         return frac;
+
+    akvcam_string_list_t frac_list = akvcam_settings_to_list(value, "/");
 
     switch (akvcam_list_size(frac_list)) {
     case 1:
@@ -584,6 +589,14 @@ char *akvcam_settings_parse_string(char *str, bool move)
     }
 
     str_tmp = vzalloc(end - start + 1);
+
+    if (!str_tmp) {
+        if (move)
+            vfree(str);
+
+        return akvcam_strdup("", AKVCAM_MEMORY_TYPE_VMALLOC);
+    }
+
     hex[2] = 0;
     j = 0;
 
@@ -615,6 +628,15 @@ char *akvcam_settings_parse_string(char *str, bool move)
 
     len = akvcam_strlen(str_tmp);
     str_parsed = vmalloc(len + 1);
+
+    if (!str_parsed) {
+        vfree(str_tmp);
+
+        if (move)
+            vfree(str);
+
+        return akvcam_strdup("", AKVCAM_MEMORY_TYPE_VMALLOC);
+    }
 
     str_parsed[len] = 0;
     memcpy(str_parsed, str_tmp, len);

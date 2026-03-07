@@ -106,6 +106,7 @@ bool akvcam_file_open(akvcam_file_t self)
         akvcam_string_from_error(error, error_str, AKVCAM_MAX_STRING_SIZE);
         akpr_err("%s\n", error_str);
         kfree(error_str);
+        self->filp = NULL;
 
         return false;
     }
@@ -215,7 +216,7 @@ size_t akvcam_file_read(akvcam_file_t self, void *data, size_t size)
         self->file_bytes_read += (size_t) bytes_read;
     }
 
-    size = akvcam_min(akvcam_rbuffer_size(self->buffer), size);
+    size = akvcam_min(akvcam_rbuffer_data_size(self->buffer), size);
 
     if (size < 1)
         return 0;
@@ -267,6 +268,10 @@ char *akvcam_file_read_line(akvcam_file_t self)
                                  read_block,
                                  (size_t) bytes_read,
                                  &offset);
+
+        if (bytes_read < 1)
+            break;
+
         akvcam_rbuffer_queue_bytes(self->buffer, read_block, (size_t) bytes_read);
         self->file_bytes_read += (size_t) bytes_read;
     }

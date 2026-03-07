@@ -95,10 +95,10 @@ static ssize_t akvcam_attributes_connected_devices_show(struct device *dev,
         if (!it)
             break;
 
-        n = snprintf(buffer + n,
-                     PAGE_SIZE - n,
-                     "/dev/video%d\n",
-                     akvcam_device_num(device));
+        n += snprintf(buffer + n,
+                      PAGE_SIZE - n,
+                      "/dev/video%d\n",
+                      akvcam_device_num(device));
     }
 
     return n;
@@ -119,18 +119,17 @@ static ssize_t akvcam_attributes_streaming_devices_show(struct device *dev,
     devices = akvcam_device_connected_devices_nr(device);
     memset(buffer, 0, PAGE_SIZE);
 
-    for (i = 0; i < 64;) {
+    for (i = 0; i < 64 && n < PAGE_SIZE; i++) {
         device = akvcam_list_next(devices, &it);
 
         if (!it)
             break;
 
         if (akvcam_device_streaming(device)) {
-            n = snprintf(buffer + n,
-                         PAGE_SIZE - n,
-                         "/dev/video%d\n",
-                         akvcam_device_num(device));
-            i++;
+            n += snprintf(buffer + n,
+                          PAGE_SIZE - n,
+                          "/dev/video%d\n",
+                          akvcam_device_num(device));
         }
     }
 
@@ -220,6 +219,9 @@ static ssize_t akvcam_attributes_menu_show(struct device *dev,
     controls = akvcam_device_controls_nr(device);
     value = akvcam_controls_string_value(controls, id);
     memset(buffer, 0, PAGE_SIZE);
+
+    if (!value)
+        return -EINVAL;
 
     return snprintf(buffer, PAGE_SIZE, "%s\n", value);
 }

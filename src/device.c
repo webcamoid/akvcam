@@ -29,6 +29,7 @@
 #include "attributes.h"
 #include "buffers.h"
 #include "controls.h"
+#include "converter.h"
 #include "format.h"
 #include "frame.h"
 #include "frame_filter.h"
@@ -57,6 +58,8 @@ struct akvcam_device
     akvcam_frame_t current_frame;
     akvcam_frame_ct default_frame;
     akvcam_frame_filter_ct frame_filter;
+    akvcam_converter_t in_video_converter;
+    akvcam_converter_t out_video_converter;
     struct mutex device_mutex;
     struct mutex frame_mutex;
     struct mutex clock_mutex;
@@ -82,8 +85,8 @@ struct akvcam_device
     // Output controls
     bool horizontal_flip;
     bool vertical_flip;
-    AKVCAM_SCALING scaling;
-    AKVCAM_ASPECT_RATIO aspect_ratio;
+    AKVCAM_SCALING_MODE scaling;
+    AKVCAM_ASPECT_RATIO_MODE aspect_ratio;
 };
 
 typedef int (*akvcam_thread_t)(void *data);
@@ -116,7 +119,9 @@ akvcam_device_t akvcam_device_new(const char *name,
     self->name = akvcam_strdup(name, AKVCAM_MEMORY_TYPE_KMALLOC);
     self->description = akvcam_strdup(description, AKVCAM_MEMORY_TYPE_KMALLOC);
     self->formats = akvcam_list_new_copy(formats);
-    self->format = akvcam_format_new_copy(akvcam_list_front(formats));
+    self->format = akvcam_list_empty(formats)?
+                     akvcam_format_new(0, 0, 0, NULL):
+                     akvcam_format_new_copy(akvcam_list_front(formats));
     self->controls = akvcam_controls_new(type);
     self->connected_devices = akvcam_list_new();
     multiplanar = akvcam_format_have_multiplanar(formats);
@@ -131,6 +136,8 @@ akvcam_device_t akvcam_device_new(const char *name,
     mutex_init(&self->frame_mutex);
     mutex_init(&self->clock_mutex);
 
+    self->in_video_converter = akvcam_converter_new();
+    self->out_video_converter = akvcam_converter_new();
     akvcam_buffers_set_format(self->buffers, self->format);
     memset(&self->v4l2_dev, 0, sizeof(struct v4l2_device));
     snprintf(self->v4l2_dev.name,
@@ -147,6 +154,8 @@ static void akvcam_device_free(struct kref *ref)
 {
     akvcam_device_t self = container_of(ref, struct akvcam_device, ref);
 
+    akvcam_converter_delete(self->in_video_converter);
+    akvcam_converter_delete(self->out_video_converter);
     akvcam_frame_delete(self->current_frame);
     akvcam_buffers_delete(self->buffers);
     akvcam_device_unregister(self);
@@ -277,9 +286,14 @@ akvcam_formats_list_t akvcam_device_formats(akvcam_device_ct self)
     return akvcam_list_new_copy(self->formats);
 }
 
+akvcam_format_t akvcam_device_format_nr(akvcam_device_ct self)
+{
+    return self->format;
+}
+
 akvcam_format_t akvcam_device_format(akvcam_device_ct self)
 {
-    return akvcam_format_new_copy(self->format);
+    return akvcam_format_ref(self->format);
 }
 
 void akvcam_device_set_format(akvcam_device_t self, akvcam_format_t format)
@@ -497,7 +511,7 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
                 frame = akvcam_frame_new_copy(self->default_frame);
             } else {
                 akpr_debug("Generating random frame.\n");
-                frame = akvcam_frame_new(self->format, NULL, 0);
+                frame = akvcam_frame_new(self->format);
                 get_random_bytes(akvcam_frame_data(frame),
                                  (int) akvcam_frame_size(frame));
             }
@@ -556,8 +570,10 @@ int akvcam_device_clock_start(akvcam_device_t self)
                                "akvcam-thread-%llu",
                                akvcam_id());
 
-    if (!self->thread)
-        result = -EIO;
+    if (IS_ERR(self->thread)) {
+        result = PTR_ERR(self->thread);
+        self->thread = NULL;
+    }
 
     mutex_unlock(&self->clock_mutex);
 
@@ -598,16 +614,8 @@ akvcam_frame_t akvcam_device_frame_apply_adjusts(akvcam_device_ct self,
 {
     bool horizontal_flip = self->horizontal_flip != self->horizontal_mirror;
     bool vertical_flip = self->vertical_flip != self->vertical_mirror;
-    akvcam_frame_t new_frame = akvcam_frame_new_copy(frame);
-    akvcam_format_t frame_format = akvcam_frame_format(frame);
-    __u32 fourcc = akvcam_format_fourcc(self->format);
-    size_t iwidth = akvcam_format_width(frame_format);
-    size_t iheight = akvcam_format_height(frame_format);
-    size_t owidth = akvcam_format_width(self->format);
-    size_t oheight = akvcam_format_height(self->format);
 
     akpr_function();
-    akvcam_format_delete(frame_format);
 
     akpr_debug("brightness: %d\n", self->brightness);
     akpr_debug("contrast: %d\n", self->contrast);
@@ -620,50 +628,49 @@ akvcam_frame_t akvcam_device_frame_apply_adjusts(akvcam_device_ct self,
     akpr_debug("swap_rgb: %s\n", self->swap_rgb? "true": "false");
     akpr_debug("horizontal_flip: %s\n", self->horizontal_flip? "true": "false");
     akpr_debug("vertical_flip: %s\n", self->vertical_flip? "true": "false");
-    akpr_debug("scaling: %s\n", akvcam_frame_scaling_to_string(self->scaling));
-    akpr_debug("aspect_ratio: %s\n", akvcam_frame_aspect_ratio_to_string(self->aspect_ratio));
+    akpr_debug("scaling: %s\n", akvcam_converter_scaling_mode_to_string(self->scaling));
+    akpr_debug("aspect_ratio: %s\n", akvcam_converter_aspect_ratio_mode_to_string(self->aspect_ratio));
 
-    if (owidth * oheight > iwidth * iheight) {
-        akvcam_frame_mirror(new_frame,
-                            horizontal_flip,
-                            vertical_flip);
-        akvcam_frame_filter_apply(self->frame_filter,
-                                  new_frame,
-                                  self->hue,
-                                  self->saturation,
-                                  self->brightness,
-                                  self->contrast,
-                                  self->gamma,
-                                  self->gray,
-                                  self->swap_rgb);
-        akvcam_frame_scaled(new_frame,
-                            owidth,
-                            oheight,
-                            self->scaling,
-                            self->aspect_ratio);
-        akvcam_frame_convert(new_frame, fourcc);
-    } else {
-        akvcam_frame_scaled(new_frame,
-                            owidth,
-                            oheight,
-                            self->scaling,
-                            self->aspect_ratio);
-        akvcam_frame_mirror(new_frame,
-                            horizontal_flip,
-                            vertical_flip);
-        akvcam_frame_filter_apply(self->frame_filter,
-                                  new_frame,
-                                  self->hue,
-                                  self->saturation,
-                                  self->brightness,
-                                  self->contrast,
-                                  self->gamma,
-                                  self->gray,
-                                  self->swap_rgb);
-        akvcam_frame_convert(new_frame, fourcc);
-    }
+    akvcam_format_t frame_fmt = akvcam_frame_format_nr(frame);
+    struct v4l2_fract frame_rate = akvcam_format_frame_rate(frame_fmt);
+    akvcam_format_t iformat = akvcam_format_new(V4L2_PIX_FMT_ARGB32,
+                                                akvcam_format_width(frame_fmt),
+                                                akvcam_format_height(frame_fmt),
+                                                &frame_rate);
+    akvcam_converter_set_output_format(self->in_video_converter, iformat);
+    akvcam_converter_set_scaling_mode(self->in_video_converter, self->scaling);
+    akvcam_converter_set_aspect_ratio_mode(self->in_video_converter, self->aspect_ratio);
+    akvcam_format_delete(iformat);
 
-    return new_frame;
+    akvcam_converter_begin(self->in_video_converter);
+    akvcam_frame_t iframe =
+            akvcam_converter_convert(self->in_video_converter, frame);
+    akvcam_converter_end(self->in_video_converter);
+
+    akvcam_frame_filter_mirror(iframe,
+                               horizontal_flip,
+                               vertical_flip);
+    akvcam_frame_filter_apply(self->frame_filter,
+                              iframe,
+                              self->hue,
+                              self->saturation,
+                              self->brightness,
+                              self->contrast,
+                              self->gamma,
+                              self->gray,
+                              self->swap_rgb);
+
+    akvcam_converter_set_output_format(self->out_video_converter, self->format);
+    akvcam_converter_set_scaling_mode(self->out_video_converter, self->scaling);
+    akvcam_converter_set_aspect_ratio_mode(self->out_video_converter, self->aspect_ratio);
+
+    akvcam_converter_begin(self->out_video_converter);
+    akvcam_frame_t oframe =
+            akvcam_converter_convert(self->out_video_converter, iframe);
+    akvcam_converter_end(self->out_video_converter);
+    akvcam_frame_delete(iframe);
+
+    return oframe;
 }
 
 static const struct v4l2_file_operations akvcam_device_fops = {

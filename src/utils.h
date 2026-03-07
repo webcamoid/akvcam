@@ -159,6 +159,75 @@
     len; \
 })
 
+// Endianness conversion functions for color
+
+static inline uint8_t akvcam_swap_bytes_uint8_t(uint8_t value)
+{
+    return value;
+}
+
+static inline uint16_t akvcam_swap_bytes_uint16_t(uint16_t value)
+{
+    return (uint16_t)(((value & 0xff00u) >> 8)
+                    | ((value & 0x00ffu) << 8));
+}
+
+static inline uint32_t akvcam_swap_bytes_uint32_t(uint32_t value)
+{
+    return ((value & 0xff000000u) >> 24)
+         | ((value & 0x00ff0000u) >>  8)
+         | ((value & 0x0000ff00u) <<  8)
+         | ((value & 0x000000ffu) << 24);
+}
+
+static inline uint64_t akvcam_swap_bytes_uint64_t(uint64_t value)
+{
+    return ((value & U64_C(0xff00000000000000)) >> 56)
+         | ((value & U64_C(0x00ff000000000000)) >> 40)
+         | ((value & U64_C(0x0000ff0000000000)) >> 24)
+         | ((value & U64_C(0x000000ff00000000)) >>  8)
+         | ((value & U64_C(0x00000000ff000000)) <<  8)
+         | ((value & U64_C(0x0000000000ff0000)) << 24)
+         | ((value & U64_C(0x000000000000ff00)) << 40)
+         | ((value & U64_C(0x00000000000000ff)) << 56);
+}
+
+#define akvcam_swap_bytes(T, value) \
+    akvcam_swap_bytes_##T(value)
+
+static inline void akvcam_swap_data_bytes_uint8_t(uint8_t *data, size_t size_in_bytes)
+{
+    (void) data;
+    (void) size_in_bytes;
+}
+
+static inline void akvcam_swap_data_bytes_uint16_t(uint16_t *data, size_t size_in_bytes)
+{
+    size_t n = size_in_bytes / sizeof(uint16_t);
+
+    for (size_t i = 0; i < n; ++i, ++data)
+        *data = akvcam_swap_bytes_uint16_t(*data);
+}
+
+static inline void akvcam_swap_data_bytes_uint32_t(uint32_t *data, size_t size_in_bytes)
+{
+    size_t n = size_in_bytes / sizeof(uint32_t);
+
+    for (size_t i = 0; i < n; ++i, ++data)
+        *data = akvcam_swap_bytes_uint32_t(*data);
+}
+
+static inline void akvcam_swap_data_bytes_uint64_t(uint64_t *data, size_t size_in_bytes)
+{
+    size_t n = size_in_bytes / sizeof(uint64_t);
+
+    for (size_t i = 0; i < n; ++i, ++data)
+        *data = akvcam_swap_bytes_uint64_t(*data);
+}
+
+#define akvcam_swap_data_bytes(T, data, size_in_bytes) \
+    akvcam_swap_data_bytes_##T((data), (size_in_bytes))
+
 typedef enum
 {
     AKVCAM_MEMORY_TYPE_KMALLOC,

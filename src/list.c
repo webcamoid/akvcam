@@ -21,6 +21,11 @@
 
 #include "list.h"
 
+typedef struct {
+    size_t index;
+    akvcam_list_t combined;
+} akvcam_matrix_combine_frame;
+
 typedef struct akvcam_list_element
 {
     void *data;
@@ -37,11 +42,6 @@ struct akvcam_list
     akvcam_list_element_t head;
     akvcam_list_element_t tail;
 };
-
-void akvcam_matrix_combine_p(akvcam_matrix_ct matrix,
-                             size_t index,
-                             akvcam_list_t combined,
-                             akvcam_matrix_t combinations);
 
 akvcam_list_t akvcam_list_new(void)
 {
@@ -172,7 +172,19 @@ akvcam_list_element_t akvcam_list_push_back(akvcam_list_t self,
         return NULL;
     }
 
-    element->data = copier? copier(data): data;
+    if (copier) {
+        element->data = copier(data);
+
+        if (!element->data) {
+            kfree(element);
+            akvcam_set_last_error(-ENOMEM);
+
+            return NULL;
+        }
+    } else {
+        element->data = data;
+    }
+
     element->copier = copier;
     element->deleter = deleter;
     element->prev = self->tail;
@@ -211,31 +223,26 @@ akvcam_list_element_t akvcam_list_it(akvcam_list_ct self, size_t i)
 
 void akvcam_list_erase(akvcam_list_t self, akvcam_list_element_ct element)
 {
-    akvcam_list_element_t it;
+    akvcam_list_element_t it = (akvcam_list_element_t) element;
 
-    if (!self)
+    if (!self || !it)
         return;
 
-    for (it = self->head; it != NULL; it = it->next)
-        if (it == element) {
-            if (it->data && it->deleter)
-                it->deleter(it->data);
+    if (it->data && it->deleter)
+        it->deleter(it->data);
 
-            if (it->prev)
-                it->prev->next = it->next;
-            else
-                self->head = it->next;
+    if (it->prev)
+        it->prev->next = it->next;
+    else
+        self->head = it->next;
 
-            if (it->next)
-                it->next->prev = it->prev;
-            else
-                self->tail = it->prev;
+    if (it->next)
+        it->next->prev = it->prev;
+    else
+        self->tail = it->prev;
 
-            kfree(it);
-            self->size--;
-
-            break;
-        }
+    kfree(it);
+    self->size--;
 }
 
 void akvcam_list_clear(akvcam_list_t self)
@@ -300,8 +307,12 @@ ssize_t akvcam_list_index_of(akvcam_list_ct self,
         if (!it)
             break;
 
-        if (equals(element_data, data))
+        if (equals(element_data, data)) {
+            if (i > (size_t) SSIZE_MAX)
+                return -1;
+
             return i;
+        }
     }
 
     return -1;
@@ -363,53 +374,88 @@ akvcam_delete_t akvcam_list_element_deleter(akvcam_list_element_ct element)
 
 akvcam_matrix_t akvcam_matrix_combine(akvcam_matrix_ct matrix)
 {
-    akvcam_list_t combined = akvcam_list_new();
     akvcam_matrix_t combinations = akvcam_list_new();
-    akvcam_matrix_combine_p(matrix, 0, combined, combinations);
-    akvcam_list_delete(combined);
+    size_t matrix_size = akvcam_list_size(matrix);
+    size_t max_frames;
+    akvcam_matrix_combine_frame *stack;
+    size_t stack_top = 0;
+
+    if (!combinations || matrix_size < 1)
+        return combinations;
+
+    /* Worst case: one branch per element in each row.
+     * In practice, the stack grows linearly with depth,
+     * but we reserve a safe limit.
+     */
+    max_frames = matrix_size * 64 + 1;
+    stack = kvmalloc_array(max_frames,
+                           sizeof(akvcam_matrix_combine_frame),
+                           GFP_KERNEL);
+
+    if (!stack)
+        return combinations;
+
+    // Push the initial frame
+    stack[0].index = 0;
+    stack[0].combined = akvcam_list_new();
+
+    if (!stack[0].combined) {
+        kvfree(stack);
+        return combinations;
+    }
+
+    stack_top = 1;
+
+    while (stack_top > 0) {
+        akvcam_matrix_combine_frame frame;
+        akvcam_list_t row;
+        akvcam_list_element_t it = NULL;
+        void *data;
+
+        // Pop
+        stack_top--;
+        frame = stack[stack_top];
+
+        if (frame.index >= matrix_size) {
+            // Leaf: save the complete combination
+            akvcam_list_push_back(combinations,
+                                  frame.combined,
+                                  (akvcam_copy_t) akvcam_list_ref,
+                                  (akvcam_delete_t) akvcam_list_delete);
+            akvcam_list_delete(frame.combined);
+
+            continue;
+        }
+
+        row = akvcam_list_at(matrix, frame.index);
+
+        while ((data = akvcam_list_next(row, &it)) || it) {
+            akvcam_list_t combined_next;
+
+            if (stack_top >= max_frames) {
+                // Sercure limit reached
+                break;
+            }
+
+            combined_next = akvcam_list_new_copy(frame.combined);
+
+            if (!combined_next)
+                break;
+
+            akvcam_list_push_back(combined_next,
+                                  data,
+                                  it->copier,
+                                  it->deleter);
+
+            stack[stack_top].index = frame.index + 1;
+            stack[stack_top].combined = combined_next;
+            stack_top++;
+        }
+
+        akvcam_list_delete(frame.combined);
+    }
+
+    kvfree(stack);
 
     return combinations;
-}
-
-/* A matrix is a list of lists where each element in the main list is a row,
- * and each element in a row is a column. We combine each element in a row with
- * each element in the next rows.
- */
-void akvcam_matrix_combine_p(akvcam_matrix_ct matrix,
-                             size_t index,
-                             akvcam_list_t combined,
-                             akvcam_matrix_t combinations)
-{
-    akvcam_list_t row;
-    akvcam_list_element_t it = NULL;
-
-    if (index >= akvcam_list_size(matrix)) {
-        akvcam_list_push_back(combinations,
-                              combined,
-                              (akvcam_copy_t) akvcam_list_ref,
-                              (akvcam_delete_t) akvcam_list_delete);
-
-        return;
-    }
-
-    row = akvcam_list_at(matrix, index);
-
-    for (;;) {
-        akvcam_list_t combined_p1;
-        void *data = akvcam_list_next(row, &it);
-
-        if (!it)
-            break;
-
-        combined_p1 = akvcam_list_new_copy(combined);
-        akvcam_list_push_back(combined_p1,
-                              data,
-                              it->copier,
-                              it->deleter);
-        akvcam_matrix_combine_p(matrix,
-                                index + 1,
-                                combined_p1,
-                                combinations);
-        akvcam_list_delete(combined_p1);
-    }
 }

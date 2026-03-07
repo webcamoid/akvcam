@@ -25,11 +25,14 @@ akvcam-objs := \
 	module.o \
 	attributes.o \
 	buffers.o \
+	color_convert.o \
 	controls.o \
+	converter.o \
 	device.o \
 	driver.o \
 	file_read.o \
 	format.o \
+	format_specs.o \
 	frame.o \
 	frame_filter.o \
 	ioctl.o \

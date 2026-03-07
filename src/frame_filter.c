@@ -27,13 +27,6 @@
 #include "log.h"
 #include "utils.h"
 
-typedef struct
-{
-    uint8_t b;
-    uint8_t g;
-    uint8_t r;
-} akvcam_RGB24, *akvcam_RGB24_t;
-
 struct akvcam_frame_filter
 {
     struct kref ref;
@@ -46,7 +39,6 @@ void akvcam_hsl_to_rgb(int h, int s, int l, int *r, int *g, int *b);
 void akvcam_init_contrast_table(akvcam_frame_filter_t self);
 void akvcam_init_gamma_table(akvcam_frame_filter_t self);
 int akvcam_grayval(int r, int g, int b);
-bool akvcam_filter_format_supported(__u32 fourcc);
 
 akvcam_frame_filter_t akvcam_frame_filter_new(void)
 {
@@ -100,26 +92,23 @@ void akvcam_frame_filter_swap_rgb(akvcam_frame_filter_ct self,
 
     akpr_function();
 
-    format = akvcam_frame_format(frame);
+    format = akvcam_frame_format_nr(frame);
     fourcc = akvcam_format_fourcc(format);
 
-    if (!akvcam_filter_format_supported(fourcc)) {
-        akvcam_format_delete(format);
-
+    if (fourcc != V4L2_PIX_FMT_ARGB32)
         return;
-    }
 
     width = akvcam_format_width(format);
     height = akvcam_format_height(format);
-    akvcam_format_delete(format);
 
     for (y = 0; y < height; y++) {
-        akvcam_RGB24_t line = akvcam_frame_line(frame, 0, y);
+        uint8_t *line = akvcam_frame_line(frame, 0, y);
 
         for (x = 0; x < width; x++) {
-            uint8_t tmp = line[x].r;
-            line[x].r = line[x].b;
-            line[x].b = tmp;
+            uint8_t *pixel = line + 4 * x;
+            uint8_t tmp = pixel[0];
+            pixel[0] = pixel[2];
+            pixel[2] = tmp;
         }
     }
 }
@@ -149,24 +138,21 @@ void akvcam_frame_filter_hsl(akvcam_frame_filter_ct self,
     if (hue == 0 && saturation == 0 && luminance == 0)
         return;
 
-    format = akvcam_frame_format(frame);
+    format = akvcam_frame_format_nr(frame);
     fourcc = akvcam_format_fourcc(format);
 
-    if (!akvcam_filter_format_supported(fourcc)) {
-        akvcam_format_delete(format);
-
+    if (fourcc != V4L2_PIX_FMT_ARGB32)
         return;
-    }
 
     width = akvcam_format_width(format);
     height = akvcam_format_height(format);
-    akvcam_format_delete(format);
 
     for (y = 0; y < height; y++) {
-        akvcam_RGB24_t line = akvcam_frame_line(frame, 0, y);
+        uint8_t *line = akvcam_frame_line(frame, 0, y);
 
         for (x = 0; x < width; x++) {
-            akvcam_rgb_to_hsl(line[x].r, line[x].g, line[x].b, &h, &s, &l);
+            uint8_t *pixel = line + 4 * x;
+            akvcam_rgb_to_hsl(pixel[1], pixel[2], pixel[3], &h, &s, &l);
 
             h = akvcam_mod(h + hue, 360);
             s = akvcam_bound(0, s + saturation, 255);
@@ -174,9 +160,9 @@ void akvcam_frame_filter_hsl(akvcam_frame_filter_ct self,
 
             akvcam_hsl_to_rgb(h, s, l, &r, &g, &b);
 
-            line[x].r = (uint8_t) r;
-            line[x].g = (uint8_t) g;
-            line[x].b = (uint8_t) b;
+            pixel[1] = (uint8_t) r;
+            pixel[2] = (uint8_t) g;
+            pixel[3] = (uint8_t) b;
         }
     }
 }
@@ -198,28 +184,25 @@ void akvcam_frame_filter_contrast(akvcam_frame_filter_ct self,
     if (!self->contrast_table || contrast == 0)
         return;
 
-    format = akvcam_frame_format(frame);
+    format = akvcam_frame_format_nr(frame);
     fourcc = akvcam_format_fourcc(format);
 
-    if (!akvcam_filter_format_supported(fourcc)) {
-        akvcam_format_delete(format);
-
+    if (fourcc != V4L2_PIX_FMT_ARGB32)
         return;
-    }
 
     width = akvcam_format_width(format);
     height = akvcam_format_height(format);
-    akvcam_format_delete(format);
     contrast = akvcam_bound(-255, contrast, 255);
     contrast_offset = (size_t) (contrast + 255) << 8;
 
     for (y = 0; y < height; y++) {
-        akvcam_RGB24_t line = akvcam_frame_line(frame, 0, y);
+        uint8_t *line = akvcam_frame_line(frame, 0, y);
 
         for (x = 0; x < width; x++) {
-            line[x].r = self->contrast_table[contrast_offset | line[x].r];
-            line[x].g = self->contrast_table[contrast_offset | line[x].g];
-            line[x].b = self->contrast_table[contrast_offset | line[x].b];
+            uint8_t *pixel = line + 4 * x;
+            pixel[1] = self->contrast_table[contrast_offset | pixel[1]];
+            pixel[2] = self->contrast_table[contrast_offset | pixel[2]];
+            pixel[3] = self->contrast_table[contrast_offset | pixel[3]];
         }
     }
 }
@@ -241,28 +224,25 @@ void akvcam_frame_filter_gamma(akvcam_frame_filter_ct self,
     if (!self->gamma_table || gamma == 0)
         return;
 
-    format = akvcam_frame_format(frame);
+    format = akvcam_frame_format_nr(frame);
     fourcc = akvcam_format_fourcc(format);
 
-    if (!akvcam_filter_format_supported(fourcc)) {
-        akvcam_format_delete(format);
-
+    if (fourcc != V4L2_PIX_FMT_ARGB32)
         return;
-    }
 
     width = akvcam_format_width(format);
     height = akvcam_format_height(format);
-    akvcam_format_delete(format);
     gamma = akvcam_bound(-255, gamma, 255);
     gamma_offset = (size_t) (gamma + 255) << 8;
 
     for (y = 0; y < height; y++) {
-        akvcam_RGB24_t line = akvcam_frame_line(frame, 0, y);
+        uint8_t *line = akvcam_frame_line(frame, 0, y);
 
         for (x = 0; x < width; x++) {
-            line[x].r = self->gamma_table[gamma_offset | line[x].r];
-            line[x].g = self->gamma_table[gamma_offset | line[x].g];
-            line[x].b = self->gamma_table[gamma_offset | line[x].b];
+            uint8_t *pixel = line + 4 * x;
+            pixel[1] = self->gamma_table[gamma_offset | pixel[1]];
+            pixel[2] = self->gamma_table[gamma_offset | pixel[2]];
+            pixel[3] = self->gamma_table[gamma_offset | pixel[3]];
         }
     }
 }
@@ -279,28 +259,25 @@ void akvcam_frame_filter_gray(akvcam_frame_filter_ct self,
     UNUSED(self);
 
     akpr_function();
-    format = akvcam_frame_format(frame);
+    format = akvcam_frame_format_nr(frame);
     fourcc = akvcam_format_fourcc(format);
 
-    if (!akvcam_filter_format_supported(fourcc)) {
-        akvcam_format_delete(format);
-
+    if (fourcc != V4L2_PIX_FMT_ARGB32)
         return;
-    }
 
     width = akvcam_format_width(format);
     height = akvcam_format_height(format);
-    akvcam_format_delete(format);
 
     for (y = 0; y < height; y++) {
-        akvcam_RGB24_t line = akvcam_frame_line(frame, 0, y);
+        uint8_t *line = akvcam_frame_line(frame, 0, y);
 
         for (x = 0; x < width; x++) {
-            int luma = akvcam_grayval(line[x].r, line[x].g, line[x].b);
+            uint8_t *pixel = line + 4 * x;
+            int luma = akvcam_grayval(pixel[1], pixel[2], pixel[3]);
 
-            line[x].r = (uint8_t) luma;
-            line[x].g = (uint8_t) luma;
-            line[x].b = (uint8_t) luma;
+            pixel[1] = (uint8_t) luma;
+            pixel[2] = (uint8_t) luma;
+            pixel[3] = (uint8_t) luma;
         }
     }
 }
@@ -317,15 +294,145 @@ void akvcam_frame_filter_apply(akvcam_frame_filter_ct self,
 {
     akpr_function();
 
-    if (swap_rgb)
-        akvcam_frame_filter_swap_rgb(self, frame);
-
     akvcam_frame_filter_hsl(self, frame, hue, saturation, luminance);
     akvcam_frame_filter_gamma(self, frame, gamma);
     akvcam_frame_filter_contrast(self, frame, contrast);
 
     if (gray)
         akvcam_frame_filter_gray(self, frame);
+
+    if (swap_rgb)
+        akvcam_frame_filter_swap_rgb(self, frame);
+}
+
+void akvcam_frame_filter_mirror(akvcam_frame_t frame,
+                                bool horizontal_mirror,
+                                bool vertical_mirror)
+{
+    akvcam_format_t format;
+    __u32 fourcc;
+    size_t width;
+    size_t height;
+
+    akpr_function();
+
+    if (!horizontal_mirror && !vertical_mirror)
+        return;
+
+    format = akvcam_frame_format_nr(frame);
+    fourcc = akvcam_format_fourcc(format);
+
+    if (fourcc != V4L2_PIX_FMT_ARGB32)
+        return;
+
+    width = akvcam_format_width(format);
+    height = akvcam_format_height(format);
+    size_t line_size = akvcam_format_line_size(format, 0);
+
+    if (line_size == 0)
+        return;
+
+    if (horizontal_mirror && vertical_mirror) {
+        size_t y;
+        uint8_t *tmp_line = vmalloc(line_size);
+
+        if (!tmp_line)
+            return;
+
+        for (y = 0; y < height / 2; y++) {
+            uint8_t *top_line = akvcam_frame_line(frame, 0, y);
+            uint8_t *bot_line = akvcam_frame_line(frame, 0, height - y - 1);
+            size_t x;
+
+            // Invert top -> tmp
+            for (x = 0; x < width; x++) {
+                size_t src = x * 4;
+                size_t dst = (width - x - 1) * 4;
+
+                tmp_line[dst + 0] = top_line[src + 0];
+                tmp_line[dst + 1] = top_line[src + 1];
+                tmp_line[dst + 2] = top_line[src + 2];
+                tmp_line[dst + 3] = top_line[src + 3];
+            }
+
+            // Invert bot -> top
+            for (x = 0; x < width; x++) {
+                size_t src = x * 4;
+                size_t dst = (width - x - 1) * 4;
+
+                top_line[dst + 0] = bot_line[src + 0];
+                top_line[dst + 1] = bot_line[src + 1];
+                top_line[dst + 2] = bot_line[src + 2];
+                top_line[dst + 3] = bot_line[src + 3];
+            }
+
+            // tmp -> bot
+            memcpy(bot_line, tmp_line, line_size);
+        }
+
+        // If height is odd, the centerline only needs horizontal inversion
+        if (height % 2 != 0) {
+            uint8_t *mid_line = akvcam_frame_line(frame, 0, height / 2);
+
+            for (size_t x = 0; x < width / 2; x++) {
+                size_t lo = x * 4;
+                size_t hi = (width - x - 1) * 4;
+                uint8_t b0 = mid_line[lo + 0], b1 = mid_line[lo + 1];
+                uint8_t b2 = mid_line[lo + 2], b3 = mid_line[lo + 3];
+
+                mid_line[lo + 0] = mid_line[hi + 0];
+                mid_line[lo + 1] = mid_line[hi + 1];
+                mid_line[lo + 2] = mid_line[hi + 2];
+                mid_line[lo + 3] = mid_line[hi + 3];
+                mid_line[hi + 0] = b0; mid_line[hi + 1] = b1;
+                mid_line[hi + 2] = b2; mid_line[hi + 3] = b3;
+            }
+        }
+
+        vfree(tmp_line);
+
+        return;
+    }
+
+    if (horizontal_mirror) {
+        size_t y;
+
+        for (y = 0; y < height; y++) {
+            uint8_t *line = akvcam_frame_line(frame, 0, y);
+            size_t x;
+
+            for (x = 0; x < width / 2; x++) {
+                size_t lo = x * 4;
+                size_t hi = (width - x - 1) * 4;
+                uint8_t b0 = line[lo + 0], b1 = line[lo + 1];
+                uint8_t b2 = line[lo + 2], b3 = line[lo + 3];
+                line[lo + 0] = line[hi + 0];
+                line[lo + 1] = line[hi + 1];
+                line[lo + 2] = line[hi + 2];
+                line[lo + 3] = line[hi + 3];
+                line[hi + 0] = b0; line[hi + 1] = b1;
+                line[hi + 2] = b2; line[hi + 3] = b3;
+            }
+        }
+    }
+
+    if (vertical_mirror) {
+        size_t y;
+        uint8_t *tmp_line = vmalloc(line_size);
+
+        if (!tmp_line)
+            return;
+
+        for (y = 0; y < height / 2; y++) {
+            uint8_t *top_line = akvcam_frame_line(frame, 0, y);
+            uint8_t *bot_line = akvcam_frame_line(frame, 0, height - y - 1);
+            memcpy(tmp_line, top_line, line_size);
+            memcpy(top_line, bot_line, line_size);
+            memcpy(bot_line, tmp_line, line_size);
+        }
+
+        vfree(tmp_line);
+    }
 }
 
 void akvcam_rgb_to_hsl(int r, int g, int b, int *h, int *s, int *l)
@@ -504,20 +611,4 @@ void akvcam_init_gamma_table(akvcam_frame_filter_t self)
 int akvcam_grayval(int r, int g, int b)
 {
     return (11 * r + 16 * g + 5 * b) >> 5;
-}
-
-bool akvcam_filter_format_supported(__u32 fourcc)
-{
-    size_t i;
-    static const __u32 filter_contrast_formats[] = {
-        V4L2_PIX_FMT_BGR24,
-        V4L2_PIX_FMT_RGB24,
-        0
-    };
-
-    for (i = 0; filter_contrast_formats[i]; i++)
-        if (filter_contrast_formats[i] == fourcc)
-            return true;
-
-    return false;
 }

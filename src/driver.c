@@ -24,6 +24,7 @@
 #include "buffers.h"
 #include "device.h"
 #include "format.h"
+#include "format_specs.h"
 #include "frame.h"
 #include "frame_filter.h"
 #include "list.h"
@@ -82,6 +83,10 @@ int akvcam_driver_init(const char *name, const char *description)
 
     akpr_info("Initializing driver\n");
     akvcam_driver_global = kzalloc(sizeof(akvcam_driver), GFP_KERNEL);
+
+    if (!akvcam_driver_global)
+        return -ENOMEM;
+
     snprintf(akvcam_driver_global->name, AKVCAM_MAX_STRING_SIZE, "%s", name);
     snprintf(akvcam_driver_global->description, AKVCAM_MAX_STRING_SIZE, "%s", description);
     akvcam_driver_global->default_frame = NULL;
@@ -127,6 +132,7 @@ void akvcam_driver_uninit(void)
     akvcam_frame_delete(akvcam_driver_global->default_frame);
     akvcam_frame_filter_delete(akvcam_driver_global->frame_filter);
     kfree(akvcam_driver_global);
+    akvcam_driver_global = NULL;
 }
 
 const char *akvcam_driver_name(void)
@@ -156,14 +162,22 @@ bool akvcam_driver_register(void)
 
     // Register numbered devices first.
     for (;;) {
+        int32_t dev_num;
         akvcam_device_t device =
                 akvcam_list_next(akvcam_driver_global->devices, &element);
 
         if (!element)
             break;
 
-        if (akvcam_device_num(device) >= 0)
-            akvcam_device_register(device);
+        dev_num = akvcam_device_num(device);
+
+        if (dev_num >= 0)
+            if (!akvcam_device_register(device)) {
+                const char *dev_description = akvcam_device_description(device);
+                akpr_warning("Failed to register device %i as '%s'\n",
+                             dev_num,
+                             dev_description);
+            }
     }
 
     // Register the remaining devices
@@ -214,7 +228,7 @@ akvcam_frame_t  akvcam_driver_load_default_frame(akvcam_settings_t settings)
 
     akvcam_settings_begin_group(settings, "General");
     file_name = akvcam_settings_value(settings, "default_frame");
-    frame = akvcam_frame_new(NULL, NULL, 0);
+    frame = akvcam_frame_new(NULL);
     loaded = akvcam_frame_load(frame, file_name);
     akvcam_settings_end_group(settings);
 
@@ -312,7 +326,7 @@ akvcam_formats_list_t akvcam_driver_read_format(akvcam_settings_t settings)
         if (!it)
             break;
 
-        pix_format = akvcam_format_fourcc_from_string(akvcam_list_at(format_list, 0));
+        pix_format = akvcam_fourcc_from_string(akvcam_list_at(format_list, 0));
         width = akvcam_settings_to_uint32(akvcam_list_at(format_list, 1));
         height = akvcam_settings_to_uint32(akvcam_list_at(format_list, 2));
         frame_rate = akvcam_settings_to_frac(akvcam_list_at(format_list, 3));
@@ -380,6 +394,7 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
     AKVCAM_DEVICE_TYPE type;
     akvcam_string_list_t modes;
     AKVCAM_RW_MODE mode;
+    char *type_str;
     char *description;
     akvcam_formats_list_t formats;
     akvcam_driver_rw_mode_strings_ct rw_mode_strings =
@@ -389,9 +404,10 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
 
     akpr_info("Reading device\n");
 
-    type = strcmp(akvcam_settings_value(settings, "type"),
-                  "output") == 0? AKVCAM_DEVICE_TYPE_OUTPUT:
-                                  AKVCAM_DEVICE_TYPE_CAPTURE;
+    type_str = akvcam_settings_value(settings, "type");
+    type = type_str && strcmp(type_str, "output") == 0?
+               AKVCAM_DEVICE_TYPE_OUTPUT:
+               AKVCAM_DEVICE_TYPE_CAPTURE;
     description = akvcam_settings_value(settings, "description");
 
     if (akvcam_strlen(description) < 1) {
@@ -488,11 +504,11 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
                                    akvcam_devices_list_t devices)
 {
     akvcam_devices_list_t connected_outputs;
-    akvcam_list_element_t it = NULL;
+    akvcam_list_element_t it;
     akvcam_device_t device;
     akvcam_device_t output;
     size_t n_connections;
-    u32 *connections_index;
+    u32 *connections_index = NULL;
     char *index_str;
     u32 index;
     size_t i;
@@ -517,6 +533,7 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
         }
 
         connections_index = kzalloc(sizeof(u32) * n_nodes, GFP_KERNEL);
+        it = NULL;
 
         for (j = 0;; j++) {
             index_str = akvcam_list_next(connections, &it);
@@ -594,7 +611,11 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
             }
 
         kfree(connections_index);
+        connections_index = NULL;
     }
+
+    if (connections_index)
+        kfree(connections_index);
 
     akvcam_settings_end_array(settings);
     akvcam_settings_end_group(settings);

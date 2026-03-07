@@ -54,4 +54,9 @@ void akvcam_frame_filter_apply(akvcam_frame_filter_ct self,
                                bool gray,
                                bool swap_rgb);
 
+// public static
+void akvcam_frame_filter_mirror(akvcam_frame_t frame,
+                                bool horizontal_mirror,
+                                bool vertical_mirror);
+
 #endif // AKVCAM_FRAME_FILTER_H

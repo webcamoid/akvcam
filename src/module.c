@@ -27,7 +27,7 @@
 #define AKVCAM_DRIVER_NAME        "akvcam"
 #define AKVCAM_DRIVER_DESCRIPTION "AkVCam Virtual Camera"
 
-static int loglevel = 0;
+static int loglevel = LOGLEVEL_EMERG;
 module_param(loglevel, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(loglevel, "Debug verbosity (-2 to 7)");
 

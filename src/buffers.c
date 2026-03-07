@@ -25,6 +25,7 @@
 #include "buffers.h"
 #include "device.h"
 #include "format.h"
+#include "format_specs_types.h"
 #include "frame.h"
 #include "log.h"
 
@@ -116,9 +117,14 @@ akvcam_buffers_t akvcam_buffers_ref(akvcam_buffers_t self)
     return self;
 }
 
+akvcam_format_t akvcam_buffers_format_nr(akvcam_buffers_ct self)
+{
+    return self->format;
+}
+
 akvcam_format_t akvcam_buffers_format(akvcam_buffers_ct self)
 {
-    return akvcam_format_new_copy(self->format);
+    return akvcam_format_ref(self->format);
 }
 
 void akvcam_buffers_set_format(akvcam_buffers_t self, akvcam_format_ct format)
@@ -128,7 +134,7 @@ void akvcam_buffers_set_format(akvcam_buffers_t self, akvcam_format_ct format)
 
 size_t akvcam_buffers_count(akvcam_buffers_ct self)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION( 6, 8, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
     return self->queue.min_buffers_needed;
 #else
     return self->queue.min_queued_buffers;
@@ -137,7 +143,7 @@ size_t akvcam_buffers_count(akvcam_buffers_ct self)
 
 void akvcam_buffers_set_count(akvcam_buffers_t self, size_t nbuffers)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION( 6, 8, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
     self->queue.min_buffers_needed = nbuffers;
 #else
     self->queue.min_queued_buffers = nbuffers;
@@ -168,12 +174,17 @@ akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
     buf->vb.sequence = self->sequence++;
     mutex_unlock(&self->frames_mutex);
 
-    frame = akvcam_frame_new(self->format, NULL, 0);
+    frame = akvcam_frame_new(self->format);
 
     for (i = 0; i < buf->vb.vb2_buf.num_planes; i++) {
-        memcpy(akvcam_frame_plane_data(frame, i),
-               vb2_plane_vaddr(&buf->vb.vb2_buf, i),
-               akvcam_format_plane_size(self->format, i));
+        void *src = vb2_plane_vaddr(&buf->vb.vb2_buf, i);
+        void *dst = akvcam_frame_plane_data(frame, i);
+        size_t payload = vb2_get_plane_payload(&buf->vb.vb2_buf, i);
+        size_t expected = akvcam_format_plane_size(self->format, i);
+        size_t copy_size = akvcam_min(payload, expected);
+
+        if (src && dst && copy_size > 0)
+            memcpy(dst, src, copy_size);
     }
 
     vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
@@ -207,9 +218,16 @@ int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame)
     mutex_unlock(&self->frames_mutex);
 
     for (i = 0; i < buf->vb.vb2_buf.num_planes; i++) {
-        memcpy(vb2_plane_vaddr(&buf->vb.vb2_buf, i),
-               akvcam_frame_plane_data(frame, i),
-               vb2_plane_size(&buf->vb.vb2_buf, i));
+        void *dst = vb2_plane_vaddr(&buf->vb.vb2_buf, i);
+        void *src = akvcam_frame_plane_data(frame, i);
+        size_t frame_size = akvcam_format_plane_size(self->format, i);
+        size_t buf_size = vb2_plane_size(&buf->vb.vb2_buf, i);
+        size_t copy_size = akvcam_min(frame_size, buf_size);
+
+        if (dst && src && copy_size > 0) {
+            memcpy(dst, src, copy_size);
+            vb2_set_plane_payload(&buf->vb.vb2_buf, i, copy_size);
+        }
     }
 
     vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
@@ -271,7 +289,8 @@ int akvcam_buffers_queue_setup(struct vb2_queue *queue,
         return 0;
     }
 
-    *num_planes = akvcam_format_planes(self->format);
+    *num_planes = akvcam_min(akvcam_format_planes(self->format),
+                             MAX_PLANES);
 
     for (i = 0; i < *num_planes; i++)
         sizes[i] = akvcam_format_plane_size(self->format, i);
@@ -310,10 +329,14 @@ void akvcam_buffers_buffer_queue(struct vb2_buffer *buffer)
 
     akpr_function();
 
-    if (!mutex_lock_interruptible(&self->frames_mutex)) {
-        list_add_tail(&buf->list, &self->buffers);
-        mutex_unlock(&self->frames_mutex);
+    if (mutex_lock_interruptible(&self->frames_mutex)) {
+        vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_ERROR);
+
+        return;
     }
+
+    list_add_tail(&buf->list, &self->buffers);
+    mutex_unlock(&self->frames_mutex);
 }
 
 int akvcam_buffers_start_streaming(struct vb2_queue *queue, unsigned int count)

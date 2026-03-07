@@ -49,6 +49,7 @@ AKVCAM_DEVICE_TYPE akvcam_device_type(akvcam_device_ct self);
 enum v4l2_buf_type akvcam_device_v4l2_type(akvcam_device_ct self);
 AKVCAM_RW_MODE akvcam_device_rw_mode(akvcam_device_ct self);
 akvcam_formats_list_t akvcam_device_formats(akvcam_device_ct self);
+akvcam_format_t akvcam_device_format_nr(akvcam_device_ct self);
 akvcam_format_t akvcam_device_format(akvcam_device_ct self);
 void akvcam_device_set_format(akvcam_device_t self,
                               akvcam_format_t format);
@@ -64,4 +65,4 @@ __u32 akvcam_device_caps(akvcam_device_ct self);
 // public static
 AKVCAM_DEVICE_TYPE akvcam_device_type_from_v4l2(enum v4l2_buf_type type);
 
-#endif //AKVCAM_ DEVICE_H
+#endif //AKVCAM_DEVICE_H

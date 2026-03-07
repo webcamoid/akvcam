@@ -35,6 +35,7 @@ akvcam_buffers_t akvcam_buffers_new(AKVCAM_RW_MODE rw_mode,
 void akvcam_buffers_delete(akvcam_buffers_t self);
 akvcam_buffers_t akvcam_buffers_ref(akvcam_buffers_t self);
 
+akvcam_format_t akvcam_buffers_format_nr(akvcam_buffers_ct self);
 akvcam_format_t akvcam_buffers_format(akvcam_buffers_ct self);
 void akvcam_buffers_set_format(akvcam_buffers_t self, akvcam_format_ct format);
 size_t akvcam_buffers_count(akvcam_buffers_ct self);

@@ -21,6 +21,7 @@
 #include <media/v4l2-ctrls.h>
 
 #include "controls.h"
+#include "converter_types.h"
 #include "frame_types.h"
 
 struct akvcam_controls
@@ -47,14 +48,15 @@ static const struct v4l2_ctrl_config akvcam_controls_capture[] = {
 };
 
 static const char * const akvcam_controls_scaling_menu[] = {
-    [AKVCAM_SCALING_FAST  ] = "Fast"  ,
-    [AKVCAM_SCALING_LINEAR] = "Linear",
+    [AKVCAM_SCALING_MODE_FAST  ] = "Fast"  ,
+    [AKVCAM_SCALING_MODE_LINEAR] = "Linear",
 };
 
 static const char * const akvcam_controls_aspect_menu[] = {
-    [AKVCAM_ASPECT_RATIO_IGNORE   ] = "Ignore"   ,
-    [AKVCAM_ASPECT_RATIO_KEEP     ] = "Keep"     ,
-    [AKVCAM_ASPECT_RATIO_EXPANDING] = "Expanding",
+    [AKVCAM_ASPECT_RATIO_MODE_IGNORE   ] = "Ignore"   ,
+    [AKVCAM_ASPECT_RATIO_MODE_KEEP     ] = "Keep"     ,
+    [AKVCAM_ASPECT_RATIO_MODE_EXPANDING] = "Expanding",
+    [AKVCAM_ASPECT_RATIO_MODE_FIT      ] = "Fit"      ,
 };
 
 static const struct v4l2_ctrl_config akvcam_controls_output[] = {
@@ -89,7 +91,7 @@ static const struct v4l2_ctrl_config akvcam_controls_output[] = {
     {.id = 0},
 };
 
-int akvcam_controls_cotrol_changed(struct v4l2_ctrl *control);
+int akvcam_controls_control_changed(struct v4l2_ctrl *control);
 
 akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE device_type)
 {
@@ -158,7 +160,7 @@ akvcam_controls_t akvcam_controls_new(AKVCAM_DEVICE_TYPE device_type)
 static void akvcam_controls_free(struct kref *ref)
 {
     akvcam_controls_t self = container_of(ref, struct akvcam_controls, ref);
-    v4l2_ctrl_handler_free(&self->handler);;
+    v4l2_ctrl_handler_free(&self->handler);
     kfree(self);
 }
 
@@ -175,6 +177,7 @@ akvcam_controls_t akvcam_controls_ref(akvcam_controls_t self)
 
     return self;
 }
+
 __s32 akvcam_controls_value(akvcam_controls_t self, __u32 id)
 {
     struct v4l2_ctrl *control = v4l2_ctrl_find(&self->handler, id);
@@ -223,7 +226,8 @@ int akvcam_controls_set_string_value(akvcam_controls_t self, __u32 id, const cha
         return -EINVAL;
 
     for (i = 0; i <= control->maximum; i++)
-        if (strncmp(control->qmenu[i], value, AKVCAM_MAX_STRING_SIZE) == 0) {
+        if (control->qmenu[i]
+            && strncmp(control->qmenu[i], value, AKVCAM_MAX_STRING_SIZE) == 0) {
             result = 0;
 
             break;
@@ -247,7 +251,7 @@ struct v4l2_ctrl_handler *akvcam_controls_handler(akvcam_controls_t self)
     return self->handler.error? NULL: &self->handler;
 }
 
-int akvcam_controls_cotrol_changed(struct v4l2_ctrl *control)
+int akvcam_controls_control_changed(struct v4l2_ctrl *control)
 {
     akvcam_controls_t self =
             container_of(control->handler, struct akvcam_controls, handler);
@@ -258,5 +262,5 @@ int akvcam_controls_cotrol_changed(struct v4l2_ctrl *control)
 }
 
 static const struct v4l2_ctrl_ops akvcam_controls_ops = {
-    .s_ctrl = akvcam_controls_cotrol_changed,
+    .s_ctrl = akvcam_controls_control_changed,
 };

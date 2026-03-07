@@ -21,7 +21,7 @@
 
 #include <linux/version.h>
 
-#define akpr_file_name (strrchr(__FILE__, '/') + 1)
+#define akpr_file_name (strrchr(__FILE__, '/')? strrchr(__FILE__, '/') + 1: __FILE__)
 #define akpr_log_format "[akvcam] %s(%d): "
 
 #define akpr_err(fmt, ...) \

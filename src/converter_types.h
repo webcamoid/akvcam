@@ -1,5 +1,5 @@
 /* akvcam, virtual camera for Linux.
- * Copyright (C) 2018  Gonzalo Exequiel Pedone
+ * Copyright (C) 2026  Gonzalo Exequiel Pedone
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,23 +16,25 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef AKVCAM_FRAME_TYPES_H
-#define AKVCAM_FRAME_TYPES_H
+#ifndef AKVCAM_CONVERTER_TYPES_H
+#define AKVCAM_CONVERTER_TYPES_H
 
-#include <linux/types.h>
-
-struct akvcam_frame;
-typedef struct akvcam_frame *akvcam_frame_t;
-typedef const struct akvcam_frame *akvcam_frame_ct;
-
-static inline uint32_t akvcam_xyza(int x, int y, int z, int a)
+typedef enum
 {
-    return ((a & 0xff) << 24) | ((x & 0xff) << 16) | ((y & 0xff) << 8) | (z & 0xff);
-}
+    AKVCAM_SCALING_MODE_FAST,
+    AKVCAM_SCALING_MODE_LINEAR
+} AKVCAM_SCALING_MODE;
 
-static inline uint32_t akvcam_xyz(int x, int y, int z)
+typedef enum
 {
-    return akvcam_xyza(x, y, z, 255);
-}
+    AKVCAM_ASPECT_RATIO_MODE_IGNORE,
+    AKVCAM_ASPECT_RATIO_MODE_KEEP,
+    AKVCAM_ASPECT_RATIO_MODE_EXPANDING,
+    AKVCAM_ASPECT_RATIO_MODE_FIT,
+} AKVCAM_ASPECT_RATIO_MODE;
 
-#endif // AKVCAM_FRAME_TYPES_H
+struct akvcam_converter;
+typedef struct akvcam_converter *akvcam_converter_t;
+typedef const struct akvcam_converter *akvcam_converter_ct;
+
+#endif // AKVCAM_CONVERTER_TYPES_H
