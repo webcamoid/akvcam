@@ -69,6 +69,7 @@ struct akvcam_device
     AKVCAM_DEVICE_TYPE type;
     enum v4l2_buf_type buffer_type;
     AKVCAM_RW_MODE rw_mode;
+    bool direct_mode;
     int32_t videonr;
 
     // Capture controls
@@ -209,7 +210,10 @@ bool akvcam_device_register(akvcam_device_t self)
             self->vdev->release = video_device_release_empty;
             self->vdev->queue = queue;
             self->vdev->lock = &self->device_mutex;
-            self->vdev->ctrl_handler = akvcam_controls_handler(self->controls);
+            self->vdev->ctrl_handler =
+                    self->direct_mode?
+                        NULL:
+                        akvcam_controls_handler(self->controls);
             self->vdev->dev.groups = akvcam_attributes_groups(self->type);
             video_set_drvdata(self->vdev, self);
             self->vdev->device_caps = akvcam_device_caps(self);
@@ -279,6 +283,16 @@ enum v4l2_buf_type akvcam_device_v4l2_type(akvcam_device_ct self)
 AKVCAM_RW_MODE akvcam_device_rw_mode(akvcam_device_ct self)
 {
     return self->rw_mode;
+}
+
+bool akvcam_device_direct_mode(akvcam_device_ct self)
+{
+    return self->direct_mode;
+}
+
+void akvcam_device_set_direct_mode(akvcam_device_t self, bool direct_mode)
+{
+    self->direct_mode = direct_mode;
 }
 
 akvcam_formats_list_t akvcam_device_formats(akvcam_device_ct self)
@@ -485,6 +499,8 @@ __u32 akvcam_device_caps(akvcam_device_ct self)
 
 void akvcam_device_clock_run_once(akvcam_device_t self)
 {
+    bool using_default = false;
+
     akpr_function();
 
     if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
@@ -509,6 +525,7 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
             if (self->default_frame && akvcam_frame_size(self->default_frame) > 0) {
                 akpr_debug("Reading default frame.\n");
                 frame = akvcam_frame_new_copy(self->default_frame);
+                using_default = true;
             } else {
                 akpr_debug("Generating random frame.\n");
                 frame = akvcam_frame_new(self->format);
@@ -517,9 +534,37 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
             }
         }
 
-        adjusted_frame = akvcam_device_frame_apply_adjusts(self, frame);
+        if (self->direct_mode) {
+            /* In direct mode: skip all adjustments and format conversion,
+             * write the frame as-is directly to the capture buffer.
+             * Exception: The default frames must still be converted to the
+             * capture device format because they may have been created in a
+             * different pixel format. */
+            if (!using_default) {
+                /* Frame came from the output device - formats are guaranteed
+                 * to match (enforced at connect time), copy directly. */
+                result = akvcam_buffers_write_frame(self->buffers, frame);
+            } else {
+                /* Fallback frame: convert to capture format first. */
+                akvcam_converter_set_output_format(self->out_video_converter, self->format);
+                akvcam_converter_set_scaling_mode(self->out_video_converter, self->scaling);
+                akvcam_converter_set_aspect_ratio_mode(self->out_video_converter, self->aspect_ratio);
+
+                akvcam_converter_begin(self->out_video_converter);
+                akvcam_frame_t converted =
+                    akvcam_converter_convert(self->out_video_converter, frame);
+                akvcam_converter_end(self->out_video_converter);
+                result = akvcam_buffers_write_frame(self->buffers, converted);
+                akvcam_frame_delete(converted);
+            }
+
+            adjusted_frame = NULL;
+        } else {
+            adjusted_frame = akvcam_device_frame_apply_adjusts(self, frame);
+            result = akvcam_buffers_write_frame(self->buffers, adjusted_frame);
+        }
+
         akvcam_frame_delete(frame);
-        result = akvcam_buffers_write_frame(self->buffers, adjusted_frame);
 
         if (result < 0) {
             char *error_str = kzalloc(AKVCAM_MAX_STRING_SIZE, GFP_KERNEL);
@@ -529,7 +574,8 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
             kfree(error_str);
         }
 
-        akvcam_frame_delete(adjusted_frame);
+        if (adjusted_frame)
+            akvcam_frame_delete(adjusted_frame);
     } else {
         akvcam_list_element_t it = NULL;
         akvcam_frame_t frame = akvcam_buffers_read_frame(self->buffers);
@@ -603,7 +649,13 @@ int akvcam_device_clock_timeout(akvcam_device_t self)
 
     while (!kthread_should_stop()) {
         akvcam_device_clock_run_once(self);
-        msleep_interruptible(tsleep);
+
+        /* In direct_mode output devices, yield immediately to minimise
+         * frame-delivery latency instead of sleeping a full frame period. */
+        if (self->direct_mode && self->type == AKVCAM_DEVICE_TYPE_OUTPUT)
+            schedule();
+        else
+            msleep_interruptible(tsleep);
     }
 
     return 0;

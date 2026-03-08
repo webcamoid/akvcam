@@ -437,6 +437,16 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
     kfree(rw_mode_str);
     formats = akvcam_driver_read_device_formats(settings, available_formats);
 
+    // In direct_mode only the first configured format is used.
+    if (akvcam_settings_contains(settings, "direct_mode")
+        && akvcam_settings_value_bool(settings, "direct_mode")) {
+        while (akvcam_list_size(formats) > 1) {
+            akvcam_list_element_t last =
+                    akvcam_list_it(formats, akvcam_list_size(formats) - 1);
+            akvcam_list_erase(formats, last);
+        }
+    }
+
     if (akvcam_list_empty(formats)) {
         pr_err("Can't read device formats\n");
         akvcam_list_delete(formats);
@@ -452,6 +462,10 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
                                akvcam_driver_global->default_frame,
                                akvcam_driver_global->frame_filter);
     akvcam_list_delete(formats);
+
+    if (akvcam_settings_contains(settings, "direct_mode"))
+        akvcam_device_set_direct_mode(device,
+                                      akvcam_settings_value_bool(settings, "direct_mode"));
 
     if (akvcam_settings_contains(settings, "videonr"))
         akvcam_device_set_num(device,
@@ -592,6 +606,33 @@ void akvcam_driver_connect_devices(akvcam_settings_t settings,
                     connected_outputs = akvcam_device_connected_devices_nr(device);
 
                     if (akvcam_list_empty(connected_outputs)) {
+                        // Warn if direct_mode settings are inconsistent.
+                        if (akvcam_device_direct_mode(output)
+                            != akvcam_device_direct_mode(device)) {
+                            akpr_warning("Connection between devices %u and %u: "
+                                         "direct_mode mismatch - connection allowed "
+                                         "but may not work as expected\n",
+                                         connections_index[0],
+                                         connections_index[j]);
+                        } else if (akvcam_device_direct_mode(output)
+                                   && akvcam_device_direct_mode(device)) {
+                            // Both in direct_mode: formats must be identical.
+                            akvcam_format_t ofmt =
+                                    akvcam_device_format_nr(output);
+                            akvcam_format_t cfmt =
+                                    akvcam_device_format_nr(device);
+
+                            if (!akvcam_format_is_same_format(ofmt, cfmt)) {
+                                akpr_err("Connection between devices %u and %u "
+                                         "rejected: both are in direct_mode but "
+                                         "formats differ\n",
+                                         connections_index[0],
+                                         connections_index[j]);
+
+                                continue;
+                            }
+                        }
+
                         akvcam_list_push_back(connected_outputs,
                                               output,
                                               (akvcam_copy_t) akvcam_device_ref,
@@ -668,6 +709,9 @@ void akvcam_driver_print_devices(void)
         } else {
             akpr_info("\tType: Capture\n");
         }
+
+        akpr_info("\tDirect mode: %s\n",
+                  akvcam_device_direct_mode(device)? "yes": "no");
 
         akpr_info("\tModes:\n");
         rw_mode = akvcam_device_rw_mode(device);

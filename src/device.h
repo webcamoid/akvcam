@@ -48,6 +48,8 @@ const char *akvcam_device_description(akvcam_device_t self);
 AKVCAM_DEVICE_TYPE akvcam_device_type(akvcam_device_ct self);
 enum v4l2_buf_type akvcam_device_v4l2_type(akvcam_device_ct self);
 AKVCAM_RW_MODE akvcam_device_rw_mode(akvcam_device_ct self);
+bool akvcam_device_direct_mode(akvcam_device_ct self);
+void akvcam_device_set_direct_mode(akvcam_device_t self, bool direct_mode);
 akvcam_formats_list_t akvcam_device_formats(akvcam_device_ct self);
 akvcam_format_t akvcam_device_format_nr(akvcam_device_ct self);
 akvcam_format_t akvcam_device_format(akvcam_device_ct self);
