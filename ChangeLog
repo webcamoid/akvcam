@@ -1,5 +1,6 @@
 akvcam 1.4.0:
 
+- Minimum supported kernel version: 5.10.
 - Added support bidirectional format convertion to any format.
   The supported formats are:
 

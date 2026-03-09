@@ -14,41 +14,46 @@ jobs:
       fail-fast: false
       matrix:
        include:
-         - dockerimg: amd64/ubuntu:focal
-           repository: v5.4.293
-           kernel_version: 5.4.293-0504293
-           kernel_version_c: 202505020720
-           upload: 1
          # Do not update
          - dockerimg: amd64/ubuntu:jammy
            repository: v5.10.130
            kernel_version: 5.10.130-0510130
            kernel_version_c: 202207121545
-           upload: 0
+           upload: 1
          - dockerimg: amd64/ubuntu:jammy
-           repository: v5.15.186
-           kernel_version: 5.15.186-0515186
-           kernel_version_c: 202506271407
+           repository: v5.15.201
+           kernel_version: 5.15.201-0515201
+           kernel_version_c: 202602191605
            upload: 0
          - dockerimg: amd64/ubuntu:noble
-           repository: v6.1.142
-           kernel_version: 6.1.142-0601142
-           kernel_version_c: 202506271127
+           repository: v6.1.166
+           kernel_version: 6.1.166-0601166
+           kernel_version_c: 202603051616
            upload: 0
          - dockerimg: amd64/ubuntu:noble
-           repository: v6.6.95
-           kernel_version: 6.6.95-060695
-           kernel_version_c: 202506271118
-           upload: 0
-         - dockerimg: amd64/ubuntu:plucky
-           repository: v6.12.35
-           kernel_version: 6.12.35-061235
-           kernel_version_c: 202506271123
+           repository: v6.6.129
+           kernel_version: 6.6.129-0606129
+           kernel_version_c: 202603051541
            upload: 0
          - dockerimg: amd64/ubuntu:questing
-           repository: v6.15.4
-           kernel_version: 6.15.4-061504
-           kernel_version_c: 202506271452
+           repository: v6.12.76
+           kernel_version: 6.12.76-061276
+           kernel_version_c: 202603051545
+           upload: 0
+         - dockerimg: amd64/ubuntu:questing
+           repository: v6.18.14
+           kernel_version: 6.18.14-061814
+           kernel_version_c: 202602262345
+           upload: 0
+         - dockerimg: amd64/ubuntu:questing
+           repository: v6.19.4
+           kernel_version: 6.19.4-061904
+           kernel_version_c: 202602262342
+           upload: 0
+         - dockerimg: amd64/ubuntu:resolute
+           repository: v7.0-rc3
+           kernel_version: 7.0.0-070000rc3
+           kernel_version_c: 202603090038
            upload: 0
     steps:
     - uses: actions/checkout@v2
