@@ -376,6 +376,9 @@ static const struct vb2_ops akvcam_akvcam_buffers_queue_ops = {
     .buf_queue       = akvcam_buffers_buffer_queue,
     .start_streaming = akvcam_buffers_start_streaming,
     .stop_streaming  = akvcam_buffers_stop_streaming,
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(7, 0, 0)
     .wait_prepare    = vb2_ops_wait_prepare,
     .wait_finish     = vb2_ops_wait_finish,
+#endif
 };
