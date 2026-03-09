@@ -1,3 +1,58 @@
+akvcam 1.4.0:
+
+- Added support bidirectional format convertion to any format.
+  The supported formats are:
+
+      V4L2_PIX_FMT_ABGR32
+      V4L2_PIX_FMT_ABGR555
+      V4L2_PIX_FMT_ARGB32
+      V4L2_PIX_FMT_ARGB555
+      V4L2_PIX_FMT_ARGB555X
+      V4L2_PIX_FMT_BGR24
+      V4L2_PIX_FMT_BGR32
+      V4L2_PIX_FMT_BGRA32
+      V4L2_PIX_FMT_BGRA555
+      V4L2_PIX_FMT_BGRX32
+      V4L2_PIX_FMT_BGRX555
+      V4L2_PIX_FMT_NV12
+      V4L2_PIX_FMT_NV16
+      V4L2_PIX_FMT_NV21
+      V4L2_PIX_FMT_NV61
+      V4L2_PIX_FMT_RGB24
+      V4L2_PIX_FMT_RGB32
+      V4L2_PIX_FMT_RGB555
+      V4L2_PIX_FMT_RGB555X
+      V4L2_PIX_FMT_RGB565
+      V4L2_PIX_FMT_RGB565X
+      V4L2_PIX_FMT_RGBA32
+      V4L2_PIX_FMT_RGBA555
+      V4L2_PIX_FMT_RGBX32
+      V4L2_PIX_FMT_RGBX555
+      V4L2_PIX_FMT_UYVY
+      V4L2_PIX_FMT_VYUY
+      V4L2_PIX_FMT_XBGR32
+      V4L2_PIX_FMT_XBGR555
+      V4L2_PIX_FMT_XRGB32
+      V4L2_PIX_FMT_XRGB555
+      V4L2_PIX_FMT_XRGB555X
+      V4L2_PIX_FMT_YUV410
+      V4L2_PIX_FMT_YUV411P
+      V4L2_PIX_FMT_YUV420
+      V4L2_PIX_FMT_YUV422P
+      V4L2_PIX_FMT_YUYV
+      V4L2_PIX_FMT_YVU410
+      V4L2_PIX_FMT_YVU420
+      V4L2_PIX_FMT_YVYU
+
+  You can now send send the video frames to the output in any format supported
+  by the module.
+- Added direct mode support. The devices, when configured in direct mode, the
+  frames are sent straight to the other side without any kind of treatement,
+  giving a higher frame rate than using the normal normal mode.
+  You can only connect the devices when both sides are configured in direct
+  mode, also both devices must have the same format (only one allowed), and the
+  devices does not offers user controls.
+
 akvcam 1.3.0:
 
 - Added /proc/akvcaminfo to read information about the supported input and
