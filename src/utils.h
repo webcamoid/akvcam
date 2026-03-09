@@ -203,25 +203,28 @@ static inline void akvcam_swap_data_bytes_uint8_t(uint8_t *data, size_t size_in_
 
 static inline void akvcam_swap_data_bytes_uint16_t(uint16_t *data, size_t size_in_bytes)
 {
+    size_t i;
     size_t n = size_in_bytes / sizeof(uint16_t);
 
-    for (size_t i = 0; i < n; ++i, ++data)
+    for (i = 0; i < n; ++i, ++data)
         *data = akvcam_swap_bytes_uint16_t(*data);
 }
 
 static inline void akvcam_swap_data_bytes_uint32_t(uint32_t *data, size_t size_in_bytes)
 {
+    size_t i;
     size_t n = size_in_bytes / sizeof(uint32_t);
 
-    for (size_t i = 0; i < n; ++i, ++data)
+    for (i = 0; i < n; ++i, ++data)
         *data = akvcam_swap_bytes_uint32_t(*data);
 }
 
 static inline void akvcam_swap_data_bytes_uint64_t(uint64_t *data, size_t size_in_bytes)
 {
+    size_t i;
     size_t n = size_in_bytes / sizeof(uint64_t);
 
-    for (size_t i = 0; i < n; ++i, ++data)
+    for (i = 0; i < n; ++i, ++data)
         *data = akvcam_swap_bytes_uint64_t(*data);
 }
 
