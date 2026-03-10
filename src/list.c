@@ -23,6 +23,10 @@
 
 #include "list.h"
 
+#ifndef SSIZE_MAX
+#define SSIZE_MAX ((ssize_t) (SIZE_MAX >> 1))
+#endif
+
 typedef struct {
     size_t index;
     akvcam_list_t combined;
@@ -390,7 +394,7 @@ akvcam_matrix_t akvcam_matrix_combine(akvcam_matrix_ct matrix)
      * but we reserve a safe limit.
      */
     max_frames = matrix_size * 64 + 1;
-    stack = vmalloc_array(max_frames, sizeof(akvcam_matrix_combine_frame));
+    stack = vmalloc(max_frames * sizeof(akvcam_matrix_combine_frame));
 
     if (!stack)
         return combinations;
