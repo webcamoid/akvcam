@@ -7866,10 +7866,12 @@ void akvcam_converter_end(akvcam_converter_t self)
 akvcam_frame_t akvcam_converter_convert(akvcam_converter_t self,
                                         akvcam_frame_ct frame)
 {
+    akvcam_format_t format;
+
     if (!frame)
         return NULL;
 
-    akvcam_format_t format = akvcam_frame_format_nr(frame);
+    format = akvcam_frame_format_nr(frame);
 
     if (akvcam_format_fourcc(format) == akvcam_format_fourcc(self->output_format)
         && akvcam_format_width(format) == akvcam_format_width(self->output_format)
@@ -7961,6 +7963,8 @@ akvcam_frame_t akvcam_converter_private_convert(akvcam_converter_t self,
                                                 akvcam_format_ct output_format)
 {
     static const int max_cache_alloc = 1 << 16;
+    akvcam_frame_convert_parameters_t fc;
+    akvcam_format_t frame_format;
 
     if (self->cache_index >= max_cache_alloc)
         return NULL;
@@ -7984,8 +7988,8 @@ akvcam_frame_t akvcam_converter_private_convert(akvcam_converter_t self,
         self->fc_size = new_size;
     }
 
-    akvcam_frame_convert_parameters_t fc = self->fc + self->cache_index;
-    akvcam_format_t frame_format = akvcam_frame_format_nr(frame);
+    fc = self->fc + self->cache_index;
+    frame_format = akvcam_frame_format_nr(frame);
 
     if (!akvcam_format_is_same_format(frame_format, fc->input_format)
         || !akvcam_format_is_same_format(output_format, fc->output_format)
@@ -8351,12 +8355,16 @@ void akvcam_frame_convert_parameters_configure(akvcam_frame_convert_parameters_t
 
     akvcam_format_specs_ct ispecs =
             akvcam_format_specs_from_fixel_format(ifourcc);
+    akvcam_format_specs_ct ospecs;
+    size_t icomponents;
+    size_t ocomponents;
+    bool has_alpha_in;
+    bool has_alpha_out;
 
     if (ofourcc == 0)
         ofourcc = ifourcc;
 
-    akvcam_format_specs_ct ospecs =
-            akvcam_format_specs_from_fixel_format(ofourcc);
+    ospecs = akvcam_format_specs_from_fixel_format(ofourcc);
 
     DEFINE_CONVERT_TYPES(8, 8);
     DEFINE_CONVERT_TYPES(8, 16);
@@ -8368,8 +8376,8 @@ void akvcam_frame_convert_parameters_configure(akvcam_frame_convert_parameters_t
     DEFINE_CONVERT_TYPES(32, 16);
     DEFINE_CONVERT_TYPES(32, 32);
 
-    size_t icomponents = akvcam_format_specs_main_components(ispecs);
-    size_t ocomponents = akvcam_format_specs_main_components(ospecs);
+    icomponents = akvcam_format_specs_main_components(ispecs);
+    ocomponents = akvcam_format_specs_main_components(ospecs);
 
     if (icomponents == 3 && ispecs->type == ospecs->type)
         fc->convert_type = AKVCAM_CONVERT_TYPE_VECTOR;
@@ -8503,10 +8511,10 @@ void akvcam_frame_convert_parameters_configure(akvcam_frame_convert_parameters_t
     fc->alpha_mask = akvcam_color_component_max(fc->comp_ao) << fc->ao_shift;
     fc->mask_ao = ~fc->alpha_mask;
 
-    bool has_alpha_in = akvcam_format_specs_contains(ispecs,
-                                                     AKVCAM_COMPONENT_TYPE_A);
-    bool has_alpha_out = akvcam_format_specs_contains(ospecs,
-                                                      AKVCAM_COMPONENT_TYPE_A);
+    has_alpha_in = akvcam_format_specs_contains(ispecs,
+                                                AKVCAM_COMPONENT_TYPE_A);
+    has_alpha_out = akvcam_format_specs_contains(ospecs,
+                                                 AKVCAM_COMPONENT_TYPE_A);
 
     if (has_alpha_in && has_alpha_out)
         fc->alpha_mode = AKVCAM_CONVERT_ALPHA_MODE_AI_AO;
@@ -8622,7 +8630,9 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
 #define x_src_to_dst(v) ((((v) - irect.x) * wo_1 + fc->xmin * wi_1) / wi_1)
 #define x_dst_to_src(v) ((((v) - fc->xmin) * wi_1 + irect.x * wo_1) / wo_1)
 
-    for (int x = 0; x < output_convert_format_width; ++x) {
+    int x;
+
+    for (x = 0; x < output_convert_format_width; ++x) {
         int xs = x_dst_to_src(x);
         int xs_1 = x_dst_to_src(akvcam_min(x + 1, output_convert_format_width - 1));
         int xmin = x_src_to_dst(xs);
@@ -8658,7 +8668,9 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
 #define y_src_to_dst(v) ((((v) - irect.y) * ho_1 + fc->ymin * hi_1) / hi_1)
 #define y_dst_to_src(v) ((((v) - fc->ymin) * hi_1 + irect.y * ho_1) / ho_1)
 
-    for (int y = 0; y < output_convert_format_height; ++y) {
+    int y;
+
+    for (y = 0; y < output_convert_format_height; ++y) {
         if (fc->resize_mode == AKVCAM_RESIZE_MODE_DOWN) {
             fc->src_height[y] = y_dst_to_src(y);
             fc->src_height_1[y] = akvcam_min(y_dst_to_src(y + 1), iformat_height);
@@ -8689,14 +8701,14 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
                                                             iformat,
                                                             fc->output_convert_format);
 
-        for (int x = 0; x < iformat_width; ++x) {
+        for (x = 0; x < iformat_width; ++x) {
             fc->dl_src_width_offset_x[x] = fc->comp_xi? (x >> fc->comp_xi->width_div) * fc->comp_xi->step: 0;
             fc->dl_src_width_offset_y[x] = fc->comp_yi? (x >> fc->comp_yi->width_div) * fc->comp_yi->step: 0;
             fc->dl_src_width_offset_z[x] = fc->comp_zi? (x >> fc->comp_zi->width_div) * fc->comp_zi->step: 0;
             fc->dl_src_width_offset_a[x] = fc->comp_ai? (x >> fc->comp_ai->width_div) * fc->comp_ai->step: 0;
         }
 
-        for (int y = 0; y < output_convert_format_height; ++y) {
+        for (y = 0; y < output_convert_format_height; ++y) {
             int ys = fc->src_height[y];
             int ys_1 = fc->src_height_1[y];
 
@@ -8706,7 +8718,7 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
             int diff_y = ys_1 - ys;
             uint64_t *line = fc->kdl + (size_t) y * output_convert_format_width;
 
-            for (int x = 0; x < output_convert_format_width; ++x) {
+            for (x = 0; x < output_convert_format_width; ++x) {
                 int diff_x = fc->src_width_1[x] - fc->src_width[x];
                 int area = diff_x * diff_y;
                 line[x] = area > 0? area: 1;
@@ -8764,13 +8776,14 @@ void akvcam_frame_convert_parameters_allocate_dl_buffers(akvcam_frame_convert_pa
     size_t width_1 = iwidth + 1;
     size_t height_1 = iheight + 1;
     size_t integral_image_size = width_1 * height_1;
+    size_t kdl_size;
 
     fc->integral_image_data_x = vzalloc(integral_image_size * sizeof(uint64_t));
     fc->integral_image_data_y = vzalloc(integral_image_size * sizeof(uint64_t));
     fc->integral_image_data_z = vzalloc(integral_image_size * sizeof(uint64_t));
     fc->integral_image_data_a = vzalloc(integral_image_size * sizeof(uint64_t));
 
-    size_t kdl_size = (size_t) owidth * oheight;
+    kdl_size = (size_t) owidth * oheight;
     fc->kdl = vzalloc(kdl_size * sizeof(uint64_t));
     memset(fc->kdl, 0, kdl_size * sizeof(uint64_t));
 
