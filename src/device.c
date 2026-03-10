@@ -538,12 +538,14 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
                 result = akvcam_buffers_write_frame(self->buffers, frame);
             } else {
                 /* Fallback frame: convert to capture format first. */
+                akvcam_frame_t converted;
+
                 akvcam_converter_set_output_format(self->out_video_converter, self->format);
                 akvcam_converter_set_scaling_mode(self->out_video_converter, self->scaling);
                 akvcam_converter_set_aspect_ratio_mode(self->out_video_converter, self->aspect_ratio);
 
                 akvcam_converter_begin(self->out_video_converter);
-                akvcam_frame_t converted =
+                converted =
                     akvcam_converter_convert(self->out_video_converter, frame);
                 akvcam_converter_end(self->out_video_converter);
                 result = akvcam_buffers_write_frame(self->buffers, converted);
@@ -658,6 +660,11 @@ akvcam_frame_t akvcam_device_frame_apply_adjusts(akvcam_device_ct self,
 {
     bool horizontal_flip = self->horizontal_flip != self->horizontal_mirror;
     bool vertical_flip = self->vertical_flip != self->vertical_mirror;
+    akvcam_format_t frame_fmt;
+    akvcam_format_t iformat;
+    akvcam_frame_t iframe;
+    akvcam_frame_t oframe;
+    struct v4l2_fract frame_rate;
 
     akpr_function();
 
@@ -675,20 +682,19 @@ akvcam_frame_t akvcam_device_frame_apply_adjusts(akvcam_device_ct self,
     akpr_debug("scaling: %s\n", akvcam_converter_scaling_mode_to_string(self->scaling));
     akpr_debug("aspect_ratio: %s\n", akvcam_converter_aspect_ratio_mode_to_string(self->aspect_ratio));
 
-    akvcam_format_t frame_fmt = akvcam_frame_format_nr(frame);
-    struct v4l2_fract frame_rate = akvcam_format_frame_rate(frame_fmt);
-    akvcam_format_t iformat = akvcam_format_new(V4L2_PIX_FMT_ARGB32,
-                                                akvcam_format_width(frame_fmt),
-                                                akvcam_format_height(frame_fmt),
-                                                &frame_rate);
+    frame_fmt = akvcam_frame_format_nr(frame);
+    frame_rate = akvcam_format_frame_rate(frame_fmt);
+    iformat = akvcam_format_new(V4L2_PIX_FMT_ARGB32,
+                                akvcam_format_width(frame_fmt),
+                                akvcam_format_height(frame_fmt),
+                                &frame_rate);
     akvcam_converter_set_output_format(self->in_video_converter, iformat);
     akvcam_converter_set_scaling_mode(self->in_video_converter, self->scaling);
     akvcam_converter_set_aspect_ratio_mode(self->in_video_converter, self->aspect_ratio);
     akvcam_format_delete(iformat);
 
     akvcam_converter_begin(self->in_video_converter);
-    akvcam_frame_t iframe =
-            akvcam_converter_convert(self->in_video_converter, frame);
+    iframe = akvcam_converter_convert(self->in_video_converter, frame);
     akvcam_converter_end(self->in_video_converter);
 
     akvcam_frame_filter_mirror(iframe,
@@ -709,8 +715,7 @@ akvcam_frame_t akvcam_device_frame_apply_adjusts(akvcam_device_ct self,
     akvcam_converter_set_aspect_ratio_mode(self->out_video_converter, self->aspect_ratio);
 
     akvcam_converter_begin(self->out_video_converter);
-    akvcam_frame_t oframe =
-            akvcam_converter_convert(self->out_video_converter, iframe);
+    oframe = akvcam_converter_convert(self->out_video_converter, iframe);
     akvcam_converter_end(self->out_video_converter);
     akvcam_frame_delete(iframe);
 

@@ -57,12 +57,12 @@ akvcam_format_t akvcam_format_new(__u32 fourcc,
                                   const struct v4l2_fract *frame_rate)
 {
     akvcam_format_t self = kzalloc(sizeof(struct akvcam_format), GFP_KERNEL);
+    akvcam_format_specs_ct specs;
     kref_init(&self->ref);
     self->fourcc = fourcc;
     self->width = width;
     self->height = height;
-    akvcam_format_specs_ct specs =
-            akvcam_format_specs_from_fixel_format(fourcc);
+    specs = akvcam_format_specs_from_fixel_format(fourcc);
     self->nplanes = specs? specs->nplanes: 0;
     self->align = 32;
     akvcam_format_private_update_params(self, specs);
@@ -78,6 +78,7 @@ akvcam_format_t akvcam_format_new(__u32 fourcc,
 akvcam_format_t akvcam_format_new_copy(akvcam_format_ct other)
 {
     akvcam_format_t self = kzalloc(sizeof(struct akvcam_format), GFP_KERNEL);
+    size_t mem_size;
     kref_init(&self->ref);
     self->fourcc = other->fourcc;
     self->width = other->width;
@@ -89,7 +90,7 @@ akvcam_format_t akvcam_format_new_copy(akvcam_format_ct other)
     self->bpp = other->bpp;
     self->align = other->align;
 
-    size_t mem_size = MAX_PLANES * sizeof(size_t);
+    mem_size = MAX_PLANES * sizeof(size_t);
     memcpy(self->plane_size, other->plane_size, mem_size);
     memcpy(self->plane_offset, other->plane_offset, mem_size);
     memcpy(self->pixel_size, other->pixel_size, mem_size);
@@ -127,6 +128,8 @@ void akvcam_format_copy(akvcam_format_t self, akvcam_format_ct other)
         return;
 
     if (other) {
+        size_t mem_size;
+
         self->fourcc = other->fourcc;
         self->width = other->width;
         self->height = other->height;
@@ -136,7 +139,7 @@ void akvcam_format_copy(akvcam_format_t self, akvcam_format_ct other)
         self->bpp = other->bpp;
         self->align = other->align;
 
-        size_t mem_size = MAX_PLANES * sizeof(size_t);
+        mem_size = MAX_PLANES * sizeof(size_t);
         memcpy(self->plane_size, other->plane_size, mem_size);
         memcpy(self->plane_offset, other->plane_offset, mem_size);
         memcpy(self->pixel_size, other->pixel_size, mem_size);
@@ -145,6 +148,8 @@ void akvcam_format_copy(akvcam_format_t self, akvcam_format_ct other)
         memcpy(self->width_div, other->width_div, mem_size);
         memcpy(self->height_div, other->height_div, mem_size);
     } else {
+        size_t mem_size;
+
         self->fourcc = 0;
         self->width = 0;
         self->height = 0;
@@ -154,7 +159,7 @@ void akvcam_format_copy(akvcam_format_t self, akvcam_format_ct other)
         self->bpp = 0;
         self->align = 32;
 
-        size_t mem_size = MAX_PLANES * sizeof(size_t);
+        mem_size = MAX_PLANES * sizeof(size_t);
         memset(self->plane_size, 0, mem_size);
         memset(self->plane_offset, 0, mem_size);
         memset(self->pixel_size, 0, mem_size);
@@ -527,6 +532,8 @@ bool akvcam_format_have_multiplanar(akvcam_formats_list_ct formats)
 static void akvcam_format_private_update_params(akvcam_format_t self,
                                                 akvcam_format_specs_ct specs)
 {
+    size_t i;
+
     self->data_size = 0;
     self->bpp = 0;
 
@@ -544,7 +551,7 @@ static void akvcam_format_private_update_params(akvcam_format_t self,
     }
 
     // Calculate parameters for each plane
-    for (size_t i = 0; i < specs->nplanes; ++i) {
+    for (i = 0; i < specs->nplanes; ++i) {
         akvcam_plane_ct plane = specs->planes + i;
         size_t pixel_size = akvcam_plane_pixel_size(plane);
         size_t width_div = akvcam_plane_width_div(plane);
@@ -555,6 +562,7 @@ static void akvcam_format_private_update_params(akvcam_format_t self,
 
         // Align line size for SIMD compatibility
         size_t line_size = akvcam_align_up(bytes_used, (size_t)self->align);
+        size_t plane_size;
 
         // Store pixel size, line size, and bytes used
         self->pixel_size[i] = pixel_size;
@@ -562,7 +570,7 @@ static void akvcam_format_private_update_params(akvcam_format_t self,
         self->bytes_used[i] = bytes_used;
 
         // Calculate plane size, considering sub-sampling
-        size_t plane_size = (line_size * self->height) >> height_div;
+        plane_size = (line_size * self->height) >> height_div;
 
         // Align plane size to ensure next plane starts aligned
         plane_size = akvcam_align_up(plane_size, (size_t)self->align);

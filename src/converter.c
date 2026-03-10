@@ -8534,6 +8534,15 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
                                                        akvcam_format_ct oformat,
                                                        AKVCAM_ASPECT_RATIO_MODE aspect_ratio_mode)
 {
+    int x;
+    int y;
+    int wi_1;
+    int wo_1;
+    int hi_1;
+    int ho_1;
+    int iformat_width;
+    int iformat_height;
+
     akvcam_rect irect = {
         0,
         0,
@@ -8542,21 +8551,27 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
     };
 
     int output_convert_format_fourcc = akvcam_format_fourcc(oformat);
+    int output_convert_format_width;
+    int output_convert_format_height;
+    int width;
+    int height;
+    int owidth;
+    int oheight;
 
     if (output_convert_format_fourcc == 0)
         output_convert_format_fourcc = akvcam_format_fourcc(iformat);
 
-    int output_convert_format_width = akvcam_format_width(oformat);
-    int output_convert_format_height = akvcam_format_height(oformat);
+    output_convert_format_width = akvcam_format_width(oformat);
+    output_convert_format_height = akvcam_format_height(oformat);
 
-    int width = output_convert_format_width > 1?
-                    output_convert_format_width:
-                    irect.width;
-    int height = output_convert_format_height > 1?
-                     output_convert_format_height:
-                     irect.height;
-    int owidth = width;
-    int oheight = height;
+    width = output_convert_format_width > 1?
+                output_convert_format_width:
+                irect.width;
+    height = output_convert_format_height > 1?
+                 output_convert_format_height:
+                 irect.height;
+    owidth = width;
+    oheight = height;
 
     if (aspect_ratio_mode == AKVCAM_ASPECT_RATIO_MODE_KEEP
         || aspect_ratio_mode == AKVCAM_ASPECT_RATIO_MODE_FIT) {
@@ -8602,6 +8617,8 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
         fc->resize_mode = AKVCAM_RESIZE_MODE_KEEP;
 
     if (aspect_ratio_mode == AKVCAM_ASPECT_RATIO_MODE_EXPANDING) {
+        int x;
+        int y;
         int w = irect.height * owidth / oheight;
         int h = irect.width * oheight / owidth;
 
@@ -8611,8 +8628,8 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
         if (h > irect.height)
             h = irect.height;
 
-        int x = irect.x + (irect.width - w) / 2;
-        int y = irect.y + (irect.height - h) / 2;
+        x = irect.x + (irect.width - w) / 2;
+        y = irect.y + (irect.height - h) / 2;
         irect.x = x;
         irect.y = y;
         irect.width = w;
@@ -8621,16 +8638,14 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
 
     akvcam_frame_convert_parameters_allocate_buffers(fc,
                                                      fc->output_convert_format);
-    int iformat_width = akvcam_format_width(iformat);
-    int iformat_height = akvcam_format_height(iformat);
+    iformat_width = akvcam_format_width(iformat);
+    iformat_height = akvcam_format_height(iformat);
 
-    int wi_1 = akvcam_max(1, irect.width - 1);
-    int wo_1 = akvcam_max(1, owidth - 1);
+    wi_1 = akvcam_max(1, irect.width - 1);
+    wo_1 = akvcam_max(1, owidth - 1);
 
 #define x_src_to_dst(v) ((((v) - irect.x) * wo_1 + fc->xmin * wi_1) / wi_1)
 #define x_dst_to_src(v) ((((v) - fc->xmin) * wi_1 + irect.x * wo_1) / wo_1)
-
-    int x;
 
     for (x = 0; x < output_convert_format_width; ++x) {
         int xs = x_dst_to_src(x);
@@ -8661,14 +8676,11 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
             fc->kx[x] = 0;
     }
 
-
-    int hi_1 = akvcam_max(1, irect.height - 1);
-    int ho_1 = akvcam_max(1, oheight - 1);
+    hi_1 = akvcam_max(1, irect.height - 1);
+    ho_1 = akvcam_max(1, oheight - 1);
 
 #define y_src_to_dst(v) ((((v) - irect.y) * ho_1 + fc->ymin * hi_1) / hi_1)
 #define y_dst_to_src(v) ((((v) - fc->ymin) * hi_1 + irect.y * ho_1) / ho_1)
-
-    int y;
 
     for (y = 0; y < output_convert_format_height; ++y) {
         if (fc->resize_mode == AKVCAM_RESIZE_MODE_DOWN) {
@@ -8711,12 +8723,14 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
         for (y = 0; y < output_convert_format_height; ++y) {
             int ys = fc->src_height[y];
             int ys_1 = fc->src_height_1[y];
+            int diff_y;
+            uint64_t *line;
 
             fc->src_height_dl_offset[y] = (size_t) ys * fc->input_width_1;
             fc->src_height_dl_offset_1[y] = (size_t) ys_1 * fc->input_width_1;
 
-            int diff_y = ys_1 - ys;
-            uint64_t *line = fc->kdl + (size_t) y * output_convert_format_width;
+            diff_y = ys_1 - ys;
+            line = fc->kdl + (size_t) y * output_convert_format_width;
 
             for (x = 0; x < output_convert_format_width; ++x) {
                 int diff_x = fc->src_width_1[x] - fc->src_width[x];
@@ -8738,9 +8752,10 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
 void akvcam_frame_convert_parameters_allocate_buffers(akvcam_frame_convert_parameters_t fc,
                                                       akvcam_format_ct oformat)
 {
-    akvcam_frame_convert_parameters_clear_buffers(fc);
     int width = akvcam_format_width(oformat);
     int height = akvcam_format_height(oformat);
+
+    akvcam_frame_convert_parameters_clear_buffers(fc);
 
     fc->src_width = vzalloc(width * sizeof(int));
     fc->src_width_1 = vzalloc(width * sizeof(int));
