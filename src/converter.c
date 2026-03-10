@@ -376,6 +376,8 @@ static inline void akvcam_blend4(int N,
                                                int64_t ky, \
                                                itype *xi) \
     { \
+        int64_t xib; \
+        \
         int xs_x   = fc->src_width_offset_x[x]; \
         int xs_x_1 = fc->src_width_offset_x_1[x]; \
         \
@@ -393,7 +395,7 @@ static inline void akvcam_blend4(int N,
         xi_x = (xi_x >> fc->xi_shift) & fc->max_xi; \
         xi_y = (xi_y >> fc->xi_shift) & fc->max_xi; \
         \
-        int64_t xib = 0; \
+        xib = 0; \
         akvcam_blend(SCALE_EMULT, xi_, xi_x, xi_y, fc->kx[x], ky, &xib); \
         *xi = (itype) xib; \
     }
@@ -428,17 +430,32 @@ static inline void akvcam_read_f8ul1(akvcam_frame_convert_parameters_ct fc,
                                                 itype *xi, \
                                                 itype *ai) \
     { \
-        int xs_x   = fc->src_width_offset_x[x]; \
-        int xs_a   = fc->src_width_offset_a[x]; \
-        int xs_x_1 = fc->src_width_offset_x_1[x]; \
-        int xs_a_1 = fc->src_width_offset_a_1[x]; \
+        int xs_x; \
+        int xs_a; \
+        int xs_x_1; \
+        int xs_a_1; \
+        itype xai0; \
+        itype xai1; \
+        itype xai_x0; \
+        itype xai_x1; \
+        itype xai_y0; \
+        itype xai_y1; \
+        int64_t xai[2]; \
+        int64_t xai_x[2]; \
+        int64_t xai_y[2]; \
+        int64_t xaib[2]; \
         \
-        itype xai0   = *(const itype *)(src_line_x   + xs_x); \
-        itype xai1   = *(const itype *)(src_line_a   + xs_a); \
-        itype xai_x0 = *(const itype *)(src_line_x   + xs_x_1); \
-        itype xai_x1 = *(const itype *)(src_line_a   + xs_a_1); \
-        itype xai_y0 = *(const itype *)(src_line_x_1 + xs_x); \
-        itype xai_y1 = *(const itype *)(src_line_a_1 + xs_a); \
+        xs_x   = fc->src_width_offset_x[x]; \
+        xs_a   = fc->src_width_offset_a[x]; \
+        xs_x_1 = fc->src_width_offset_x_1[x]; \
+        xs_a_1 = fc->src_width_offset_a_1[x]; \
+        \
+        xai0   = *(const itype *)(src_line_x   + xs_x); \
+        xai1   = *(const itype *)(src_line_a   + xs_a); \
+        xai_x0 = *(const itype *)(src_line_x   + xs_x_1); \
+        xai_x1 = *(const itype *)(src_line_a   + xs_a_1); \
+        xai_y0 = *(const itype *)(src_line_x_1 + xs_x); \
+        xai_y1 = *(const itype *)(src_line_a_1 + xs_a); \
         \
         if (fc->from_endian != __BYTE_ORDER__) { \
             xai0   = akvcam_swap_bytes(itype, xai0); \
@@ -449,14 +466,13 @@ static inline void akvcam_read_f8ul1(akvcam_frame_convert_parameters_ct fc,
             xai_y1 = akvcam_swap_bytes(itype, xai_y1); \
         } \
         \
-        int64_t xai[2]   = {(xai0   >> fc->xi_shift) & fc->max_xi, \
-                            (xai1   >> fc->ai_shift) & fc->max_ai}; \
-        int64_t xai_x[2] = {(xai_x0 >> fc->xi_shift) & fc->max_xi, \
-                            (xai_x1 >> fc->ai_shift) & fc->max_ai}; \
-        int64_t xai_y[2] = {(xai_y0 >> fc->xi_shift) & fc->max_xi, \
-                            (xai_y1 >> fc->ai_shift) & fc->max_ai}; \
+        xai[0]   = (xai0   >> fc->xi_shift) & fc->max_xi; \
+        xai[1]   = (xai1   >> fc->ai_shift) & fc->max_ai; \
+        xai_x[0] = (xai_x0 >> fc->xi_shift) & fc->max_xi; \
+        xai_x[1] = (xai_x1 >> fc->ai_shift) & fc->max_ai; \
+        xai_y[0] = (xai_y0 >> fc->xi_shift) & fc->max_xi; \
+        xai_y[1] = (xai_y1 >> fc->ai_shift) & fc->max_ai; \
         \
-        int64_t xaib[2]; \
         akvcam_blend2(SCALE_EMULT, xai, xai_x, xai_y, fc->kx[x], ky, xaib); \
         *xi = (itype) xaib[0]; \
         *ai = (itype) xaib[1]; \
@@ -615,22 +631,42 @@ static inline void akvcam_read_f8ul1a(akvcam_frame_convert_parameters_ct fc,
                                                itype *yi, \
                                                itype *zi) \
     { \
-        int xs_x   = fc->src_width_offset_x[x]; \
-        int xs_y   = fc->src_width_offset_y[x]; \
-        int xs_z   = fc->src_width_offset_z[x]; \
-        int xs_x_1 = fc->src_width_offset_x_1[x]; \
-        int xs_y_1 = fc->src_width_offset_y_1[x]; \
-        int xs_z_1 = fc->src_width_offset_z_1[x]; \
+        int xs_x; \
+        int xs_y; \
+        int xs_z; \
+        int xs_x_1; \
+        int xs_y_1; \
+        int xs_z_1; \
+        itype xyzi0; \
+        itype xyzi1; \
+        itype xyzi2; \
+        itype xyzi_x0; \
+        itype xyzi_x1; \
+        itype xyzi_x2; \
+        itype xyzi_y0; \
+        itype xyzi_y1; \
+        itype xyzi_y2; \
+        int64_t xyzi[3]; \
+        int64_t xyzi_x[3]; \
+        int64_t xyzi_y[3]; \
+        int64_t xyzib[3]; \
         \
-        itype xyzi0   = *(const itype *)(src_line_x   + xs_x); \
-        itype xyzi1   = *(const itype *)(src_line_y   + xs_y); \
-        itype xyzi2   = *(const itype *)(src_line_z   + xs_z); \
-        itype xyzi_x0 = *(const itype *)(src_line_x   + xs_x_1); \
-        itype xyzi_x1 = *(const itype *)(src_line_y   + xs_y_1); \
-        itype xyzi_x2 = *(const itype *)(src_line_z   + xs_z_1); \
-        itype xyzi_y0 = *(const itype *)(src_line_x_1 + xs_x); \
-        itype xyzi_y1 = *(const itype *)(src_line_y_1 + xs_y); \
-        itype xyzi_y2 = *(const itype *)(src_line_z_1 + xs_z); \
+        xs_x   = fc->src_width_offset_x[x]; \
+        xs_y   = fc->src_width_offset_y[x]; \
+        xs_z   = fc->src_width_offset_z[x]; \
+        xs_x_1 = fc->src_width_offset_x_1[x]; \
+        xs_y_1 = fc->src_width_offset_y_1[x]; \
+        xs_z_1 = fc->src_width_offset_z_1[x]; \
+        \
+        xyzi0   = *(const itype *)(src_line_x   + xs_x); \
+        xyzi1   = *(const itype *)(src_line_y   + xs_y); \
+        xyzi2   = *(const itype *)(src_line_z   + xs_z); \
+        xyzi_x0 = *(const itype *)(src_line_x   + xs_x_1); \
+        xyzi_x1 = *(const itype *)(src_line_y   + xs_y_1); \
+        xyzi_x2 = *(const itype *)(src_line_z   + xs_z_1); \
+        xyzi_y0 = *(const itype *)(src_line_x_1 + xs_x); \
+        xyzi_y1 = *(const itype *)(src_line_y_1 + xs_y); \
+        xyzi_y2 = *(const itype *)(src_line_z_1 + xs_z); \
         \
         if (fc->from_endian != __BYTE_ORDER__) { \
             xyzi0   = akvcam_swap_bytes(itype, xyzi0); \
@@ -644,17 +680,16 @@ static inline void akvcam_read_f8ul1a(akvcam_frame_convert_parameters_ct fc,
             xyzi_y2 = akvcam_swap_bytes(itype, xyzi_y2); \
         } \
         \
-        int64_t xyzi[3]   = {(xyzi0   >> fc->xi_shift) & fc->max_xi, \
-                             (xyzi1   >> fc->yi_shift) & fc->max_yi, \
-                             (xyzi2   >> fc->zi_shift) & fc->max_zi}; \
-        int64_t xyzi_x[3] = {(xyzi_x0 >> fc->xi_shift) & fc->max_xi, \
-                             (xyzi_x1 >> fc->yi_shift) & fc->max_yi, \
-                             (xyzi_x2 >> fc->zi_shift) & fc->max_zi}; \
-        int64_t xyzi_y[3] = {(xyzi_y0 >> fc->xi_shift) & fc->max_xi, \
-                             (xyzi_y1 >> fc->yi_shift) & fc->max_yi, \
-                             (xyzi_y2 >> fc->zi_shift) & fc->max_zi}; \
+        xyzi[0]   = (xyzi0   >> fc->xi_shift) & fc->max_xi; \
+        xyzi[1]   = (xyzi1   >> fc->yi_shift) & fc->max_yi; \
+        xyzi[2]   = (xyzi2   >> fc->zi_shift) & fc->max_zi; \
+        xyzi_x[0] = (xyzi_x0 >> fc->xi_shift) & fc->max_xi; \
+        xyzi_x[1] = (xyzi_x1 >> fc->yi_shift) & fc->max_yi; \
+        xyzi_x[2] = (xyzi_x2 >> fc->zi_shift) & fc->max_zi; \
+        xyzi_y[0] = (xyzi_y0 >> fc->xi_shift) & fc->max_xi; \
+        xyzi_y[1] = (xyzi_y1 >> fc->yi_shift) & fc->max_yi; \
+        xyzi_y[2] = (xyzi_y2 >> fc->zi_shift) & fc->max_zi; \
         \
-        int64_t xyzib[3]; \
         akvcam_blend3(SCALE_EMULT, xyzi, xyzi_x, xyzi_y, fc->kx[x], ky, xyzib); \
         *xi = (itype) xyzib[0]; \
         *yi = (itype) xyzib[1]; \
@@ -709,27 +744,52 @@ static inline void akvcam_read_f8ul3(akvcam_frame_convert_parameters_ct fc,
                                                 itype *zi, \
                                                 itype *ai) \
     { \
-        int xs_x   = fc->src_width_offset_x[x]; \
-        int xs_y   = fc->src_width_offset_y[x]; \
-        int xs_z   = fc->src_width_offset_z[x]; \
-        int xs_a   = fc->src_width_offset_a[x]; \
-        int xs_x_1 = fc->src_width_offset_x_1[x]; \
-        int xs_y_1 = fc->src_width_offset_y_1[x]; \
-        int xs_z_1 = fc->src_width_offset_z_1[x]; \
-        int xs_a_1 = fc->src_width_offset_a_1[x]; \
+        int xs_x; \
+        int xs_y; \
+        int xs_z; \
+        int xs_a; \
+        int xs_x_1; \
+        int xs_y_1; \
+        int xs_z_1; \
+        int xs_a_1; \
+        itype xyzai0; \
+        itype xyzai1; \
+        itype xyzai2; \
+        itype xyzai3; \
+        itype xyzai_x0; \
+        itype xyzai_x1; \
+        itype xyzai_x2; \
+        itype xyzai_x3; \
+        itype xyzai_y0; \
+        itype xyzai_y1; \
+        itype xyzai_y2; \
+        itype xyzai_y3; \
+        int64_t xyzai[4]; \
+        int64_t xyzai_x[4]; \
+        int64_t xyzai_y[4]; \
+        int64_t xyzaib[4]; \
         \
-        itype xyzai0   = *(const itype *)(src_line_x   + xs_x); \
-        itype xyzai1   = *(const itype *)(src_line_y   + xs_y); \
-        itype xyzai2   = *(const itype *)(src_line_z   + xs_z); \
-        itype xyzai3   = *(const itype *)(src_line_a   + xs_a); \
-        itype xyzai_x0 = *(const itype *)(src_line_x   + xs_x_1); \
-        itype xyzai_x1 = *(const itype *)(src_line_y   + xs_y_1); \
-        itype xyzai_x2 = *(const itype *)(src_line_z   + xs_z_1); \
-        itype xyzai_x3 = *(const itype *)(src_line_a   + xs_a_1); \
-        itype xyzai_y0 = *(const itype *)(src_line_x_1 + xs_x); \
-        itype xyzai_y1 = *(const itype *)(src_line_y_1 + xs_y); \
-        itype xyzai_y2 = *(const itype *)(src_line_z_1 + xs_z); \
-        itype xyzai_y3 = *(const itype *)(src_line_a_1 + xs_a); \
+        xs_x   = fc->src_width_offset_x[x]; \
+        xs_y   = fc->src_width_offset_y[x]; \
+        xs_z   = fc->src_width_offset_z[x]; \
+        xs_a   = fc->src_width_offset_a[x]; \
+        xs_x_1 = fc->src_width_offset_x_1[x]; \
+        xs_y_1 = fc->src_width_offset_y_1[x]; \
+        xs_z_1 = fc->src_width_offset_z_1[x]; \
+        xs_a_1 = fc->src_width_offset_a_1[x]; \
+        \
+        xyzai0   = *(const itype *)(src_line_x   + xs_x); \
+        xyzai1   = *(const itype *)(src_line_y   + xs_y); \
+        xyzai2   = *(const itype *)(src_line_z   + xs_z); \
+        xyzai3   = *(const itype *)(src_line_a   + xs_a); \
+        xyzai_x0 = *(const itype *)(src_line_x   + xs_x_1); \
+        xyzai_x1 = *(const itype *)(src_line_y   + xs_y_1); \
+        xyzai_x2 = *(const itype *)(src_line_z   + xs_z_1); \
+        xyzai_x3 = *(const itype *)(src_line_a   + xs_a_1); \
+        xyzai_y0 = *(const itype *)(src_line_x_1 + xs_x); \
+        xyzai_y1 = *(const itype *)(src_line_y_1 + xs_y); \
+        xyzai_y2 = *(const itype *)(src_line_z_1 + xs_z); \
+        xyzai_y3 = *(const itype *)(src_line_a_1 + xs_a); \
         \
         if (fc->from_endian != __BYTE_ORDER__) { \
             xyzai0   = akvcam_swap_bytes(itype, xyzai0); \
@@ -746,20 +806,19 @@ static inline void akvcam_read_f8ul3(akvcam_frame_convert_parameters_ct fc,
             xyzai_y3 = akvcam_swap_bytes(itype, xyzai_y3); \
         } \
         \
-        int64_t xyzai[4]   = {(xyzai0   >> fc->xi_shift) & fc->max_xi, \
-                              (xyzai1   >> fc->yi_shift) & fc->max_yi, \
-                              (xyzai2   >> fc->zi_shift) & fc->max_zi, \
-                              (xyzai3   >> fc->ai_shift) & fc->max_ai}; \
-        int64_t xyzai_x[4] = {(xyzai_x0 >> fc->xi_shift) & fc->max_xi, \
-                              (xyzai_x1 >> fc->yi_shift) & fc->max_yi, \
-                              (xyzai_x2 >> fc->zi_shift) & fc->max_zi, \
-                              (xyzai_x3 >> fc->ai_shift) & fc->max_ai}; \
-        int64_t xyzai_y[4] = {(xyzai_y0 >> fc->xi_shift) & fc->max_xi, \
-                              (xyzai_y1 >> fc->yi_shift) & fc->max_yi, \
-                              (xyzai_y2 >> fc->zi_shift) & fc->max_zi, \
-                              (xyzai_y3 >> fc->ai_shift) & fc->max_ai}; \
+        xyzai[0]   = (xyzai0   >> fc->xi_shift) & fc->max_xi; \
+        xyzai[1]   = (xyzai1   >> fc->yi_shift) & fc->max_yi; \
+        xyzai[2]   = (xyzai2   >> fc->zi_shift) & fc->max_zi; \
+        xyzai[3]   = (xyzai3   >> fc->ai_shift) & fc->max_ai; \
+        xyzai_x[0] = (xyzai_x0 >> fc->xi_shift) & fc->max_xi; \
+        xyzai_x[1] = (xyzai_x1 >> fc->yi_shift) & fc->max_yi; \
+        xyzai_x[2] = (xyzai_x2 >> fc->zi_shift) & fc->max_zi; \
+        xyzai_x[3] = (xyzai_x3 >> fc->ai_shift) & fc->max_ai; \
+        xyzai_y[0] = (xyzai_y0 >> fc->xi_shift) & fc->max_xi; \
+        xyzai_y[1] = (xyzai_y1 >> fc->yi_shift) & fc->max_yi; \
+        xyzai_y[2] = (xyzai_y2 >> fc->zi_shift) & fc->max_zi; \
+        xyzai_y[3] = (xyzai_y3 >> fc->ai_shift) & fc->max_ai; \
         \
-        int64_t xyzaib[4]; \
         akvcam_blend4(SCALE_EMULT, xyzai, xyzai_x, xyzai_y, fc->kx[x], ky, xyzaib); \
         *xi = (itype) xyzaib[0]; \
         *yi = (itype) xyzaib[1]; \
@@ -1013,25 +1072,23 @@ AKVCAM_WRITE3A(uint32_t)
     { \
         uint64_t *dst_line_x   = fc->integral_image_data_x; \
         uint64_t *dst_line_x_1 = dst_line_x + fc->input_width_1; \
+        int y; \
         \
-        for (int y = 0; y < fc->input_height; ++y) { \
+        for (y = 0; y < fc->input_height; ++y) { \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, y) + fc->xi_offset; \
-            \
-            /* Reset current line summation. */ \
             uint64_t sum_x = 0; \
+            int x; \
             \
-            for (int x = 0; x < fc->input_width; ++x) { \
+            for (x = 0; x < fc->input_width; ++x) { \
                 int xs_x = fc->dl_src_width_offset_x[x]; \
                 itype xi = *(const itype *)(src_line_x + xs_x); \
+                int x_1; \
                 \
                 if (fc->from_endian != __BYTE_ORDER__) \
                     xi = akvcam_swap_bytes(itype, xi); \
                 \
-                /* Accumulate pixels in current line. */ \
                 sum_x += (xi >> fc->xi_shift) & fc->max_xi; \
-                \
-                /* Accumulate current line and previous line. */ \
-                int x_1 = x + 1; \
+                x_1 = x + 1; \
                 dst_line_x_1[x_1] = sum_x + dst_line_x[x_1]; \
             } \
             \
@@ -1048,33 +1105,30 @@ AKVCAM_WRITE3A(uint32_t)
         uint64_t *dst_line_a   = fc->integral_image_data_a; \
         uint64_t *dst_line_x_1 = dst_line_x + fc->input_width_1; \
         uint64_t *dst_line_a_1 = dst_line_a + fc->input_width_1; \
+        int y; \
         \
-        for (int y = 0; y < fc->input_height; ++y) { \
+        for (y = 0; y < fc->input_height; ++y) { \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, y) + fc->xi_offset; \
             const uint8_t *src_line_a = akvcam_frame_const_line(src, fc->plane_ai, y) + fc->ai_offset; \
-            \
-            /* Reset current line summation. */ \
             uint64_t sum_x = 0; \
             uint64_t sum_a = 0; \
+            int x; \
             \
-            for (int x = 0; x < fc->input_width; ++x) { \
+            for (x = 0; x < fc->input_width; ++x) { \
                 int xs_x = fc->dl_src_width_offset_x[x]; \
                 int xs_a = fc->dl_src_width_offset_a[x]; \
-                \
                 itype xi = *(const itype *)(src_line_x + xs_x); \
                 itype ai = *(const itype *)(src_line_a + xs_a); \
+                int x_1; \
                 \
                 if (fc->from_endian != __BYTE_ORDER__) { \
                     xi = akvcam_swap_bytes(itype, xi); \
                     ai = akvcam_swap_bytes(itype, ai); \
                 } \
                 \
-                /* Accumulate pixels in current line. */ \
                 sum_x += (xi >> fc->xi_shift) & fc->max_xi; \
                 sum_a += (ai >> fc->ai_shift) & fc->max_ai; \
-                \
-                /* Accumulate current line and previous line. */ \
-                int x_1 = x + 1; \
+                x_1 = x + 1; \
                 dst_line_x_1[x_1] = sum_x + dst_line_x[x_1]; \
                 dst_line_a_1[x_1] = sum_a + dst_line_a[x_1]; \
             } \
@@ -1096,25 +1150,25 @@ AKVCAM_WRITE3A(uint32_t)
         uint64_t *dst_line_x_1 = dst_line_x + fc->input_width_1; \
         uint64_t *dst_line_y_1 = dst_line_y + fc->input_width_1; \
         uint64_t *dst_line_z_1 = dst_line_z + fc->input_width_1; \
+        int y; \
         \
-        for (int y = 0; y < fc->input_height; ++y) { \
+        for (y = 0; y < fc->input_height; ++y) { \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, y) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, y) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, y) + fc->zi_offset; \
-            \
-            /* Reset current line summation. */ \
             uint64_t sum_x = 0; \
             uint64_t sum_y = 0; \
             uint64_t sum_z = 0; \
+            int x; \
             \
-            for (int x = 0; x < fc->input_width; ++x) { \
+            for (x = 0; x < fc->input_width; ++x) { \
                 int xs_x = fc->dl_src_width_offset_x[x]; \
                 int xs_y = fc->dl_src_width_offset_y[x]; \
                 int xs_z = fc->dl_src_width_offset_z[x]; \
-                \
                 itype xi = *(const itype *)(src_line_x + xs_x); \
                 itype yi = *(const itype *)(src_line_y + xs_y); \
                 itype zi = *(const itype *)(src_line_z + xs_z); \
+                int x_1; \
                 \
                 if (fc->from_endian != __BYTE_ORDER__) { \
                     xi = akvcam_swap_bytes(itype, xi); \
@@ -1122,13 +1176,10 @@ AKVCAM_WRITE3A(uint32_t)
                     zi = akvcam_swap_bytes(itype, zi); \
                 } \
                 \
-                /* Accumulate pixels in current line. */ \
                 sum_x += (xi >> fc->xi_shift) & fc->max_xi; \
                 sum_y += (yi >> fc->yi_shift) & fc->max_yi; \
                 sum_z += (zi >> fc->zi_shift) & fc->max_zi; \
-                \
-                /* Accumulate current line and previous line. */ \
-                int x_1 = x + 1; \
+                x_1 = x + 1; \
                 dst_line_x_1[x_1] = sum_x + dst_line_x[x_1]; \
                 dst_line_y_1[x_1] = sum_y + dst_line_y[x_1]; \
                 dst_line_z_1[x_1] = sum_z + dst_line_z[x_1]; \
@@ -1155,29 +1206,29 @@ AKVCAM_WRITE3A(uint32_t)
         uint64_t *dst_line_y_1 = dst_line_y + fc->input_width_1; \
         uint64_t *dst_line_z_1 = dst_line_z + fc->input_width_1; \
         uint64_t *dst_line_a_1 = dst_line_a + fc->input_width_1; \
+        int y; \
         \
-        for (int y = 0; y < fc->input_height; ++y) { \
+        for (y = 0; y < fc->input_height; ++y) { \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, y) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, y) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, y) + fc->zi_offset; \
             const uint8_t *src_line_a = akvcam_frame_const_line(src, fc->plane_ai, y) + fc->ai_offset; \
-            \
-            /* Reset current line summation. */ \
             uint64_t sum_x = 0; \
             uint64_t sum_y = 0; \
             uint64_t sum_z = 0; \
             uint64_t sum_a = 0; \
+            int x; \
             \
-            for (int x = 0; x < fc->input_width; ++x) { \
+            for (x = 0; x < fc->input_width; ++x) { \
                 int xs_x = fc->dl_src_width_offset_x[x]; \
                 int xs_y = fc->dl_src_width_offset_y[x]; \
                 int xs_z = fc->dl_src_width_offset_z[x]; \
                 int xs_a = fc->dl_src_width_offset_a[x]; \
-                \
                 itype xi = *(const itype *)(src_line_x + xs_x); \
                 itype yi = *(const itype *)(src_line_y + xs_y); \
                 itype zi = *(const itype *)(src_line_z + xs_z); \
                 itype ai = *(const itype *)(src_line_a + xs_a); \
+                int x_1; \
                 \
                 if (fc->from_endian != __BYTE_ORDER__) { \
                     xi = akvcam_swap_bytes(itype, xi); \
@@ -1186,14 +1237,11 @@ AKVCAM_WRITE3A(uint32_t)
                     ai = akvcam_swap_bytes(itype, ai); \
                 } \
                 \
-                /* Accumulate pixels in current line. */ \
                 sum_x += (xi >> fc->xi_shift) & fc->max_xi; \
                 sum_y += (yi >> fc->yi_shift) & fc->max_yi; \
                 sum_z += (zi >> fc->zi_shift) & fc->max_zi; \
                 sum_a += (ai >> fc->ai_shift) & fc->max_ai; \
-                \
-                /* Accumulate current line and previous line. */ \
-                int x_1 = x + 1; \
+                x_1 = x + 1; \
                 dst_line_x_1[x_1] = sum_x + dst_line_x[x_1]; \
                 dst_line_y_1[x_1] = sum_y + dst_line_y[x_1]; \
                 dst_line_z_1[x_1] = sum_z + dst_line_z[x_1]; \
@@ -1239,26 +1287,31 @@ AKVCAM_INTEGRAL_IMAGE_3A(uint32_t)
 /* Fast conversion functions */
 
 // Conversion functions for 3 components to 3 components formats
-
 #define AKVCAM_CONVERT_3TO3(itype, otype) \
     static inline void akvcam_converter_private_convert_3to3_##itype##_##otype(akvcam_frame_convert_parameters_ct fc, \
                                                                                akvcam_frame_ct src, \
                                                                                akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset; \
-            \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read3_##itype(fc, \
                                      src_line_x, \
                                      src_line_y, \
@@ -1268,9 +1321,6 @@ AKVCAM_INTEGRAL_IMAGE_3A(uint32_t)
                                      &yi, \
                                      &zi); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3_##otype(fc, \
@@ -1289,8 +1339,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to3(akvcam_frame
                                                                     akvcam_frame_ct src,
                                                                     akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset;
         const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset;
@@ -1299,7 +1352,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to3(akvcam_frame
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             uint8_t xi = src_line_x[fc->src_width_offset_x[i]];
             uint8_t yi = src_line_y[fc->src_width_offset_y[i]];
             uint8_t zi = src_line_z[fc->src_width_offset_z[i]];
@@ -1307,6 +1362,7 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to3(akvcam_frame
             int64_t xo = 0;
             int64_t yo = 0;
             int64_t zo = 0;
+
             akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[i]] = (uint8_t)(xo);
@@ -1321,8 +1377,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to3(akvcam_frame
                                                                                 akvcam_frame_ct src, \
                                                                                 akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset; \
@@ -1332,10 +1391,17 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to3(akvcam_frame
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read3_##itype(fc, \
                                      src_line_x, \
                                      src_line_y, \
@@ -1345,9 +1411,6 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to3(akvcam_frame
                                      &yi, \
                                      &zi); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_##otype(fc, \
@@ -1367,8 +1430,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to3a(akvcam_fram
                                                                      akvcam_frame_ct src,
                                                                      akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset;
         const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset;
@@ -1378,7 +1444,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to3a(akvcam_fram
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             uint8_t xi = src_line_x[fc->src_width_offset_x[i]];
             uint8_t yi = src_line_y[fc->src_width_offset_y[i]];
             uint8_t zi = src_line_z[fc->src_width_offset_z[i]];
@@ -1386,6 +1454,7 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to3a(akvcam_fram
             int64_t xo = 0;
             int64_t yo = 0;
             int64_t zo = 0;
+
             akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[i]] = (uint8_t)(xo);
@@ -1401,8 +1470,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to3a(akvcam_fram
                                                                                 akvcam_frame_ct src, \
                                                                                 akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset; \
@@ -1412,11 +1484,18 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to3a(akvcam_fram
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read3a_##itype(fc, \
                                       src_line_x, \
                                       src_line_y, \
@@ -1428,9 +1507,6 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to3a(akvcam_fram
                                       &zi, \
                                       &ai); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo); \
                 \
@@ -1450,8 +1526,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato3(akvcam_fram
                                                                      akvcam_frame_ct src,
                                                                      akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset;
         const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset;
@@ -1461,7 +1540,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato3(akvcam_fram
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             uint8_t xi = src_line_x[fc->src_width_offset_x[i]];
             uint8_t yi = src_line_y[fc->src_width_offset_y[i]];
             uint8_t zi = src_line_z[fc->src_width_offset_z[i]];
@@ -1470,6 +1551,7 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato3(akvcam_fram
             int64_t xo = 0;
             int64_t yo = 0;
             int64_t zo = 0;
+
             akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
             akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo);
 
@@ -1485,8 +1567,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato3(akvcam_fram
                                                                                  akvcam_frame_ct src, \
                                                                                  akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset; \
@@ -1497,11 +1582,18 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato3(akvcam_fram
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read3a_##itype(fc, \
                                       src_line_x, \
                                       src_line_y, \
@@ -1513,9 +1605,6 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato3(akvcam_fram
                                       &zi, \
                                       &ai); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_ao_##otype(fc, \
@@ -1536,8 +1625,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato3a(akvcam_fra
                                                                       akvcam_frame_ct src,
                                                                       akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset;
         const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset;
@@ -1548,7 +1640,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato3a(akvcam_fra
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             uint8_t xi = src_line_x[fc->src_width_offset_x[i]];
             uint8_t yi = src_line_y[fc->src_width_offset_y[i]];
             uint8_t zi = src_line_z[fc->src_width_offset_z[i]];
@@ -1557,6 +1651,7 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato3a(akvcam_fra
             int64_t xo = 0;
             int64_t yo = 0;
             int64_t zo = 0;
+
             akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[i]] = (uint8_t)(xo);
@@ -1615,8 +1710,11 @@ AKVCAM_CONVERT_3ATO3A(uint32_t, uint32_t)
                                                                                 akvcam_frame_ct src, \
                                                                                 akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset; \
@@ -1625,10 +1723,17 @@ AKVCAM_CONVERT_3ATO3A(uint32_t, uint32_t)
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read3_##itype(fc, \
                                      src_line_x, \
                                      src_line_y, \
@@ -1638,9 +1743,6 @@ AKVCAM_CONVERT_3ATO3A(uint32_t, uint32_t)
                                      &yi, \
                                      &zi); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3_##otype(fc, \
@@ -1659,8 +1761,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3to3(akvcam_fram
                                                                      akvcam_frame_ct src,
                                                                      akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset;
         const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset;
@@ -1669,7 +1774,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3to3(akvcam_fram
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             dst_line_x[fc->dst_width_offset_x[x]] = src_line_x[fc->src_width_offset_x[x]];
             dst_line_y[fc->dst_width_offset_y[x]] = src_line_y[fc->src_width_offset_y[x]];
             dst_line_z[fc->dst_width_offset_z[x]] = src_line_z[fc->src_width_offset_z[x]];
@@ -1682,8 +1789,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3to3(akvcam_fram
                                                                                  akvcam_frame_ct src, \
                                                                                  akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset; \
@@ -1693,10 +1803,17 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3to3(akvcam_fram
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read3_##itype(fc, \
                                      src_line_x, \
                                      src_line_y, \
@@ -1706,9 +1823,6 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3to3(akvcam_fram
                                      &yi, \
                                      &zi); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_##otype(fc, \
@@ -1728,8 +1842,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3to3a(akvcam_fra
                                                                       akvcam_frame_ct src,
                                                                       akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset;
         const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset;
@@ -1739,7 +1856,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3to3a(akvcam_fra
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             dst_line_x[fc->dst_width_offset_x[x]] = src_line_x[fc->src_width_offset_x[x]];
             dst_line_y[fc->dst_width_offset_y[x]] = src_line_y[fc->src_width_offset_y[x]];
             dst_line_z[fc->dst_width_offset_z[x]] = src_line_z[fc->src_width_offset_z[x]];
@@ -1753,8 +1872,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3to3a(akvcam_fra
                                                                                  akvcam_frame_ct src, \
                                                                                  akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset; \
@@ -1764,11 +1886,18 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3to3a(akvcam_fra
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read3a_##itype(fc, \
                                       src_line_x, \
                                       src_line_y, \
@@ -1780,9 +1909,6 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3to3a(akvcam_fra
                                       &zi, \
                                       &ai); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo); \
                 \
@@ -1802,8 +1928,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3ato3(akvcam_fra
                                                                       akvcam_frame_ct src,
                                                                       akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset;
         const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset;
@@ -1813,7 +1942,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3ato3(akvcam_fra
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             int64_t xi = src_line_x[fc->src_width_offset_x[i]];
             int64_t yi = src_line_y[fc->src_width_offset_y[i]];
             int64_t zi = src_line_z[fc->src_width_offset_z[i]];
@@ -1833,8 +1964,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3ato3(akvcam_fra
                                                                                   akvcam_frame_ct src, \
                                                                                   akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset; \
@@ -1845,11 +1979,18 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3ato3(akvcam_fra
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read3a_##itype(fc, \
                                       src_line_x, \
                                       src_line_y, \
@@ -1861,9 +2002,6 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3ato3(akvcam_fra
                                       &zi, \
                                       &ai); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_ao_##otype(fc, \
@@ -1884,8 +2022,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3ato3a(akvcam_fr
                                                                        akvcam_frame_ct src,
                                                                        akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset;
         const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset;
@@ -1896,7 +2037,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_v3ato3a(akvcam_fr
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             dst_line_x[fc->dst_width_offset_x[x]] = src_line_x[fc->src_width_offset_x[x]];
             dst_line_y[fc->dst_width_offset_y[x]] = src_line_y[fc->src_width_offset_y[x]];
             dst_line_z[fc->dst_width_offset_z[x]] = src_line_z[fc->src_width_offset_z[x]];
@@ -1952,18 +2095,26 @@ AKVCAM_CONVERT_V3ATO3A(uint32_t, uint32_t)
                                                                                akvcam_frame_ct src, \
                                                                                akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                \
                 akvcam_read3_##itype(fc, \
                                      src_line_x, \
                                      src_line_y, \
@@ -1973,7 +2124,6 @@ AKVCAM_CONVERT_V3ATO3A(uint32_t, uint32_t)
                                      &yi, \
                                      &zi); \
                 \
-                int64_t xo = 0; \
                 akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo); \
                 \
                 akvcam_write1_##otype(fc, \
@@ -1988,20 +2138,26 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to1(akvcam_frame
                                                                     akvcam_frame_ct src,
                                                                     akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset;
         const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             uint8_t xi = src_line_x[fc->src_width_offset_x[i]];
             uint8_t yi = src_line_y[fc->src_width_offset_y[i]];
             uint8_t zi = src_line_z[fc->src_width_offset_z[i]];
 
             int64_t xo = 0;
+
             akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo);
 
             dst_line_x[fc->dst_width_offset_x[i]] = (uint8_t)(xo);
@@ -2014,8 +2170,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to1(akvcam_frame
                                                                                 akvcam_frame_ct src, \
                                                                                 akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset; \
@@ -2023,10 +2182,15 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to1(akvcam_frame
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                \
                 akvcam_read3_##itype(fc, \
                                      src_line_x, \
                                      src_line_y, \
@@ -2036,7 +2200,6 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to1(akvcam_frame
                                      &yi, \
                                      &zi); \
                 \
-                int64_t xo = 0; \
                 akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo); \
                 \
                 akvcam_write1a_##otype(fc, \
@@ -2052,8 +2215,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to1a(akvcam_fram
                                                                      akvcam_frame_ct src,
                                                                      akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset;
         const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset;
@@ -2061,12 +2227,15 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to1a(akvcam_fram
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             uint8_t xi = src_line_x[fc->src_width_offset_x[i]];
             uint8_t yi = src_line_y[fc->src_width_offset_y[i]];
             uint8_t zi = src_line_z[fc->src_width_offset_z[i]];
 
             int64_t xo = 0;
+
             akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo);
 
             dst_line_x[fc->dst_width_offset_x[i]] = (uint8_t)(xo);
@@ -2080,8 +2249,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to1a(akvcam_fram
                                                                                 akvcam_frame_ct src, \
                                                                                 akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset; \
@@ -2089,11 +2261,16 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to1a(akvcam_fram
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                \
                 akvcam_read3a_##itype(fc, \
                                       src_line_x, \
                                       src_line_y, \
@@ -2105,7 +2282,6 @@ static inline void akvcam_converter_private_convert_fast_8bits_3to1a(akvcam_fram
                                       &zi, \
                                       &ai); \
                 \
-                int64_t xo = 0; \
                 akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo); \
                 akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo); \
                 \
@@ -2121,8 +2297,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato1(akvcam_fram
                                                                      akvcam_frame_ct src,
                                                                      akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset;
         const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset;
@@ -2130,13 +2309,16 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato1(akvcam_fram
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             uint8_t xi = src_line_x[fc->src_width_offset_x[i]];
             uint8_t yi = src_line_y[fc->src_width_offset_y[i]];
             uint8_t zi = src_line_z[fc->src_width_offset_z[i]];
             uint8_t ai = src_line_a[fc->src_width_offset_a[i]];
 
             int64_t xo = 0;
+
             akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo);
             akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo);
 
@@ -2150,8 +2332,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato1(akvcam_fram
                                                                                  akvcam_frame_ct src, \
                                                                                  akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset; \
             const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset; \
@@ -2160,11 +2345,16 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato1(akvcam_fram
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                \
                 akvcam_read3a_##itype(fc, \
                                       src_line_x, \
                                       src_line_y, \
@@ -2176,7 +2366,6 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato1(akvcam_fram
                                       &zi, \
                                       &ai); \
                 \
-                int64_t xo = 0; \
                 akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo); \
                 \
                 akvcam_write1a_ao_##otype(fc, \
@@ -2193,8 +2382,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato1a(akvcam_fra
                                                                       akvcam_frame_ct src,
                                                                       akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_y = akvcam_frame_const_line(src, fc->plane_yi, ys) + fc->yi_offset;
         const uint8_t *src_line_z = akvcam_frame_const_line(src, fc->plane_zi, ys) + fc->zi_offset;
@@ -2203,13 +2395,16 @@ static inline void akvcam_converter_private_convert_fast_8bits_3ato1a(akvcam_fra
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             uint8_t xi = src_line_x[fc->src_width_offset_x[i]];
             uint8_t yi = src_line_y[fc->src_width_offset_y[i]];
             uint8_t zi = src_line_z[fc->src_width_offset_z[i]];
             uint8_t ai = src_line_a[fc->src_width_offset_a[i]];
 
             int64_t xo = 0;
+
             akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo);
 
             dst_line_x[fc->dst_width_offset_x[i]] = (uint8_t)(xo);
@@ -2265,21 +2460,28 @@ AKVCAM_CONVERT_3ATO1A(uint32_t, uint32_t)
                                                                                akvcam_frame_ct src, \
                                                                                akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
-                akvcam_read1_##itype(fc, src_line_x, x, &xi); \
                 \
                 int64_t xo = 0; \
                 int64_t yo = 0; \
                 int64_t zo = 0; \
+                \
+                akvcam_read1_##itype(fc, src_line_x, x, &xi); \
+                \
                 akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 \
                 akvcam_write3_##otype(fc, \
@@ -2298,20 +2500,26 @@ static inline void akvcam_converter_private_convert_fast_8bits_1to3(akvcam_frame
                                                                     akvcam_frame_ct src,
                                                                     akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             uint8_t xi = src_line_x[fc->src_width_offset_x[i]];
 
             int64_t xo = 0;
             int64_t yo = 0;
             int64_t zo = 0;
+
             akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[i]] = (uint8_t)(xo);
@@ -2326,8 +2534,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_1to3(akvcam_frame
                                                                                 akvcam_frame_ct src, \
                                                                                 akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
@@ -2335,13 +2546,17 @@ static inline void akvcam_converter_private_convert_fast_8bits_1to3(akvcam_frame
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
-                akvcam_read1_##itype(fc, src_line_x, x, &xi); \
                 \
                 int64_t xo = 0; \
                 int64_t yo = 0; \
                 int64_t zo = 0; \
+                \
+                akvcam_read1_##itype(fc, src_line_x, x, &xi); \
+                \
                 akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_##otype(fc, \
@@ -2361,8 +2576,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_1to3a(akvcam_fram
                                                                      akvcam_frame_ct src,
                                                                      akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
@@ -2370,12 +2588,15 @@ static inline void akvcam_converter_private_convert_fast_8bits_1to3a(akvcam_fram
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             uint8_t xi = src_line_x[fc->src_width_offset_x[i]];
 
             int64_t xo = 0;
             int64_t yo = 0;
             int64_t zo = 0;
+
             akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[i]] = (uint8_t)(xo);
@@ -2391,8 +2612,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_1to3a(akvcam_fram
                                                                                 akvcam_frame_ct src, \
                                                                                 akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_a = akvcam_frame_const_line(src, fc->plane_ai, ys) + fc->ai_offset; \
             \
@@ -2400,14 +2624,18 @@ static inline void akvcam_converter_private_convert_fast_8bits_1to3a(akvcam_fram
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype ai; \
-                akvcam_read1a_##itype(fc, src_line_x, src_line_a, x, &xi, &ai); \
                 \
                 int64_t xo = 0; \
                 int64_t yo = 0; \
                 int64_t zo = 0; \
+                \
+                akvcam_read1a_##itype(fc, src_line_x, src_line_a, x, &xi, &ai); \
+                \
                 akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo); \
                 \
@@ -2427,8 +2655,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_1ato3(akvcam_fram
                                                                      akvcam_frame_ct src,
                                                                      akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_a = akvcam_frame_const_line(src, fc->plane_ai, ys) + fc->ai_offset;
 
@@ -2436,13 +2667,16 @@ static inline void akvcam_converter_private_convert_fast_8bits_1ato3(akvcam_fram
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             uint8_t xi = src_line_x[fc->src_width_offset_x[i]];
             uint8_t ai = src_line_a[fc->src_width_offset_a[i]];
 
             int64_t xo = 0;
             int64_t yo = 0;
             int64_t zo = 0;
+
             akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo);
             akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo);
 
@@ -2458,8 +2692,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_1ato3(akvcam_fram
                                                                                  akvcam_frame_ct src, \
                                                                                  akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_a = akvcam_frame_const_line(src, fc->plane_ai, ys) + fc->ai_offset; \
             \
@@ -2468,14 +2705,18 @@ static inline void akvcam_converter_private_convert_fast_8bits_1ato3(akvcam_fram
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype ai; \
-                akvcam_read1a_##itype(fc, src_line_x, src_line_a, x, &xi, &ai); \
                 \
                 int64_t xo = 0; \
                 int64_t yo = 0; \
                 int64_t zo = 0; \
+                \
+                akvcam_read1a_##itype(fc, src_line_x, src_line_a, x, &xi, &ai); \
+                \
                 akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_ao_##otype(fc, \
@@ -2496,8 +2737,11 @@ static inline void akvcam_converter_private_convert_fast_8bits_1ato3a(akvcam_fra
                                                                       akvcam_frame_ct src,
                                                                       akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_a = akvcam_frame_const_line(src, fc->plane_ai, ys) + fc->ai_offset;
 
@@ -2506,13 +2750,16 @@ static inline void akvcam_converter_private_convert_fast_8bits_1ato3a(akvcam_fra
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             uint8_t xi = src_line_x[fc->src_width_offset_x[i]];
             uint8_t ai = src_line_a[fc->src_width_offset_a[i]];
 
             int64_t xo = 0;
             int64_t yo = 0;
             int64_t zo = 0;
+
             akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[i]] = (uint8_t)(xo);
@@ -2570,18 +2817,23 @@ AKVCAM_CONVERT_1ATO3A(uint32_t, uint32_t)
                                                                                akvcam_frame_ct src, \
                                                                                akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
-                akvcam_read1_##itype(fc, src_line_x, x, &xi); \
                 \
                 int64_t xo = 0; \
-                akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
                 \
+                akvcam_read1_##itype(fc, src_line_x, x, &xi); \
+                akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
                 akvcam_write1_##otype(fc, dst_line_x, x, (otype)(xo)); \
             } \
         } \
@@ -2591,12 +2843,17 @@ static inline void akvcam_converter_private_convert_fast_8bits_1to1(akvcam_frame
                                                                     akvcam_frame_ct src,
                                                                     akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x)
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x)
             dst_line_x[fc->dst_width_offset_x[x]] = src_line_x[fc->src_width_offset_x[x]];
     }
 }
@@ -2606,20 +2863,25 @@ static inline void akvcam_converter_private_convert_fast_8bits_1to1(akvcam_frame
                                                                                 akvcam_frame_ct src, \
                                                                                 akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
-                akvcam_read1_##itype(fc, src_line_x, x, &xi); \
                 \
                 int64_t xo = 0; \
-                akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
                 \
+                akvcam_read1_##itype(fc, src_line_x, x, &xi); \
+                akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
                 akvcam_write1a_##otype(fc, dst_line_x, dst_line_a, x, (otype)(xo)); \
             } \
         } \
@@ -2629,14 +2891,19 @@ static inline void akvcam_converter_private_convert_fast_8bits_1to1a(akvcam_fram
                                                                      akvcam_frame_ct src,
                                                                      akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             dst_line_x[fc->dst_width_offset_x[x]] = src_line_x[fc->src_width_offset_x[x]];
             dst_line_a[fc->dst_width_offset_a[x]] = 0xff;
         }
@@ -2648,22 +2915,27 @@ static inline void akvcam_converter_private_convert_fast_8bits_1to1a(akvcam_fram
                                                                                 akvcam_frame_ct src, \
                                                                                 akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_a = akvcam_frame_const_line(src, fc->plane_ai, ys) + fc->ai_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype ai; \
-                akvcam_read1a_##itype(fc, src_line_x, src_line_a, x, &xi, &ai); \
                 \
                 int64_t xo = 0; \
+                \
+                akvcam_read1a_##itype(fc, src_line_x, src_line_a, x, &xi, &ai); \
                 akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
                 akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo); \
-                \
                 akvcam_write1_##otype(fc, dst_line_x, x, (otype)(xo)); \
             } \
         } \
@@ -2673,18 +2945,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_1ato1(akvcam_fram
                                                                      akvcam_frame_ct src,
                                                                      akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_a = akvcam_frame_const_line(src, fc->plane_ai, ys) + fc->ai_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
 
-        for (int i = fc->xmin; i < fc->xmax; ++i) {
+        int i;
+
+        for (i = fc->xmin; i < fc->xmax; ++i) {
             dst_line_x[fc->dst_width_offset_x[i]] =
                 (uint8_t)((uint16_t)(src_line_x[fc->src_width_offset_x[i]])
-                          * (uint16_t)(src_line_a[fc->src_width_offset_a[i]])
-                          / 255);
+                * (uint16_t)(src_line_a[fc->src_width_offset_a[i]])
+                / 255);
         }
     }
 }
@@ -2694,24 +2971,29 @@ static inline void akvcam_converter_private_convert_fast_8bits_1ato1(akvcam_fram
                                                                                  akvcam_frame_ct src, \
                                                                                  akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys = fc->src_height[y]; \
+            \
             const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset; \
             const uint8_t *src_line_a = akvcam_frame_const_line(src, fc->plane_ai, ys) + fc->ai_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype ai; \
-                akvcam_read1a_##itype(fc, src_line_x, src_line_a, x, &xi, &ai); \
                 \
                 int64_t xo = 0; \
-                akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
                 \
+                akvcam_read1a_##itype(fc, src_line_x, src_line_a, x, &xi, &ai); \
+                akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
                 akvcam_write1a_ao_##otype(fc, dst_line_x, dst_line_a, x, \
-                                          (otype)(xo), (otype)(ai)); \
+                (otype)(xo), (otype)(ai)); \
             } \
         } \
     }
@@ -2720,15 +3002,20 @@ static inline void akvcam_converter_private_convert_fast_8bits_1ato1a(akvcam_fra
                                                                       akvcam_frame_ct src,
                                                                       akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys = fc->src_height[y];
+
         const uint8_t *src_line_x = akvcam_frame_const_line(src, fc->plane_xi, ys) + fc->xi_offset;
         const uint8_t *src_line_a = akvcam_frame_const_line(src, fc->plane_ai, ys) + fc->ai_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             dst_line_x[fc->dst_width_offset_x[x]] = src_line_x[fc->src_width_offset_x[x]];
             dst_line_a[fc->dst_width_offset_a[x]] = src_line_a[fc->src_width_offset_a[x]];
         }
@@ -2784,8 +3071,9 @@ AKVCAM_CONVERT_1ATO1A(uint32_t, uint32_t)
                                                                                  akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
@@ -2800,18 +3088,22 @@ AKVCAM_CONVERT_1ATO1A(uint32_t, uint32_t)
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_dl3_##itype(fc, \
                                         src_line_x, src_line_y, src_line_z, \
                                         src_line_x_1, src_line_y_1, src_line_z_1, \
                                         x, kdl, &xi, &yi, &zi); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3_##otype(fc, \
@@ -2830,8 +3122,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to3(akvcam_fra
                                                                       akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
@@ -2846,18 +3139,22 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to3(akvcam_fra
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_dl3_uint8_t(fc,
                                     src_line_x, src_line_y, src_line_z,
                                     src_line_x_1, src_line_y_1, src_line_z_1,
                                     x, kdl, &xi, &yi, &zi);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -2874,8 +3171,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to3(akvcam_fra
                                                                                   akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
@@ -2891,18 +3189,22 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to3(akvcam_fra
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_dl3_##itype(fc, \
                                         src_line_x, src_line_y, src_line_z, \
                                         src_line_x_1, src_line_y_1, src_line_z_1, \
                                         x, kdl, &xi, &yi, &zi); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_##otype(fc, \
@@ -2921,8 +3223,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to3a(akvcam_fr
                                                                        akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
@@ -2938,18 +3241,22 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to3a(akvcam_fr
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_dl3_uint8_t(fc,
                                     src_line_x, src_line_y, src_line_z,
                                     src_line_x_1, src_line_y_1, src_line_z_1,
                                     x, kdl, &xi, &yi, &zi);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -2967,8 +3274,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to3a(akvcam_fr
                                                                                   akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
@@ -2985,19 +3293,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to3a(akvcam_fr
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_dl3a_##itype(fc, \
                                          src_line_x, src_line_y, src_line_z, src_line_a, \
                                          src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
                                          x, kdl, &xi, &yi, &zi, &ai); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo); \
                 \
@@ -3017,8 +3329,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3ato3(akvcam_fr
                                                                        akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
@@ -3035,19 +3348,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3ato3(akvcam_fr
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
             uint8_t ai;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_dl3a_uint8_t(fc,
                                      src_line_x, src_line_y, src_line_z, src_line_a,
                                      src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1,
                                      x, kdl, &xi, &yi, &zi, &ai);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
             akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo);
 
@@ -3065,8 +3382,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3ato3(akvcam_fr
                                                                                    akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
@@ -3084,19 +3402,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3ato3(akvcam_fr
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_dl3a_##itype(fc, \
                                          src_line_x, src_line_y, src_line_z, src_line_a, \
                                          src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
                                          x, kdl, &xi, &yi, &zi, &ai); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_ao_##otype(fc, \
@@ -3116,8 +3438,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3ato3a(akvcam_f
                                                                         akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
@@ -3135,19 +3458,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3ato3a(akvcam_f
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
             uint8_t ai;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_dl3a_uint8_t(fc,
                                      src_line_x, src_line_y, src_line_z, src_line_a,
                                      src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1,
                                      x, kdl, &xi, &yi, &zi, &ai);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -3208,14 +3535,15 @@ AKVCAM_CONVERT_DL3ATO3A(uint32_t, uint32_t)
                                                                                   akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
-            const uint64_t *src_line_y = fc->integral_image_data_y + y_offset; \
-            const uint64_t *src_line_z = fc->integral_image_data_z + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset; \
+            const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
             const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset; \
             const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset; \
@@ -3224,18 +3552,22 @@ AKVCAM_CONVERT_DL3ATO3A(uint32_t, uint32_t)
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_dl3_##itype(fc, \
                                         src_line_x, src_line_y, src_line_z, \
                                         src_line_x_1, src_line_y_1, src_line_z_1, \
                                         x, kdl, &xi, &yi, &zi); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3_##otype(fc, \
@@ -3254,14 +3586,15 @@ static inline void akvcam_converter_private_convert_fast_8bits_dlv3to3(akvcam_fr
                                                                        akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x  = fc->integral_image_data_x + y_offset;
-        const uint64_t *src_line_y  = fc->integral_image_data_y + y_offset;
-        const uint64_t *src_line_z  = fc->integral_image_data_z + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset;
+        const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
         const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset;
         const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset;
@@ -3270,19 +3603,27 @@ static inline void akvcam_converter_private_convert_fast_8bits_dlv3to3(akvcam_fr
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
-            uint8_t xi, yi, zi;
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
+            uint8_t xi;
+            uint8_t yi;
+            uint8_t zi;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_dl3_uint8_t(fc,
                                     src_line_x, src_line_y, src_line_z,
                                     src_line_x_1, src_line_y_1, src_line_z_1,
                                     x, kdl, &xi, &yi, &zi);
 
-            int64_t xo = 0, yo = 0, zo = 0;
             akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
-            dst_line_y[fc->dst_width_offset_y[x]] = (uint8_t)yo;
-            dst_line_z[fc->dst_width_offset_z[x]] = (uint8_t)zo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
+            dst_line_y[fc->dst_width_offset_y[x]] = (uint8_t)(yo);
+            dst_line_z[fc->dst_width_offset_z[x]] = (uint8_t)(zo);
         }
 
         kdl += fc->xmax;
@@ -3294,14 +3635,15 @@ static inline void akvcam_converter_private_convert_fast_8bits_dlv3to3(akvcam_fr
                                                                                    akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
-            const uint64_t *src_line_y = fc->integral_image_data_y + y_offset; \
-            const uint64_t *src_line_z = fc->integral_image_data_z + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset; \
+            const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
             const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset; \
             const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset; \
@@ -3311,18 +3653,22 @@ static inline void akvcam_converter_private_convert_fast_8bits_dlv3to3(akvcam_fr
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_dl3_##itype(fc, \
                                         src_line_x, src_line_y, src_line_z, \
                                         src_line_x_1, src_line_y_1, src_line_z_1, \
                                         x, kdl, &xi, &yi, &zi); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_##otype(fc, \
@@ -3341,14 +3687,15 @@ static inline void akvcam_converter_private_convert_fast_8bits_dlv3to3a(akvcam_f
                                                                         akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x = fc->integral_image_data_x + y_offset;
-        const uint64_t *src_line_y = fc->integral_image_data_y + y_offset;
-        const uint64_t *src_line_z = fc->integral_image_data_z + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset;
+        const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
         const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset;
         const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset;
@@ -3358,19 +3705,27 @@ static inline void akvcam_converter_private_convert_fast_8bits_dlv3to3a(akvcam_f
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
-            uint8_t xi, yi, zi;
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
+            uint8_t xi;
+            uint8_t yi;
+            uint8_t zi;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_dl3_uint8_t(fc,
                                     src_line_x, src_line_y, src_line_z,
                                     src_line_x_1, src_line_y_1, src_line_z_1,
                                     x, kdl, &xi, &yi, &zi);
 
-            int64_t xo = 0, yo = 0, zo = 0;
             akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
-            dst_line_y[fc->dst_width_offset_y[x]] = (uint8_t)yo;
-            dst_line_z[fc->dst_width_offset_z[x]] = (uint8_t)zo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
+            dst_line_y[fc->dst_width_offset_y[x]] = (uint8_t)(yo);
+            dst_line_z[fc->dst_width_offset_z[x]] = (uint8_t)(zo);
             dst_line_a[fc->dst_width_offset_a[x]] = 0xff;
         }
 
@@ -3383,38 +3738,48 @@ static inline void akvcam_converter_private_convert_fast_8bits_dlv3to3a(akvcam_f
                                                                                    akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
-            const uint64_t *src_line_y = fc->integral_image_data_y + y_offset; \
-            const uint64_t *src_line_z = fc->integral_image_data_z + y_offset; \
-            const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset; \
+            const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset; \
+            const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
             const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset; \
             const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset; \
-            const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset; \
+            const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
-                itype xi, yi, zi, ai; \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
+                itype xi; \
+                itype yi; \
+                itype zi; \
+                itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_dl3a_##itype(fc, \
                                          src_line_x, src_line_y, src_line_z, src_line_a, \
                                          src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
                                          x, kdl, &xi, &yi, &zi, &ai); \
                 \
-                int64_t xo = 0, yo = 0, zo = 0; \
                 akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo); \
                 \
                 akvcam_write3_##otype(fc, \
                                       dst_line_x, dst_line_y, dst_line_z, \
-                                      x, (otype)xo, (otype)yo, (otype)zo); \
+                                      x, (otype)(xo), (otype)(yo), (otype)(zo)); \
             } \
             \
             kdl += fc->xmax; \
@@ -3425,8 +3790,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_dlv3ato3(akvcam_f
                                                                         akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
@@ -3443,19 +3809,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_dlv3ato3(akvcam_f
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
             uint8_t ai;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_dl3a_uint8_t(fc,
                                      src_line_x, src_line_y, src_line_z, src_line_a,
                                      src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1,
                                      x, kdl, &xi, &yi, &zi, &ai);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
             akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo);
 
@@ -3473,39 +3843,49 @@ static inline void akvcam_converter_private_convert_fast_8bits_dlv3ato3(akvcam_f
                                                                                     akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
-            const uint64_t *src_line_y = fc->integral_image_data_y + y_offset; \
-            const uint64_t *src_line_z = fc->integral_image_data_z + y_offset; \
-            const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset; \
+            const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset; \
+            const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
             const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset; \
             const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset; \
-            const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset; \
+            const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
-                itype xi, yi, zi, ai; \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
+                itype xi; \
+                itype yi; \
+                itype zi; \
+                itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_dl3a_##itype(fc, \
                                          src_line_x, src_line_y, src_line_z, src_line_a, \
                                          src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
                                          x, kdl, &xi, &yi, &zi, &ai); \
                 \
-                int64_t xo = 0, yo = 0, zo = 0; \
                 akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_ao_##otype(fc, \
                                           dst_line_x, dst_line_y, dst_line_z, dst_line_a, \
                                           x, \
-                                          (otype)xo, (otype)yo, (otype)zo, (otype)ai); \
+                                          (otype)(xo), (otype)(yo), (otype)(zo), (otype)(ai)); \
             } \
             \
             kdl += fc->xmax; \
@@ -3516,8 +3896,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_dlv3ato3a(akvcam_
                                                                          akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
@@ -3535,19 +3916,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_dlv3ato3a(akvcam_
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
             uint8_t ai;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_dl3a_uint8_t(fc,
                                      src_line_x, src_line_y, src_line_z, src_line_a,
                                      src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1,
                                      x, kdl, &xi, &yi, &zi, &ai);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -3607,36 +3992,38 @@ AKVCAM_CONVERT_DLV3ATO3A(uint32_t, uint32_t)
                                                                                  akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
-            const uint64_t *src_line_y = fc->integral_image_data_y + y_offset; \
-            const uint64_t *src_line_z = fc->integral_image_data_z + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset; \
+            const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
             const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset; \
             const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                \
                 akvcam_read_dl3_##itype(fc, \
                                         src_line_x, src_line_y, src_line_z, \
                                         src_line_x_1, src_line_y_1, src_line_z_1, \
                                         x, kdl, &xi, &yi, &zi); \
                 \
-                int64_t xo = 0; \
                 akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo); \
                 \
-                akvcam_write1_##otype(fc, \
-                                      dst_line_x, \
-                                      x, \
-                                      (otype)xo); \
+                akvcam_write1_##otype(fc, dst_line_x, x, (otype)(xo)); \
             } \
             \
             kdl += fc->xmax; \
@@ -3647,31 +4034,36 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to1(akvcam_fra
                                                                       akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x = fc->integral_image_data_x + y_offset;
-        const uint64_t *src_line_y = fc->integral_image_data_y + y_offset;
-        const uint64_t *src_line_z = fc->integral_image_data_z + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset;
+        const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
         const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset;
         const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
-            uint8_t xi, yi, zi;
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
+            uint8_t xi;
+            uint8_t yi;
+            uint8_t zi;
+            int64_t xo = 0;
+
             akvcam_read_dl3_uint8_t(fc,
                                     src_line_x, src_line_y, src_line_z,
                                     src_line_x_1, src_line_y_1, src_line_z_1,
                                     x, kdl, &xi, &yi, &zi);
-
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo);
 
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
         }
 
         kdl += fc->xmax;
@@ -3683,14 +4075,15 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to1(akvcam_fra
                                                                                   akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
-            const uint64_t *src_line_y = fc->integral_image_data_y + y_offset; \
-            const uint64_t *src_line_z = fc->integral_image_data_z + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset; \
+            const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
             const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset; \
             const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset; \
@@ -3698,22 +4091,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to1(akvcam_fra
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                \
                 akvcam_read_dl3_##itype(fc, \
                                         src_line_x, src_line_y, src_line_z, \
                                         src_line_x_1, src_line_y_1, src_line_z_1, \
                                         x, kdl, &xi, &yi, &zi); \
                 \
-                int64_t xo = 0; \
                 akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo); \
                 \
-                akvcam_write1a_##otype(fc, \
-                                       dst_line_x, dst_line_a, \
-                                       x, \
-                                       (otype)xo); \
+                akvcam_write1a_##otype(fc, dst_line_x, dst_line_a, x, (otype)(xo)); \
             } \
             \
             kdl += fc->xmax; \
@@ -3724,14 +4118,15 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to1a(akvcam_fr
                                                                        akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x = fc->integral_image_data_x + y_offset;
-        const uint64_t *src_line_y = fc->integral_image_data_y + y_offset;
-        const uint64_t *src_line_z = fc->integral_image_data_z + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset;
+        const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
         const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset;
         const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset;
@@ -3739,17 +4134,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to1a(akvcam_fr
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
-            uint8_t xi, yi, zi;
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
+            uint8_t xi;
+            uint8_t yi;
+            uint8_t zi;
+
+            int64_t xo = 0;
+
             akvcam_read_dl3_uint8_t(fc,
                                     src_line_x, src_line_y, src_line_z,
                                     src_line_x_1, src_line_y_1, src_line_z_1,
                                     x, kdl, &xi, &yi, &zi);
 
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo);
 
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
             dst_line_a[fc->dst_width_offset_a[x]] = 0xff;
         }
 
@@ -3762,37 +4163,42 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3to1a(akvcam_fr
                                                                                   akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
-            const uint64_t *src_line_y = fc->integral_image_data_y + y_offset; \
-            const uint64_t *src_line_z = fc->integral_image_data_z + y_offset; \
-            const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset; \
+            const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset; \
+            const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
             const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset; \
             const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset; \
-            const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset; \
+            const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
-                itype xi, yi, zi, ai; \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
+                itype xi; \
+                itype yi; \
+                itype zi; \
+                itype ai; \
+                \
+                int64_t xo = 0; \
+                \
                 akvcam_read_dl3a_##itype(fc, \
                                          src_line_x, src_line_y, src_line_z, src_line_a, \
                                          src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
                                          x, kdl, &xi, &yi, &zi, &ai); \
                 \
-                int64_t xo = 0; \
                 akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo); \
                 akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo); \
                 \
-                akvcam_write1_##otype(fc, \
-                                      dst_line_x, \
-                                      x, \
-                                      (otype)xo); \
+                akvcam_write1_##otype(fc, dst_line_x, x, (otype)(xo)); \
             } \
             \
             kdl += fc->xmax; \
@@ -3803,34 +4209,42 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3ato1(akvcam_fr
                                                                        akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x = fc->integral_image_data_x + y_offset;
-        const uint64_t *src_line_y = fc->integral_image_data_y + y_offset;
-        const uint64_t *src_line_z = fc->integral_image_data_z + y_offset;
-        const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset;
+        const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset;
+        const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
         const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset;
         const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset;
-        const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset;
+        const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
-            uint8_t xi, yi, zi, ai;
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
+            uint8_t xi;
+            uint8_t yi;
+            uint8_t zi;
+            uint8_t ai;
+
+            int64_t xo = 0;
+
             akvcam_read_dl3a_uint8_t(fc,
                                      src_line_x, src_line_y, src_line_z, src_line_a,
                                      src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1,
                                      x, kdl, &xi, &yi, &zi, &ai);
 
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo);
             akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo);
 
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
         }
 
         kdl += fc->xmax;
@@ -3842,38 +4256,42 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3ato1(akvcam_fr
                                                                                    akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
-            const uint64_t *src_line_y = fc->integral_image_data_y + y_offset; \
-            const uint64_t *src_line_z = fc->integral_image_data_z + y_offset; \
-            const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset; \
+            const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset; \
+            const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
             const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset; \
             const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset; \
-            const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset; \
+            const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
-                itype xi, yi, zi, ai; \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
+                itype xi; \
+                itype yi; \
+                itype zi; \
+                itype ai; \
+                \
+                int64_t xo = 0; \
+                \
                 akvcam_read_dl3a_##itype(fc, \
                                          src_line_x, src_line_y, src_line_z, src_line_a, \
                                          src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
                                          x, kdl, &xi, &yi, &zi, &ai); \
                 \
-                int64_t xo = 0; \
                 akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo); \
                 \
-                akvcam_write1a_ao_##otype(fc, \
-                                          dst_line_x, dst_line_a, \
-                                          x, \
-                                          (otype)xo, \
-                                          (otype)ai); \
+                akvcam_write1a_ao_##otype(fc, dst_line_x, dst_line_a, x, (otype)(xo), (otype)(ai)); \
             } \
             \
             kdl += fc->xmax; \
@@ -3884,34 +4302,42 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl3ato1a(akvcam_f
                                                                         akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x = fc->integral_image_data_x + y_offset;
-        const uint64_t *src_line_y = fc->integral_image_data_y + y_offset;
-        const uint64_t *src_line_z = fc->integral_image_data_z + y_offset;
-        const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_y   = fc->integral_image_data_y + y_offset;
+        const uint64_t *src_line_z   = fc->integral_image_data_z + y_offset;
+        const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
         const uint64_t *src_line_y_1 = fc->integral_image_data_y + y1_offset;
         const uint64_t *src_line_z_1 = fc->integral_image_data_z + y1_offset;
-        const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset;
+        const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
-            uint8_t xi, yi, zi, ai;
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
+            uint8_t xi;
+            uint8_t yi;
+            uint8_t zi;
+            uint8_t ai;
+
+            int64_t xo = 0;
+
             akvcam_read_dl3a_uint8_t(fc,
                                      src_line_x, src_line_y, src_line_z, src_line_a,
                                      src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1,
                                      x, kdl, &xi, &yi, &zi, &ai);
 
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo);
 
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
             dst_line_a[fc->dst_width_offset_a[x]] = ai;
         }
 
@@ -3966,33 +4392,38 @@ AKVCAM_CONVERT_DL3ATO1A(uint32_t, uint32_t)
                                                                                  akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
-                akvcam_read_dl1_##itype(fc, \
-                                        src_line_x, src_line_x_1, \
-                                        x, kdl, &xi); \
                 \
                 int64_t xo = 0; \
                 int64_t yo = 0; \
                 int64_t zo = 0; \
+                \
+                akvcam_read_dl1_##itype(fc, \
+                                        src_line_x, src_line_x_1, \
+                                        x, kdl, &xi); \
+                \
                 akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 \
                 akvcam_write3_##otype(fc, \
                                       dst_line_x, dst_line_y, dst_line_z, \
                                       x, \
-                                      (otype)xo, (otype)yo, (otype)zo); \
+                                      (otype)(xo), (otype)(yo), (otype)(zo)); \
             } \
             \
             kdl += fc->xmax; \
@@ -4003,30 +4434,37 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1to3(akvcam_fra
                                                                       akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_dl1_uint8_t(fc,
                                     src_line_x, src_line_x_1,
                                     x, kdl, &xi);
 
-            int64_t xo = 0, yo = 0, zo = 0;
             akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo);
 
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
-            dst_line_y[fc->dst_width_offset_y[x]] = (uint8_t)yo;
-            dst_line_z[fc->dst_width_offset_z[x]] = (uint8_t)zo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
+            dst_line_y[fc->dst_width_offset_y[x]] = (uint8_t)(yo);
+            dst_line_z[fc->dst_width_offset_z[x]] = (uint8_t)(zo);
         }
 
         kdl += fc->xmax;
@@ -4038,12 +4476,13 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1to3(akvcam_fra
                                                                                   akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
@@ -4051,21 +4490,24 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1to3(akvcam_fra
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
-                akvcam_read_dl1_##itype(fc, \
-                                        src_line_x, src_line_x_1, \
-                                        x, kdl, &xi); \
                 \
                 int64_t xo = 0; \
                 int64_t yo = 0; \
                 int64_t zo = 0; \
+                \
+                akvcam_read_dl1_##itype(fc, \
+                                        src_line_x, src_line_x_1, \
+                                        x, kdl, &xi); \
                 akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_##otype(fc, \
                                        dst_line_x, dst_line_y, dst_line_z, dst_line_a, \
                                        x, \
-                                       (otype)xo, (otype)yo, (otype)zo); \
+                                       (otype)(xo), (otype)(yo), (otype)(zo)); \
             } \
             \
             kdl += fc->xmax; \
@@ -4076,12 +4518,13 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1to3a(akvcam_fr
                                                                        akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
@@ -4089,18 +4532,24 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1to3a(akvcam_fr
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_dl1_uint8_t(fc,
                                     src_line_x, src_line_x_1,
                                     x, kdl, &xi);
 
-            int64_t xo = 0, yo = 0, zo = 0;
             akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo);
 
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
-            dst_line_y[fc->dst_width_offset_y[x]] = (uint8_t)yo;
-            dst_line_z[fc->dst_width_offset_z[x]] = (uint8_t)zo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
+            dst_line_y[fc->dst_width_offset_y[x]] = (uint8_t)(yo);
+            dst_line_z[fc->dst_width_offset_z[x]] = (uint8_t)(zo);
             dst_line_a[fc->dst_width_offset_a[x]] = 0xff;
         }
 
@@ -4113,39 +4562,44 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1to3a(akvcam_fr
                                                                                   akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
-            const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
-            const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset; \
+            const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_dl1a_##itype(fc, \
                                          src_line_x, src_line_a, \
                                          src_line_x_1, src_line_a_1, \
                                          x, kdl, &xi, &ai); \
-               \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
+                \
                 akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 akvcam_color_convert_apply_alpha_3_3(fc->color_convert, xo, yo, zo, ai, &xo, &yo, &zo); \
                 \
                 akvcam_write3_##otype(fc, \
                                       dst_line_x, dst_line_y, dst_line_z, \
                                       x, \
-                                      (otype)xo, (otype)yo, (otype)zo); \
-           } \
+                                      (otype)(xo), (otype)(yo), (otype)(zo)); \
+            } \
             \
             kdl += fc->xmax; \
         } \
@@ -4155,34 +4609,42 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1ato3(akvcam_fr
                                                                        akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x = fc->integral_image_data_x + y_offset;
-        const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
-        const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset;
+        const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
-            uint8_t xi, ai;
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
+            uint8_t xi;
+            uint8_t ai;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_dl1a_uint8_t(fc,
                                      src_line_x, src_line_a,
                                      src_line_x_1, src_line_a_1,
                                      x, kdl, &xi, &ai);
 
-            int64_t xo = 0, yo = 0,zo = 0;
             akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo);
             akvcam_color_convert_apply_alpha_3_3(fc->color_convert, xo, yo, zo, ai, &xo, &yo, &zo);
 
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
-            dst_line_y[fc->dst_width_offset_y[x]] = (uint8_t)yo;
-            dst_line_z[fc->dst_width_offset_z[x]] = (uint8_t)zo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
+            dst_line_y[fc->dst_width_offset_y[x]] = (uint8_t)(yo);
+            dst_line_z[fc->dst_width_offset_z[x]] = (uint8_t)(zo);
         }
 
         kdl += fc->xmax;
@@ -4194,39 +4656,44 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1ato3(akvcam_fr
                                                                                    akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
-            const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
-            const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset; \
+            const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset; \
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_dl1a_##itype(fc, \
                                          src_line_x, src_line_a, \
                                          src_line_x_1, src_line_a_1, \
                                          x, kdl, &xi, &ai); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_ao_##otype(fc, \
                                           dst_line_x, dst_line_y, dst_line_z, dst_line_a, \
                                           x, \
-                                          (otype)xo, (otype)yo, (otype)zo, \
-                                          (otype)ai); \
+                                          (otype)(xo), (otype)(yo), (otype)(zo), \
+                                          (otype)(ai)); \
             } \
             \
             kdl += fc->xmax; \
@@ -4237,34 +4704,42 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1ato3a(akvcam_f
                                                                         akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x = fc->integral_image_data_x + y_offset;
-        const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
-        const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset;
+        const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
         uint8_t *dst_line_y = akvcam_frame_line(dst, fc->plane_yo, y) + fc->yo_offset;
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
-            uint8_t xi, ai;
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
+            uint8_t xi;
+            uint8_t ai;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_dl1a_uint8_t(fc,
                                      src_line_x, src_line_a,
                                      src_line_x_1, src_line_a_1,
                                      x, kdl, &xi, &ai);
 
-            int64_t xo = 0, yo = 0, zo = 0;
             akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo);
 
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
-            dst_line_y[fc->dst_width_offset_y[x]] = (uint8_t)yo;
-            dst_line_z[fc->dst_width_offset_z[x]] = (uint8_t)zo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
+            dst_line_y[fc->dst_width_offset_y[x]] = (uint8_t)(yo);
+            dst_line_z[fc->dst_width_offset_z[x]] = (uint8_t)(zo);
             dst_line_a[fc->dst_width_offset_a[x]] = ai;
         }
 
@@ -4319,29 +4794,27 @@ AKVCAM_CONVERT_DL1ATO3A(uint32_t, uint32_t)
                                                                                  akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
+                int64_t xo = 0; \
                 akvcam_read_dl1_##itype(fc, \
                                         src_line_x, src_line_x_1, \
                                         x, kdl, &xi); \
-                \
-                int64_t xo = 0; \
                 akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
-                \
-                akvcam_write1_##otype(fc, \
-                                      dst_line_x, \
-                                      x, \
-                                      (otype)xo); \
+                akvcam_write1_##otype(fc, dst_line_x, x, (otype)(xo)); \
             } \
             \
             kdl += fc->xmax; \
@@ -4352,26 +4825,27 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1to1(akvcam_fra
                                                                       akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x  = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
+            int64_t xo = 0;
             akvcam_read_dl1_uint8_t(fc,
                                     src_line_x, src_line_x_1,
                                     x, kdl, &xi);
-
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo);
-
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
         }
 
         kdl += fc->xmax;
@@ -4383,30 +4857,28 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1to1(akvcam_fra
                                                                                   akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
+                int64_t xo = 0; \
                 akvcam_read_dl1_##itype(fc, \
                                         src_line_x, src_line_x_1, \
                                         x, kdl, &xi); \
-                \
-                int64_t xo = 0; \
                 akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
-                \
-                akvcam_write1a_##otype(fc, \
-                                       dst_line_x, dst_line_a, \
-                                       x, \
-                                       (otype)xo); \
+                akvcam_write1a_##otype(fc, dst_line_x, dst_line_a, x, (otype)(xo)); \
             } \
             \
             kdl += fc->xmax; \
@@ -4417,27 +4889,28 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1to1a(akvcam_fr
                                                                        akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
+            int64_t xo = 0;
             akvcam_read_dl1_uint8_t(fc,
                                     src_line_x, src_line_x_1,
                                     x, kdl, &xi);
-
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo);
-
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
             dst_line_a[fc->dst_width_offset_a[x]] = 0xff;
         }
 
@@ -4450,34 +4923,32 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1to1a(akvcam_fr
                                                                                   akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
-            const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
-            const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset; \
+            const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype ai; \
+                int64_t xo = 0; \
                 akvcam_read_dl1a_##itype(fc, \
                                          src_line_x, src_line_a, \
                                          src_line_x_1, src_line_a_1, \
                                          x, kdl, &xi, &ai); \
-                \
-                int64_t xo = 0; \
                 akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
                 akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo); \
-                \
-                akvcam_write1_##otype(fc, \
-                                      dst_line_x, \
-                                      x, \
-                                      (otype)xo); \
+                akvcam_write1_##otype(fc, dst_line_x, x, (otype)(xo)); \
             } \
             \
             kdl += fc->xmax; \
@@ -4488,30 +4959,34 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1ato1(akvcam_fr
                                                                        akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x = fc->integral_image_data_x + y_offset;
-        const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
-        const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset;
+        const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
-            uint8_t xi, ai;
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
+            uint8_t xi;
+            uint8_t ai;
+            int64_t xo = 0;
+
             akvcam_read_dl1a_uint8_t(fc,
                                      src_line_x, src_line_a,
                                      src_line_x_1, src_line_a_1,
                                      x, kdl, &xi, &ai);
 
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo);
             akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo);
-
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
         }
 
         kdl += fc->xmax;
@@ -4523,35 +4998,32 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1ato1(akvcam_fr
                                                                                    akvcam_frame_t dst) \
     { \
         const uint64_t *kdl = fc->kdl; \
+        int y; \
         \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int y_offset  = fc->src_height_dl_offset[y]; \
             int y1_offset = fc->src_height_dl_offset_1[y]; \
             \
-            const uint64_t *src_line_x = fc->integral_image_data_x + y_offset; \
-            const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset; \
+            const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset; \
+            const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset; \
             const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset; \
-            const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset; \
+            const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset; \
             \
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            int x; \
+            \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype ai; \
-                akvcam_read_dl1a_##itype(fc, \
-                                         src_line_x, src_line_a, \
-                                         src_line_x_1, src_line_a_1, \
-                                         x, kdl, &xi, &ai); \
-                \
                 int64_t xo = 0; \
+                akvcam_read_dl1a_##itype(fc, \
+                src_line_x, src_line_a, \
+                src_line_x_1, src_line_a_1, \
+                x, kdl, &xi, &ai); \
                 akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
-                \
-                akvcam_write1a_ao_##otype(fc, \
-                                          dst_line_x, dst_line_a, \
-                                          x, \
-                                          (otype)xo, \
-                                          (otype)ai); \
+                akvcam_write1a_ao_##otype(fc, dst_line_x, dst_line_a, x, (otype)(xo), (otype)(ai)); \
             } \
             \
             kdl += fc->xmax; \
@@ -4562,30 +5034,32 @@ static inline void akvcam_converter_private_convert_fast_8bits_dl1ato1a(akvcam_f
                                                                         akvcam_frame_t dst)
 {
     const uint64_t *kdl = fc->kdl;
+    int y;
 
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int y_offset  = fc->src_height_dl_offset[y];
         int y1_offset = fc->src_height_dl_offset_1[y];
 
-        const uint64_t *src_line_x = fc->integral_image_data_x + y_offset;
-        const uint64_t *src_line_a = fc->integral_image_data_a  + y_offset;
+        const uint64_t *src_line_x   = fc->integral_image_data_x + y_offset;
+        const uint64_t *src_line_a   = fc->integral_image_data_a + y_offset;
         const uint64_t *src_line_x_1 = fc->integral_image_data_x + y1_offset;
-        const uint64_t *src_line_a_1 = fc->integral_image_data_a  + y1_offset;
+        const uint64_t *src_line_a_1 = fc->integral_image_data_a + y1_offset;
 
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
-            uint8_t xi, ai;
+        int x;
+
+        for (x = fc->xmin; x < fc->xmax; ++x) {
+            uint8_t xi;
+            uint8_t ai;
+            int64_t xo = 0;
             akvcam_read_dl1a_uint8_t(fc,
                                      src_line_x, src_line_a,
                                      src_line_x_1, src_line_a_1,
                                      x, kdl, &xi, &ai);
-
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo);
-
-            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)xo;
+            dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
             dst_line_a[fc->dst_width_offset_a[x]] = ai;
         }
 
@@ -4642,7 +5116,9 @@ AKVCAM_CONVERT_DL1ATO1A(uint32_t, uint32_t)
                                                                                  akvcam_frame_ct src, \
                                                                                  akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -4658,19 +5134,22 @@ AKVCAM_CONVERT_DL1ATO1A(uint32_t, uint32_t)
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_ul3_##itype(fc, \
                                         src_line_x, src_line_y, src_line_z, \
                                         src_line_x_1, src_line_y_1, src_line_z_1, \
                                         x, ky, &xi, &yi, &zi); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3_##otype(fc, \
@@ -4687,7 +5166,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to3(akvcam_fra
                                                                       akvcam_frame_ct src,
                                                                       akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -4703,19 +5184,22 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to3(akvcam_fra
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_f8ul3(fc,
                               src_line_x, src_line_y, src_line_z,
                               src_line_x_1, src_line_y_1, src_line_z_1,
                               x, ky, &xi, &yi, &zi);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -4730,7 +5214,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to3(akvcam_fra
                                                                                   akvcam_frame_ct src, \
                                                                                   akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -4747,19 +5233,22 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to3(akvcam_fra
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_ul3_##itype(fc, \
                                         src_line_x, src_line_y, src_line_z, \
                                         src_line_x_1, src_line_y_1, src_line_z_1, \
                                         x, ky, &xi, &yi, &zi); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_##otype(fc, \
@@ -4776,7 +5265,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to3a(akvcam_fr
                                                                        akvcam_frame_ct src,
                                                                        akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -4793,19 +5284,22 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to3a(akvcam_fr
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_f8ul3(fc,
                               src_line_x, src_line_y, src_line_z,
                               src_line_x_1, src_line_y_1, src_line_z_1,
                               x, ky, &xi, &yi, &zi);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -4821,7 +5315,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to3a(akvcam_fr
                                                                                   akvcam_frame_ct src, \
                                                                                   akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -4839,20 +5335,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to3a(akvcam_fr
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_ul3a_##itype(fc, \
                                          src_line_x, src_line_y, src_line_z, src_line_a, \
                                          src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
                                          x, ky, &xi, &yi, &zi, &ai); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo); \
                 \
@@ -4870,7 +5369,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3ato3(akvcam_fr
                                                                        akvcam_frame_ct src,
                                                                        akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -4888,20 +5389,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3ato3(akvcam_fr
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
             uint8_t ai;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_f8ul3a(fc,
                                src_line_x, src_line_y, src_line_z, src_line_a,
                                src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1,
                                x, ky, &xi, &yi, &zi, &ai);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
             akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo);
 
@@ -4917,7 +5421,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3ato3(akvcam_fr
                                                                                    akvcam_frame_ct src, \
                                                                                    akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -4936,20 +5442,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3ato3(akvcam_fr
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_ul3a_##itype(fc, \
                                          src_line_x, src_line_y, src_line_z, src_line_a, \
                                          src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
                                          x, ky, &xi, &yi, &zi, &ai); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_ao_##otype(fc, \
@@ -4967,7 +5476,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3ato3a(akvcam_f
                                                                         akvcam_frame_ct src,
                                                                         akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -4986,20 +5497,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3ato3a(akvcam_f
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
             uint8_t ai;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_f8ul3a(fc,
                                src_line_x, src_line_y, src_line_z, src_line_a,
                                src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1,
                                x, ky, &xi, &yi, &zi, &ai);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -5058,7 +5572,9 @@ AKVCAM_CONVERT_UL3ATO3A(uint32_t, uint32_t)
                                                                                   akvcam_frame_ct src, \
                                                                                   akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -5074,19 +5590,22 @@ AKVCAM_CONVERT_UL3ATO3A(uint32_t, uint32_t)
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_ul3_##itype(fc, \
                                         src_line_x, src_line_y, src_line_z, \
                                         src_line_x_1, src_line_y_1, src_line_z_1, \
                                         x, ky, &xi, &yi, &zi); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3_##otype(fc, \
@@ -5103,7 +5622,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3to3(akvcam_fr
                                                                        akvcam_frame_ct src,
                                                                        akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -5119,19 +5640,22 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3to3(akvcam_fr
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_f8ul3(fc,
                               src_line_x, src_line_y, src_line_z,
                               src_line_x_1, src_line_y_1, src_line_z_1,
                               x, ky, &xi, &yi, &zi);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -5146,7 +5670,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3to3(akvcam_fr
                                                                                    akvcam_frame_ct src, \
                                                                                    akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -5163,19 +5689,22 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3to3(akvcam_fr
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_ul3_##itype(fc, \
                                         src_line_x, src_line_y, src_line_z, \
                                         src_line_x_1, src_line_y_1, src_line_z_1, \
                                         x, ky, &xi, &yi, &zi); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_##otype(fc, \
@@ -5192,7 +5721,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3to3a(akvcam_f
                                                                         akvcam_frame_ct src,
                                                                         akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -5209,19 +5740,22 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3to3a(akvcam_f
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_f8ul3(fc,
                               src_line_x, src_line_y, src_line_z,
                               src_line_x_1, src_line_y_1, src_line_z_1,
                               x, ky, &xi, &yi, &zi);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -5237,7 +5771,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3to3a(akvcam_f
                                                                                    akvcam_frame_ct src, \
                                                                                    akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -5255,20 +5791,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3to3a(akvcam_f
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_ul3a_##itype(fc, \
                                          src_line_x, src_line_y, src_line_z, src_line_a, \
                                          src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
                                          x, ky, &xi, &yi, &zi, &ai); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo); \
                 \
@@ -5286,7 +5825,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3ato3(akvcam_f
                                                                         akvcam_frame_ct src,
                                                                         akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -5304,20 +5845,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3ato3(akvcam_f
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
             uint8_t ai;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_f8ul3a(fc,
                                src_line_x, src_line_y, src_line_z, src_line_a,
                                src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1,
                                x, ky, &xi, &yi, &zi, &ai);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
             akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo, &yo, &zo);
 
@@ -5333,7 +5877,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3ato3(akvcam_f
                                                                                     akvcam_frame_ct src, \
                                                                                     akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -5352,20 +5898,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3ato3(akvcam_f
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
+                \
+                int64_t xo = 0; \
+                int64_t yo = 0; \
+                int64_t zo = 0; \
+                \
                 akvcam_read_ul3a_##itype(fc, \
                                          src_line_x, src_line_y, src_line_z, src_line_a, \
                                          src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
                                          x, ky, &xi, &yi, &zi, &ai); \
                 \
-                int64_t xo = 0; \
-                int64_t yo = 0; \
-                int64_t zo = 0; \
                 akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_ao_##otype(fc, \
@@ -5383,7 +5932,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3ato3a(akvcam_
                                                                          akvcam_frame_ct src,
                                                                          akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -5402,20 +5953,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_ulv3ato3a(akvcam_
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
             uint8_t ai;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_f8ul3a(fc,
                                src_line_x, src_line_y, src_line_z, src_line_a,
                                src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1,
                                x, ky, &xi, &yi, &zi, &ai);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -5470,10 +6024,12 @@ AKVCAM_CONVERT_ULV3ATO3A(uint32_t, uint32_t)
 
 #define AKVCAM_CONVERT_UL3TO1(itype, otype) \
     static inline void akvcam_converter_private_convert_ul3to1_##itype##_##otype(akvcam_frame_convert_parameters_ct fc, \
-                                                                                 akvcam_frame_ct src, \
-                                                                                 akvcam_frame_t dst) \
+                                                                                akvcam_frame_ct src, \
+                                                                                akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -5487,17 +6043,20 @@ AKVCAM_CONVERT_ULV3ATO3A(uint32_t, uint32_t)
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
-                akvcam_read_ul3_##itype(fc, \
-                                        src_line_x, src_line_y, src_line_z, \
-                                        src_line_x_1, src_line_y_1, src_line_z_1, \
-                                        x, ky, &xi, &yi, &zi); \
                 \
                 int64_t xo = 0; \
+                \
+                akvcam_read_ul3_##itype(fc, \
+                src_line_x, src_line_y, src_line_z, \
+                src_line_x_1, src_line_y_1, src_line_z_1, \
+                x, ky, &xi, &yi, &zi); \
+                \
                 akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo); \
                 \
                 akvcam_write1_##otype(fc, dst_line_x, x, (otype)(xo)); \
@@ -5509,7 +6068,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to1(akvcam_fra
                                                                       akvcam_frame_ct src,
                                                                       akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -5523,17 +6084,20 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to1(akvcam_fra
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
+
+            int64_t xo = 0;
+
             akvcam_read_f8ul3(fc,
                               src_line_x, src_line_y, src_line_z,
                               src_line_x_1, src_line_y_1, src_line_z_1,
                               x, ky, &xi, &yi, &zi);
 
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -5546,7 +6110,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to1(akvcam_fra
                                                                                   akvcam_frame_ct src, \
                                                                                   akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -5561,17 +6127,20 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to1(akvcam_fra
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
-                akvcam_read_ul3_##itype(fc, \
-                                        src_line_x, src_line_y, src_line_z, \
-                                        src_line_x_1, src_line_y_1, src_line_z_1, \
-                                        x, ky, &xi, &yi, &zi); \
                 \
                 int64_t xo = 0; \
+                \
+                akvcam_read_ul3_##itype(fc, \
+                src_line_x, src_line_y, src_line_z, \
+                src_line_x_1, src_line_y_1, src_line_z_1, \
+                x, ky, &xi, &yi, &zi); \
+                \
                 akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo); \
                 \
                 akvcam_write1a_##otype(fc, dst_line_x, dst_line_a, x, (otype)(xo)); \
@@ -5583,7 +6152,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to1a(akvcam_fr
                                                                        akvcam_frame_ct src,
                                                                        akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -5598,17 +6169,20 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to1a(akvcam_fr
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
+
+            int64_t xo = 0;
+
             akvcam_read_f8ul3(fc,
                               src_line_x, src_line_y, src_line_z,
                               src_line_x_1, src_line_y_1, src_line_z_1,
                               x, ky, &xi, &yi, &zi);
 
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -5622,7 +6196,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to1a(akvcam_fr
                                                                                   akvcam_frame_ct src, \
                                                                                   akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -5638,18 +6214,21 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3to1a(akvcam_fr
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
-                akvcam_read_ul3a_##itype(fc, \
-                                         src_line_x, src_line_y, src_line_z, src_line_a, \
-                                         src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
-                                         x, ky, &xi, &yi, &zi, &ai); \
                 \
                 int64_t xo = 0; \
+                \
+                akvcam_read_ul3a_##itype(fc, \
+                src_line_x, src_line_y, src_line_z, src_line_a, \
+                src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
+                x, ky, &xi, &yi, &zi, &ai); \
+                \
                 akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo); \
                 akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo); \
                 \
@@ -5662,7 +6241,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3ato1(akvcam_fr
                                                                        akvcam_frame_ct src,
                                                                        akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -5678,18 +6259,21 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3ato1(akvcam_fr
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
             uint8_t ai;
+
+            int64_t xo = 0;
+
             akvcam_read_f8ul3a(fc,
                                src_line_x, src_line_y, src_line_z, src_line_a,
                                src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1,
                                x, ky, &xi, &yi, &zi, &ai);
 
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo);
             akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo);
 
@@ -5703,7 +6287,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3ato1(akvcam_fr
                                                                                    akvcam_frame_ct src, \
                                                                                    akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -5720,22 +6306,25 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3ato1(akvcam_fr
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype yi; \
                 itype zi; \
                 itype ai; \
-                akvcam_read_ul3a_##itype(fc, \
-                                         src_line_x, src_line_y, src_line_z, src_line_a, \
-                                         src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
-                                         x, ky, &xi, &yi, &zi, &ai); \
                 \
                 int64_t xo = 0; \
+                \
+                akvcam_read_ul3a_##itype(fc, \
+                src_line_x, src_line_y, src_line_z, src_line_a, \
+                src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1, \
+                x, ky, &xi, &yi, &zi, &ai); \
+                \
                 akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo); \
                 \
                 akvcam_write1a_ao_##otype(fc, dst_line_x, dst_line_a, x, \
-                                          (otype)(xo), (otype)(ai)); \
+                (otype)(xo), (otype)(ai)); \
             } \
         } \
     }
@@ -5744,7 +6333,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3ato1a(akvcam_f
                                                                         akvcam_frame_ct src,
                                                                         akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -5761,18 +6352,21 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul3ato1a(akvcam_f
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t yi;
             uint8_t zi;
             uint8_t ai;
+
+            int64_t xo = 0;
+
             akvcam_read_f8ul3a(fc,
                                src_line_x, src_line_y, src_line_z, src_line_a,
                                src_line_x_1, src_line_y_1, src_line_z_1, src_line_a_1,
                                x, ky, &xi, &yi, &zi, &ai);
 
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -5828,7 +6422,9 @@ AKVCAM_CONVERT_UL3ATO1A(uint32_t, uint32_t)
                                                                                  akvcam_frame_ct src, \
                                                                                  akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -5840,22 +6436,25 @@ AKVCAM_CONVERT_UL3ATO1A(uint32_t, uint32_t)
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
-                akvcam_read_ul1_##itype(fc, src_line_x, src_line_x_1, x, ky, &xi); \
                 \
                 int64_t xo = 0; \
                 int64_t yo = 0; \
                 int64_t zo = 0; \
+                \
+                akvcam_read_ul1_##itype(fc, src_line_x, src_line_x_1, x, ky, &xi); \
+                \
                 akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 \
                 akvcam_write3_##otype(fc, \
-                                      dst_line_x, dst_line_y, dst_line_z, \
-                                      x, \
-                                      (otype)(xo), \
-                                      (otype)(yo), \
-                                      (otype)(zo)); \
+                dst_line_x, dst_line_y, dst_line_z, \
+                x, \
+                (otype)(xo), \
+                (otype)(yo), \
+                (otype)(zo)); \
             } \
         } \
     }
@@ -5864,7 +6463,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to3(akvcam_fra
                                                                       akvcam_frame_ct src,
                                                                       akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -5876,14 +6477,17 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to3(akvcam_fra
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
-            akvcam_read_f8ul1(fc, src_line_x, src_line_x_1, x, ky, &xi);
 
             int64_t xo = 0;
             int64_t yo = 0;
             int64_t zo = 0;
+
+            akvcam_read_f8ul1(fc, src_line_x, src_line_x_1, x, ky, &xi);
+
             akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -5898,7 +6502,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to3(akvcam_fra
                                                                                   akvcam_frame_ct src, \
                                                                                   akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -5911,22 +6517,25 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to3(akvcam_fra
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
-                akvcam_read_ul1_##itype(fc, src_line_x, src_line_x_1, x, ky, &xi); \
                 \
                 int64_t xo = 0; \
                 int64_t yo = 0; \
                 int64_t zo = 0; \
+                \
+                akvcam_read_ul1_##itype(fc, src_line_x, src_line_x_1, x, ky, &xi); \
+                \
                 akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_##otype(fc, \
-                                       dst_line_x, dst_line_y, dst_line_z, dst_line_a, \
-                                       x, \
-                                       (otype)(xo), \
-                                       (otype)(yo), \
-                                       (otype)(zo)); \
+                dst_line_x, dst_line_y, dst_line_z, dst_line_a, \
+                x, \
+                (otype)(xo), \
+                (otype)(yo), \
+                (otype)(zo)); \
             } \
         } \
     }
@@ -5935,7 +6544,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to3a(akvcam_fr
                                                                        akvcam_frame_ct src,
                                                                        akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -5948,14 +6559,17 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to3a(akvcam_fr
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
-            akvcam_read_f8ul1(fc, src_line_x, src_line_x_1, x, ky, &xi);
 
             int64_t xo = 0;
             int64_t yo = 0;
             int64_t zo = 0;
+
+            akvcam_read_f8ul1(fc, src_line_x, src_line_x_1, x, ky, &xi);
+
             akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -5971,7 +6585,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to3a(akvcam_fr
                                                                                   akvcam_frame_ct src, \
                                                                                   akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -5985,27 +6601,30 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to3a(akvcam_fr
             uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype ai; \
-                akvcam_read_ul1a_##itype(fc, \
-                                         src_line_x, src_line_a, \
-                                         src_line_x_1, src_line_a_1, \
-                                         x, ky, &xi, &ai); \
                 \
                 int64_t xo = 0; \
                 int64_t yo = 0; \
                 int64_t zo = 0; \
+                \
+                akvcam_read_ul1a_##itype(fc, \
+                src_line_x, src_line_a, \
+                src_line_x_1, src_line_a_1, \
+                x, ky, &xi, &ai); \
+                \
                 akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 akvcam_color_convert_apply_alpha_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 \
                 akvcam_write3_##otype(fc, \
-                                      dst_line_x, dst_line_y, dst_line_z, \
-                                      x, \
-                                      (otype)(xo), \
-                                      (otype)(yo), \
-                                      (otype)(zo)); \
+                dst_line_x, dst_line_y, dst_line_z, \
+                x, \
+                (otype)(xo), \
+                (otype)(yo), \
+                (otype)(zo)); \
             } \
         } \
     }
@@ -6014,7 +6633,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1ato3(akvcam_fr
                                                                        akvcam_frame_ct src,
                                                                        akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -6028,18 +6649,21 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1ato3(akvcam_fr
         uint8_t *dst_line_z = akvcam_frame_line(dst, fc->plane_zo, y) + fc->zo_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t ai;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_f8ul1a(fc,
                                src_line_x, src_line_a,
                                src_line_x_1, src_line_a_1,
                                x, ky, &xi, &ai);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo);
             akvcam_color_convert_apply_alpha_1_3(fc->color_convert, xi, &xo, &yo, &zo);
 
@@ -6055,7 +6679,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1ato3(akvcam_fr
                                                                                    akvcam_frame_ct src, \
                                                                                    akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -6070,27 +6696,30 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1ato3(akvcam_fr
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype ai; \
-                akvcam_read_ul1a_##itype(fc, \
-                                         src_line_x, src_line_a, \
-                                         src_line_x_1, src_line_a_1, \
-                                         x, ky, &xi, &ai); \
                 \
                 int64_t xo = 0; \
                 int64_t yo = 0; \
                 int64_t zo = 0; \
+                \
+                akvcam_read_ul1a_##itype(fc, \
+                src_line_x, src_line_a, \
+                src_line_x_1, src_line_a_1, \
+                x, ky, &xi, &ai); \
+                \
                 akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo); \
                 \
                 akvcam_write3a_ao_##otype(fc, \
-                                          dst_line_x, dst_line_y, dst_line_z, dst_line_a, \
-                                          x, \
-                                          (otype)(xo), \
-                                          (otype)(yo), \
-                                          (otype)(zo), \
-                                          (otype)(ai)); \
+                dst_line_x, dst_line_y, dst_line_z, dst_line_a, \
+                x, \
+                (otype)(xo), \
+                (otype)(yo), \
+                (otype)(zo), \
+                (otype)(ai)); \
             } \
         } \
     }
@@ -6099,7 +6728,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1ato3a(akvcam_f
                                                                         akvcam_frame_ct src,
                                                                         akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -6114,18 +6745,21 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1ato3a(akvcam_f
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t ai;
+
+            int64_t xo = 0;
+            int64_t yo = 0;
+            int64_t zo = 0;
+
             akvcam_read_f8ul1a(fc,
                                src_line_x, src_line_a,
                                src_line_x_1, src_line_a_1,
                                x, ky, &xi, &ai);
 
-            int64_t xo = 0;
-            int64_t yo = 0;
-            int64_t zo = 0;
             akvcam_color_convert_apply_point_1_3(fc->color_convert, xi, &xo, &yo, &zo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -6183,7 +6817,9 @@ AKVCAM_CONVERT_UL1ATO3A(uint32_t, uint32_t)
                                                                                  akvcam_frame_ct src, \
                                                                                  akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -6193,12 +6829,15 @@ AKVCAM_CONVERT_UL1ATO3A(uint32_t, uint32_t)
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
-                akvcam_read_ul1_##itype(fc, src_line_x, src_line_x_1, x, ky, &xi); \
                 \
                 int64_t xo = 0; \
+                \
+                akvcam_read_ul1_##itype(fc, src_line_x, src_line_x_1, x, ky, &xi); \
+                \
                 akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
                 \
                 akvcam_write1_##otype(fc, dst_line_x, x, (otype)(xo)); \
@@ -6210,7 +6849,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to1(akvcam_fra
                                                                       akvcam_frame_ct src,
                                                                       akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -6220,12 +6861,15 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to1(akvcam_fra
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
-            akvcam_read_f8ul1(fc, src_line_x, src_line_x_1, x, ky, &xi);
 
             int64_t xo = 0;
+
+            akvcam_read_f8ul1(fc, src_line_x, src_line_x_1, x, ky, &xi);
+
             akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -6238,7 +6882,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to1(akvcam_fra
                                                                                   akvcam_frame_ct src, \
                                                                                   akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -6249,12 +6895,15 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to1(akvcam_fra
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
-                akvcam_read_ul1_##itype(fc, src_line_x, src_line_x_1, x, ky, &xi); \
                 \
                 int64_t xo = 0; \
+                \
+                akvcam_read_ul1_##itype(fc, src_line_x, src_line_x_1, x, ky, &xi); \
+                \
                 akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
                 \
                 akvcam_write1a_##otype(fc, dst_line_x, dst_line_a, x, (otype)(xo)); \
@@ -6266,7 +6915,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to1a(akvcam_fr
                                                                        akvcam_frame_ct src,
                                                                        akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -6277,12 +6928,15 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to1a(akvcam_fr
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
-            akvcam_read_f8ul1(fc, src_line_x, src_line_x_1, x, ky, &xi);
 
             int64_t xo = 0;
+
+            akvcam_read_f8ul1(fc, src_line_x, src_line_x_1, x, ky, &xi);
+
             akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -6296,7 +6950,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to1a(akvcam_fr
                                                                                   akvcam_frame_ct src, \
                                                                                   akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -6308,16 +6964,19 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1to1a(akvcam_fr
             uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype ai; \
-                akvcam_read_ul1a_##itype(fc, \
-                                             src_line_x, src_line_a, \
-                                             src_line_x_1, src_line_a_1, \
-                                             x, ky, &xi, &ai); \
                 \
                 int64_t xo = 0; \
+                \
+                akvcam_read_ul1a_##itype(fc, \
+                src_line_x, src_line_a, \
+                src_line_x_1, src_line_a_1, \
+                x, ky, &xi, &ai); \
+                \
                 akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
                 akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo); \
                 \
@@ -6330,7 +6989,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1ato1(akvcam_fr
                                                                        akvcam_frame_ct src,
                                                                        akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -6342,16 +7003,19 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1ato1(akvcam_fr
         uint8_t *dst_line_x = akvcam_frame_line(dst, fc->plane_xo, y) + fc->xo_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t ai;
+
+            int64_t xo = 0;
+
             akvcam_read_f8ul1a(fc,
                                src_line_x, src_line_a,
                                src_line_x_1, src_line_a_1,
                                x, ky, &xi, &ai);
 
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo);
             akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo);
 
@@ -6365,7 +7029,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1ato1(akvcam_fr
                                                                                    akvcam_frame_ct src, \
                                                                                    akvcam_frame_t dst) \
     { \
-        for (int y = fc->ymin; y < fc->ymax; ++y) { \
+        int y; \
+        \
+        for (y = fc->ymin; y < fc->ymax; ++y) { \
             int ys   = fc->src_height[y]; \
             int ys_1 = fc->src_height_1[y]; \
             \
@@ -6378,20 +7044,23 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1ato1(akvcam_fr
             uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset; \
             \
             int ky = fc->ky[y]; \
+            int x; \
             \
-            for (int x = fc->xmin; x < fc->xmax; ++x) { \
+            for (x = fc->xmin; x < fc->xmax; ++x) { \
                 itype xi; \
                 itype ai; \
-                akvcam_read_ul1a_##itype(fc, \
-                                         src_line_x, src_line_a, \
-                                         src_line_x_1, src_line_a_1, \
-                                         x, ky, &xi, &ai); \
                 \
                 int64_t xo = 0; \
+                \
+                akvcam_read_ul1a_##itype(fc, \
+                src_line_x, src_line_a, \
+                src_line_x_1, src_line_a_1, \
+                x, ky, &xi, &ai); \
+                \
                 akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo); \
                 \
                 akvcam_write1a_ao_##otype(fc, dst_line_x, dst_line_a, x, \
-                                          (otype)(xo), (otype)(ai)); \
+                (otype)(xo), (otype)(ai)); \
             } \
         } \
     }
@@ -6400,7 +7069,9 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1ato1a(akvcam_f
                                                                         akvcam_frame_ct src,
                                                                         akvcam_frame_t dst)
 {
-    for (int y = fc->ymin; y < fc->ymax; ++y) {
+    int y;
+
+    for (y = fc->ymin; y < fc->ymax; ++y) {
         int ys   = fc->src_height[y];
         int ys_1 = fc->src_height_1[y];
 
@@ -6413,16 +7084,19 @@ static inline void akvcam_converter_private_convert_fast_8bits_ul1ato1a(akvcam_f
         uint8_t *dst_line_a = akvcam_frame_line(dst, fc->plane_ao, y) + fc->ao_offset;
 
         int ky = fc->ky[y];
+        int x;
 
-        for (int x = fc->xmin; x < fc->xmax; ++x) {
+        for (x = fc->xmin; x < fc->xmax; ++x) {
             uint8_t xi;
             uint8_t ai;
+
+            int64_t xo = 0;
+
             akvcam_read_f8ul1a(fc,
                                src_line_x, src_line_a,
                                src_line_x_1, src_line_a_1,
                                x, ky, &xi, &ai);
 
-            int64_t xo = 0;
             akvcam_color_convert_apply_point_1_1(fc->color_convert, xi, &xo);
 
             dst_line_x[fc->dst_width_offset_x[x]] = (uint8_t)(xo);
@@ -7562,8 +8236,9 @@ void akvcam_frame_convert_parameters_init(akvcam_frame_convert_parameters_t fc,
 
         .alpha_mask = 0,
     };
+    size_t i;
 
-    for (size_t i = 0; i < size; ++i) {
+    for (i = 0; i < size; ++i) {
         akvcam_frame_convert_parameters_t fci = fc + i;
 
         if (fci->color_convert)
@@ -7597,7 +8272,9 @@ void akvcam_frame_convert_parameters_copy(akvcam_frame_convert_parameters_t fc,
                                           akvcam_frame_convert_parameters_ct other,
                                           size_t size)
 {
-    for (size_t i = 0; i < size; ++i) {
+    size_t i;
+
+    for (i = 0; i < size; ++i) {
         akvcam_frame_convert_parameters_t fci = fc + i;
         akvcam_frame_convert_parameters_ct otheri = other + i;
 
@@ -7631,8 +8308,10 @@ void akvcam_frame_convert_parameters_copy(akvcam_frame_convert_parameters_t fc,
 void akvcam_frame_convert_parameters_delete(akvcam_frame_convert_parameters_t *fc,
                                             size_t size)
 {
+    size_t i;
+
     if (fc && *fc) {
-        for (size_t i = 0; i < size; ++i) {
+        for (i = 0; i < size; ++i) {
             akvcam_frame_convert_parameters_t fci = *fc + i;
 
             if (fci->color_convert)

@@ -655,13 +655,6 @@ void akvcam_color_convert_private_limits_y(int bits,
                                            int64_t *min_y,
                                            int64_t *max_y)
 {
-    if (type == AKVCAM_YUV_COLOR_SPACE_TYPE_FULL_SWING) {
-        *min_y = 0;
-        *max_y = (1 << bits) - 1;
-
-        return;
-    }
-
     /* g = 9% is the theoretical maximal overshoot (Gibbs phenomenon)
      *
      * https://en.wikipedia.org/wiki/YUV#Numerical_approximations
@@ -670,9 +663,18 @@ void akvcam_color_convert_private_limits_y(int bits,
      * https://www.youtube.com/watch?v=Ol0uTeXoKaU
      */
     static const int64_t g = 9;
+    int64_t max_value;
+    int64_t div;
 
-    int64_t max_value = (1 << bits) - 1;
-    int64_t div = akvcam_color_convert_private_rounded_div(max_value * g, 2 * g + 100);
+    if (type == AKVCAM_YUV_COLOR_SPACE_TYPE_FULL_SWING) {
+        *min_y = 0;
+        *max_y = (1 << bits) - 1;
+
+        return;
+    }
+
+    max_value = (1 << bits) - 1;
+    div = akvcam_color_convert_private_rounded_div(max_value * g, 2 * g + 100);
     *min_y = akvcam_color_convert_private_nearest_pow_of_2(div);
     *max_y = max_value * (g + 100) / (2 * g + 100);
 }
@@ -682,6 +684,10 @@ void akvcam_color_convert_private_limits_uv(int bits,
                                             int64_t *min_uv,
                                             int64_t *max_uv)
 {
+    static const int64_t g = 9;
+    int64_t max_value;
+    int64_t div;
+
     if (type == AKVCAM_YUV_COLOR_SPACE_TYPE_FULL_SWING) {
         *min_uv = 0;
         *max_uv = (1 << bits) - 1;
@@ -689,9 +695,8 @@ void akvcam_color_convert_private_limits_uv(int bits,
         return;
     }
 
-    static const int64_t g = 9;
-    int64_t max_value = (1 << bits) - 1;
-    int64_t div = akvcam_color_convert_private_rounded_div(max_value * g, 2 * g + 100);
+    max_value = (1 << bits) - 1;
+    div = akvcam_color_convert_private_rounded_div(max_value * g, 2 * g + 100);
     *min_uv = akvcam_color_convert_private_nearest_pow_of_2(div);
     *max_uv = (1L << bits) - *min_uv;
 }
@@ -705,16 +710,16 @@ void akvcam_color_convert_private_load_abc_to_xyz_matrix(akvcam_color_convert_pr
                                                          int zbits)
 {
     int shift = akvcam_max(abits, akvcam_max(bbits, cbits));
-    int64_t shift_div = 1L << shift;
-    int64_t rounding = 1L << akvcam_abs(shift - 1);
+    int64_t shift_div = 1LL << shift;
+    int64_t rounding = 1LL << akvcam_abs(shift - 1);
 
-    int64_t amax = (1L << abits) - 1;
-    int64_t bmax = (1L << bbits) - 1;
-    int64_t cmax = (1L << cbits) - 1;
+    int64_t amax = (1LL << abits) - 1;
+    int64_t bmax = (1LL << bbits) - 1;
+    int64_t cmax = (1LL << cbits) - 1;
 
-    int64_t xmax = (1L << xbits) - 1;
-    int64_t ymax = (1L << ybits) - 1;
-    int64_t zmax = (1L << zbits) - 1;
+    int64_t xmax = (1LL << xbits) - 1;
+    int64_t ymax = (1LL << ybits) - 1;
+    int64_t zmax = (1LL << zbits) - 1;
 
     int64_t kx = akvcam_color_convert_private_rounded_div(shift_div * xmax, amax);
     int64_t ky = akvcam_color_convert_private_rounded_div(shift_div * ymax, bmax);
@@ -741,58 +746,96 @@ void akvcam_color_convert_private_load_rgb_to_yuv_matrix(akvcam_color_convert_pr
                                                          int ubits,
                                                          int vbits)
 {
-    int64_t kyr = 0;
-    int64_t kyb = 0;
-    int64_t div = 0;
+    int64_t kyr;
+    int64_t kyb;
+    int64_t div;
+    int64_t kyg;
+    int64_t kur;
+    int64_t kug;
+    int64_t kub;
+    int64_t kvr;
+    int64_t kvg;
+    int64_t kvb;
+    int shift;
+    int64_t shift_div;
+    int64_t rounding;
+    int64_t rmax;
+    int64_t gmax;
+    int64_t bmax;
+    int64_t min_y;
+    int64_t max_y;
+    int64_t diff_y;
+    int64_t kiyr;
+    int64_t kiyg;
+    int64_t kiyb;
+    int64_t min_u;
+    int64_t max_u;
+    int64_t diff_u;
+    int64_t kiur;
+    int64_t kiug;
+    int64_t kiub;
+    int64_t min_v;
+    int64_t max_v;
+    int64_t diff_v;
+    int64_t kivr;
+    int64_t kivg;
+    int64_t kivb;
+    int64_t ciy;
+    int64_t ciu;
+    int64_t civ;
+
+    kyr = 0;
+    kyb = 0;
+    div = 0;
     akvcam_color_convert_private_rb_constants(yuv_color_space, &kyr, &kyb, &div);
-    int64_t kyg = div - kyr - kyb;
+    kyg = div - kyr - kyb;
 
-    int64_t kur = -kyr;
-    int64_t kug = -kyg;
-    int64_t kub = div - kyb;
+    kur = -kyr;
+    kug = -kyg;
+    kub = div - kyb;
 
-    int64_t kvr = div - kyr;
-    int64_t kvg = -kyg;
-    int64_t kvb = -kyb;
+    kvr = div - kyr;
+    kvg = -kyg;
+    kvb = -kyb;
 
-    int shift = akvcam_max(rbits, akvcam_max(gbits, bbits));
-    int64_t shift_div = 1L << shift;
-    int64_t rounding = 1L << (shift - 1);
+    shift = akvcam_max(rbits, akvcam_max(gbits, bbits));
+    shift_div = 1LL << shift;
+    rounding = 1LL << (shift - 1);
 
-    int64_t rmax = (1L << rbits) - 1;
-    int64_t gmax = (1L << gbits) - 1;
-    int64_t bmax = (1L << bbits) - 1;
+    rmax = (1LL << rbits) - 1;
+    gmax = (1LL << gbits) - 1;
+    bmax = (1LL << bbits) - 1;
 
-    int64_t min_y = 0;
-    int64_t max_y = 0;
+    min_y = 0;
+    max_y = 0;
     akvcam_color_convert_private_limits_y(ybits, yuv_color_space_type, &min_y, &max_y);
-    int64_t diff_y = max_y - min_y;
+    diff_y = max_y - min_y;
 
-    int64_t kiyr = akvcam_color_convert_private_rounded_div(shift_div * diff_y * kyr, div * rmax);
-    int64_t kiyg = akvcam_color_convert_private_rounded_div(shift_div * diff_y * kyg, div * gmax);
-    int64_t kiyb = akvcam_color_convert_private_rounded_div(shift_div * diff_y * kyb, div * bmax);
+    kiyr = akvcam_color_convert_private_rounded_div(shift_div * diff_y * kyr, div * rmax);
+    kiyg = akvcam_color_convert_private_rounded_div(shift_div * diff_y * kyg, div * gmax);
+    kiyb = akvcam_color_convert_private_rounded_div(shift_div * diff_y * kyb, div * bmax);
 
-    int64_t min_u = 0;
-    int64_t max_u = 0;
+    min_u = 0;
+    max_u = 0;
     akvcam_color_convert_private_limits_uv(ubits, yuv_color_space_type, &min_u, &max_u);
-    int64_t diff_u = max_u - min_u;
+    diff_u = max_u - min_u;
 
-    int64_t kiur = akvcam_color_convert_private_rounded_div(shift_div * diff_u * kur, 2 * rmax * kub);
-    int64_t kiug = akvcam_color_convert_private_rounded_div(shift_div * diff_u * kug, 2 * gmax * kub);
-    int64_t kiub = akvcam_color_convert_private_rounded_div(shift_div * diff_u      , 2 * bmax);
+    kiur = akvcam_color_convert_private_rounded_div(shift_div * diff_u * kur, 2 * rmax * kub);
+    kiug = akvcam_color_convert_private_rounded_div(shift_div * diff_u * kug, 2 * gmax * kub);
+    kiub = akvcam_color_convert_private_rounded_div(shift_div * diff_u      , 2 * bmax);
 
-    int64_t min_v = 0;
-    int64_t max_v = 0;
+    min_v = 0;
+    max_v = 0;
     akvcam_color_convert_private_limits_uv(vbits, yuv_color_space_type, &min_v, &max_v);
-    int64_t diff_v = max_v - min_v;
+    diff_v = max_v - min_v;
 
-    int64_t kivr = akvcam_color_convert_private_rounded_div(shift_div * diff_v      , 2 * rmax);
-    int64_t kivg = akvcam_color_convert_private_rounded_div(shift_div * diff_v * kvg, 2 * gmax * kvr);
-    int64_t kivb = akvcam_color_convert_private_rounded_div(shift_div * diff_v * kvb, 2 * bmax * kvr);
+    kivr = akvcam_color_convert_private_rounded_div(shift_div * diff_v      , 2 * rmax);
+    kivg = akvcam_color_convert_private_rounded_div(shift_div * diff_v * kvg, 2 * gmax * kvr);
+    kivb = akvcam_color_convert_private_rounded_div(shift_div * diff_v * kvb, 2 * bmax * kvr);
 
-    int64_t ciy = rounding + shift_div * min_y;
-    int64_t ciu = rounding + shift_div * (min_u + max_u) / 2;
-    int64_t civ = rounding + shift_div * (min_v + max_v) / 2;
+    ciy = rounding + shift_div * min_y;
+    ciu = rounding + shift_div * (min_u + max_u) / 2;
+    civ = rounding + shift_div * (min_v + max_v) / 2;
 
     self->parent->m00 = kiyr; self->parent->m01 = kiyg; self->parent->m02 = kiyb; self->parent->m03 = ciy;
     self->parent->m10 = kiur; self->parent->m11 = kiug; self->parent->m12 = kiub; self->parent->m13 = ciu;
@@ -815,48 +858,78 @@ void akvcam_color_convert_private_load_yuv_to_rgb_matrix(akvcam_color_convert_pr
                                                          int gbits,
                                                          int bbits)
 {
-    int64_t kyr = 0;
-    int64_t kyb = 0;
-    int64_t div = 0;
+    int64_t kyr;
+    int64_t kyb;
+    int64_t div;
+    int64_t kyg;
+    int64_t min_y;
+    int64_t max_y;
+    int64_t diff_y;
+    int64_t min_u;
+    int64_t max_u;
+    int64_t diff_u;
+    int64_t minV;
+    int64_t maxV;
+    int64_t diff_v;
+    int shift;
+    int64_t shift_div;
+    int64_t rounding;
+    int64_t rmax;
+    int64_t gmax;
+    int64_t bmax;
+    int64_t kry;
+    int64_t krv;
+    int64_t kgy;
+    int64_t kgu;
+    int64_t kgv;
+    int64_t kby;
+    int64_t kbu;
+    int64_t cir;
+    int64_t cig;
+    int64_t cib;
+
+    kyr = 0;
+    kyb = 0;
+    div = 0;
     akvcam_color_convert_private_rb_constants(yuv_color_space, &kyr, &kyb, &div);
-    int64_t kyg = div - kyr - kyb;
+    kyg = div - kyr - kyb;
 
-    int64_t min_y = 0;
-    int64_t max_y = 0;
+    min_y = 0;
+    max_y = 0;
     akvcam_color_convert_private_limits_y(ybits, yuv_color_space_type, &min_y, &max_y);
-    int64_t diff_y = max_y - min_y;
+    diff_y = max_y - min_y;
 
-    int64_t min_u = 0;
-    int64_t max_u = 0;
+    min_u = 0;
+    max_u = 0;
     akvcam_color_convert_private_limits_uv(ubits, yuv_color_space_type, &min_u, &max_u);
-    int64_t diff_u = max_u - min_u;
+    diff_u = max_u - min_u;
 
-    int64_t minV = 0;
-    int64_t maxV = 0;
+    minV = 0;
+    maxV = 0;
     akvcam_color_convert_private_limits_uv(vbits, yuv_color_space_type, &minV, &maxV);
-    int64_t diff_v = maxV - minV;
+    diff_v = maxV - minV;
 
-    int shift = akvcam_max(ybits, akvcam_max(ubits, vbits));
-    int64_t shift_div = 1L << shift;
-    int64_t rounding = 1L << (shift - 1);
+    shift = akvcam_max(ybits, akvcam_max(ubits, vbits));
+    shift_div = 1LL << shift;
+    rounding = 1LL << (shift - 1);
 
-    int64_t rmax = (1L << rbits) - 1;
-    int64_t gmax = (1L << gbits) - 1;
-    int64_t bmax = (1L << bbits) - 1;
+    rmax = (1LL << rbits) - 1;
+    gmax = (1LL << gbits) - 1;
+    bmax = (1LL << bbits) - 1;
 
-    int64_t kry = akvcam_color_convert_private_rounded_div(shift_div * rmax, diff_y);
-    int64_t krv = akvcam_color_convert_private_rounded_div(2 * shift_div * rmax * (div - kyr), div * diff_v);
+    kry = akvcam_color_convert_private_rounded_div(shift_div * rmax, diff_y);
+    krv = akvcam_color_convert_private_rounded_div(2 * shift_div * rmax * (div - kyr), div * diff_v);
 
-    int64_t kgy = akvcam_color_convert_private_rounded_div(shift_div * gmax, diff_y);
-    int64_t kgu = akvcam_color_convert_private_rounded_div(2 * shift_div * gmax * kyb * (kyb - div), div * kyg * diff_u);
-    int64_t kgv = akvcam_color_convert_private_rounded_div(2 * shift_div * gmax * kyr * (kyr - div), div * kyg * diff_v);
+    kgy = akvcam_color_convert_private_rounded_div(shift_div * gmax, diff_y);
+    kgu = akvcam_color_convert_private_rounded_div(2 * shift_div * gmax * kyb * (kyb - div), div * kyg * diff_u);
+    kgv = akvcam_color_convert_private_rounded_div(2 * shift_div * gmax * kyr * (kyr - div), div * kyg * diff_v);
 
-    int64_t kby = akvcam_color_convert_private_rounded_div(shift_div * bmax, diff_y);
-    int64_t kbu = akvcam_color_convert_private_rounded_div(2 * shift_div * bmax * (div - kyb), div * diff_u);
+    kby = akvcam_color_convert_private_rounded_div(shift_div * bmax, diff_y);
+    kbu = akvcam_color_convert_private_rounded_div(2 * shift_div * bmax * (div - kyb), div * diff_u);
 
-    int64_t cir = rounding - kry * min_y - krv * (minV + maxV) / 2;
-    int64_t cig = rounding - kgy * min_y - (kgu * (min_u + max_u) + kgv * (minV + maxV)) / 2;
-    int64_t cib = rounding - kby * min_y - kbu * (min_u + max_u) / 2;
+    cir = rounding - kry * min_y - krv * (minV + maxV) / 2;
+    cig = rounding - kgy * min_y - (kgu * (min_u + max_u) + kgv * (minV + maxV)) / 2;
+    cib = rounding - kby * min_y - kbu * (min_u + max_u) / 2;
 
     self->parent->m00 = kry; self->parent->m01 = 0  ; self->parent->m02 = krv; self->parent->m03 = cir;
     self->parent->m10 = kgy; self->parent->m11 = kgu; self->parent->m12 = kgv; self->parent->m13 = cig;
@@ -877,41 +950,64 @@ void akvcam_color_convert_private_load_rgb_to_gray_matrix(akvcam_color_convert_p
                                                           int gray_bits)
 {
     AKVCAM_YUV_COLOR_SPACE_TYPE type = AKVCAM_YUV_COLOR_SPACE_TYPE_FULL_SWING;
+    int64_t kyr;
+    int64_t kyb;
+    int64_t div;
+    int64_t kyg;
+    int shift;
+    int64_t shift_div;
+    int64_t rounding;
+    int64_t rmax;
+    int64_t gmax;
+    int64_t bmax;
+    int64_t min_y;
+    int64_t max_y;
+    int64_t diff_y;
+    int64_t kiyr;
+    int64_t kiyg;
+    int64_t kiyb;
+    int64_t min_u;
+    int64_t max_u;
+    int64_t min_v;
+    int64_t max_v;
+    int64_t ciy;
+    int64_t ciu;
+    int64_t civ;
 
-    int64_t kyr = 0;
-    int64_t kyb = 0;
-    int64_t div = 0;
+    kyr = 0;
+    kyb = 0;
+    div = 0;
     akvcam_color_convert_private_rb_constants(yuv_color_space, &kyr, &kyb, &div);
-    int64_t kyg = div - kyr - kyb;
+    kyg = div - kyr - kyb;
 
-    int shift = akvcam_max(rbits, akvcam_max(gbits, bbits));
-    int64_t shift_div = 1L << shift;
-    int64_t rounding = 1L << (shift - 1);
+    shift = akvcam_max(rbits, akvcam_max(gbits, bbits));
+    shift_div = 1LL << shift;
+    rounding = 1LL << (shift - 1);
 
-    int64_t rmax = (1L << rbits) - 1;
-    int64_t gmax = (1L << gbits) - 1;
-    int64_t bmax = (1L << bbits) - 1;
+    rmax = (1LL << rbits) - 1;
+    gmax = (1LL << gbits) - 1;
+    bmax = (1LL << bbits) - 1;
 
-    int64_t min_y = 0;
-    int64_t max_y = 0;
+    min_y = 0;
+    max_y = 0;
     akvcam_color_convert_private_limits_y(gray_bits, type, &min_y, &max_y);
-    int64_t diff_y = max_y - min_y;
+    diff_y = max_y - min_y;
 
-    int64_t kiyr = akvcam_color_convert_private_rounded_div(shift_div * diff_y * kyr, div * rmax);
-    int64_t kiyg = akvcam_color_convert_private_rounded_div(shift_div * diff_y * kyg, div * gmax);
-    int64_t kiyb = akvcam_color_convert_private_rounded_div(shift_div * diff_y * kyb, div * bmax);
+    kiyr = akvcam_color_convert_private_rounded_div(shift_div * diff_y * kyr, div * rmax);
+    kiyg = akvcam_color_convert_private_rounded_div(shift_div * diff_y * kyg, div * gmax);
+    kiyb = akvcam_color_convert_private_rounded_div(shift_div * diff_y * kyb, div * bmax);
 
-    int64_t min_u = 0;
-    int64_t max_u = 0;
+    min_u = 0;
+    max_u = 0;
     akvcam_color_convert_private_limits_uv(gray_bits, type, &min_u, &max_u);
 
-    int64_t min_v = 0;
-    int64_t max_v = 0;
+    min_v = 0;
+    max_v = 0;
     akvcam_color_convert_private_limits_uv(gray_bits, type, &min_v, &max_v);
 
-    int64_t ciy = rounding + shift_div * min_y;
-    int64_t ciu = rounding + shift_div * (min_u + max_u) / 2;
-    int64_t civ = rounding + shift_div * (min_v + max_v) / 2;
+    ciy = rounding + shift_div * min_y;
+    ciu = rounding + shift_div * (min_u + max_u) / 2;
+    civ = rounding + shift_div * (min_v + max_v) / 2;
 
     self->parent->m00 = kiyr; self->parent->m01 = kiyg; self->parent->m02 = kiyb; self->parent->m03 = ciy;
     self->parent->m10 = 0   ; self->parent->m11 = 0   ; self->parent->m12 = 0   ; self->parent->m13 = ciu;
@@ -930,28 +1026,34 @@ void akvcam_color_convert_private_load_gray_to_rgb_matrix(akvcam_color_convert_p
                                                           int gbits,
                                                           int bbits)
 {
-    int shift = gray_bits;
-    int64_t shift_div = 1L << shift;
-    int64_t rounding = 1L << (shift - 1);
+    int shift;
+    int64_t shift_div;
+    int64_t rounding;
+    int64_t graymax;
+    int64_t rmax;
+    int64_t gmax;
+    int64_t bmax;
+    int64_t kr;
+    int64_t kg;
+    int64_t kb;
 
-    int64_t graymax = (1L << gray_bits) - 1;
-
-    int64_t rmax = (1L << rbits) - 1;
-    int64_t gmax = (1L << gbits) - 1;
-    int64_t bmax = (1L << bbits) - 1;
-
-    int64_t kr = akvcam_color_convert_private_rounded_div(shift_div * rmax, graymax);
-    int64_t kg = akvcam_color_convert_private_rounded_div(shift_div * gmax, graymax);
-    int64_t kb = akvcam_color_convert_private_rounded_div(shift_div * bmax, graymax);
+    shift = gray_bits;
+    shift_div = 1LL << shift;
+    rounding = 1LL << (shift - 1);
+    graymax = (1LL << gray_bits) - 1;
+    rmax = (1LL << rbits) - 1;
+    gmax = (1LL << gbits) - 1;
+    bmax = (1LL << bbits) - 1;
+    kr = akvcam_color_convert_private_rounded_div(shift_div * rmax, graymax);
+    kg = akvcam_color_convert_private_rounded_div(shift_div * gmax, graymax);
+    kb = akvcam_color_convert_private_rounded_div(shift_div * bmax, graymax);
 
     self->parent->m00 = kr; self->parent->m01 = 0; self->parent->m02 = 0; self->parent->m03 = rounding;
     self->parent->m10 = kg; self->parent->m11 = 0; self->parent->m12 = 0; self->parent->m13 = rounding;
     self->parent->m20 = kb; self->parent->m21 = 0; self->parent->m22 = 0; self->parent->m23 = rounding;
-
     self->parent->xmin = 0; self->parent->xmax = rmax;
     self->parent->ymin = 0; self->parent->ymax = gmax;
     self->parent->zmin = 0; self->parent->zmax = bmax;
-
     self->parent->color_shift = shift;
 }
 
@@ -961,40 +1063,51 @@ void akvcam_color_convert_private_load_yuv_to_gray_matrix(akvcam_color_convert_p
                                                           int gray_bits)
 {
     AKVCAM_YUV_COLOR_SPACE_TYPE otype = AKVCAM_YUV_COLOR_SPACE_TYPE_FULL_SWING;
+    int shift;
+    int64_t shift_div;
+    int64_t rounding;
+    int64_t graymax;
+    int64_t min_y;
+    int64_t max_y;
+    int64_t diff_y;
+    int64_t ky;
+    int64_t min_u;
+    int64_t max_u;
+    int64_t min_v;
+    int64_t max_v;
+    int64_t ciy;
+    int64_t ciu;
+    int64_t civ;
 
-    int shift = ybits;
-    int64_t shift_div = 1L << shift;
-    int64_t rounding = 1L << (shift - 1);
-
-    int64_t graymax = (1L << gray_bits) - 1;
-
-    int64_t min_y = 0;
-    int64_t max_y = 0;
+    shift = ybits;
+    shift_div = 1LL << shift;
+    rounding = 1LL << (shift - 1);
+    graymax = (1LL << gray_bits) - 1;
+    min_y = 0;
+    max_y = 0;
     akvcam_color_convert_private_limits_y(ybits, yuv_color_space_type, &min_y, &max_y);
-    int64_t diff_y = max_y - min_y;
+    diff_y = max_y - min_y;
 
-    int64_t ky = akvcam_color_convert_private_rounded_div(shift_div * graymax, diff_y);
+    ky = akvcam_color_convert_private_rounded_div(shift_div * graymax, diff_y);
 
-    int64_t min_u = 0;
-    int64_t max_u = 0;
+    min_u = 0;
+    max_u = 0;
     akvcam_color_convert_private_limits_uv(gray_bits, otype, &min_u, &max_u);
 
-    int64_t min_v = 0;
-    int64_t max_v = 0;
+    min_v = 0;
+    max_v = 0;
     akvcam_color_convert_private_limits_uv(gray_bits, otype, &min_v, &max_v);
 
-    int64_t ciy = rounding - akvcam_color_convert_private_rounded_div(shift_div * min_y * graymax, diff_y);
-    int64_t ciu = rounding + shift_div * (min_u + max_u) / 2;
-    int64_t civ = rounding + shift_div * (min_v + max_v) / 2;
+    ciy = rounding - akvcam_color_convert_private_rounded_div(shift_div * min_y * graymax, diff_y);
+    ciu = rounding + shift_div * (min_u + max_u) / 2;
+    civ = rounding + shift_div * (min_v + max_v) / 2;
 
     self->parent->m00 = ky; self->parent->m01 = 0; self->parent->m02 = 0; self->parent->m03 = ciy;
     self->parent->m10 = 0 ; self->parent->m11 = 0; self->parent->m12 = 0; self->parent->m13 = ciu;
     self->parent->m20 = 0 ; self->parent->m21 = 0; self->parent->m22 = 0; self->parent->m23 = civ;
-
     self->parent->xmin = 0; self->parent->xmax = graymax;
     self->parent->ymin = 0; self->parent->ymax = graymax;
     self->parent->zmin = 0; self->parent->zmax = graymax;
-
     self->parent->color_shift = shift;
 }
 
@@ -1005,51 +1118,67 @@ void akvcam_color_convert_private_load_gray_to_yuv_matrix(akvcam_color_convert_p
                                                           int ubits,
                                                           int vbits)
 {
-    int shift = gray_bits;
-    int64_t shift_div = 1L << shift;
-    int64_t rounding = 1L << (shift - 1);
+    int shift;
+    int64_t shift_div;
+    int64_t rounding;
+    int64_t graymax;
+    int64_t min_y;
+    int64_t max_y;
+    int64_t diff_y;
+    int64_t ky;
+    int64_t min_u;
+    int64_t max_u;
+    int64_t min_v;
+    int64_t max_v;
+    int64_t ciy;
+    int64_t ciu;
+    int64_t civ;
 
-    int64_t graymax = (1L << gray_bits) - 1;
+    shift = gray_bits;
+    shift_div = 1LL << shift;
+    rounding = 1LL << (shift - 1);
+    graymax = (1LL << gray_bits) - 1;
 
-    int64_t min_y = 0;
-    int64_t max_y = 0;
+    min_y = 0;
+    max_y = 0;
     akvcam_color_convert_private_limits_y(ybits, yuv_color_space_type, &min_y, &max_y);
-    int64_t diff_y = max_y - min_y;
+    diff_y = max_y - min_y;
+    ky = akvcam_color_convert_private_rounded_div(shift_div * diff_y, graymax);
 
-    int64_t ky = akvcam_color_convert_private_rounded_div(shift_div * diff_y, graymax);
-
-    int64_t min_u = 0;
-    int64_t max_u = 0;
+    min_u = 0;
+    max_u = 0;
     akvcam_color_convert_private_limits_uv(ubits, yuv_color_space_type, &min_u, &max_u);
 
-    int64_t min_v = 0;
-    int64_t max_v = 0;
+    min_v = 0;
+    max_v = 0;
     akvcam_color_convert_private_limits_uv(vbits, yuv_color_space_type, &min_v, &max_v);
 
-    int64_t ciy = rounding + shift_div * min_y;
-    int64_t ciu = rounding + shift_div * (min_u + max_u) / 2;
-    int64_t civ = rounding + shift_div * (min_v + max_v) / 2;
+    ciy = rounding + shift_div * min_y;
+    ciu = rounding + shift_div * (min_u + max_u) / 2;
+    civ = rounding + shift_div * (min_v + max_v) / 2;
 
     self->parent->m00 = ky; self->parent->m01 = 0; self->parent->m02 = 0; self->parent->m03 = ciy;
     self->parent->m10 = 0 ; self->parent->m11 = 0; self->parent->m12 = 0; self->parent->m13 = ciu;
     self->parent->m20 = 0 ; self->parent->m21 = 0; self->parent->m22 = 0; self->parent->m23 = civ;
-
     self->parent->xmin = min_y; self->parent->xmax = max_y;
     self->parent->ymin = min_u; self->parent->ymax = max_u;
     self->parent->zmin = min_v; self->parent->zmax = max_v;
-
     self->parent->color_shift = shift;
 }
 
 void akvcam_color_convert_private_load_alpha_rgb_matrix(akvcam_color_convert_private_t self,
                                                         int alpha_bits)
 {
-    int64_t amax = (1L << alpha_bits) - 1;
-    self->parent->alpha_shift = alpha_bits;
-    int64_t shift_div = 1L << self->parent->alpha_shift;
-    int64_t rounding = 1L << (self->parent->alpha_shift - 1);
+    int64_t amax;
+    int64_t shift_div;
+    int64_t rounding;
+    int64_t k;
 
-    int64_t k = akvcam_color_convert_private_rounded_div(shift_div, amax);
+    amax = (1LL << alpha_bits) - 1;
+    self->parent->alpha_shift = alpha_bits;
+    shift_div = 1LL << self->parent->alpha_shift;
+    rounding = 1LL << (self->parent->alpha_shift - 1);
+    k = akvcam_color_convert_private_rounded_div(shift_div, amax);
 
     self->parent->a00 = k; self->parent->a01 = 0; self->parent->a02 = rounding;
     self->parent->a10 = k; self->parent->a11 = 0; self->parent->a12 = rounding;
@@ -1063,31 +1192,47 @@ void akvcam_color_convert_private_load_alpha_yuv_matrix(akvcam_color_convert_pri
                                                         int ubits,
                                                         int vbits)
 {
-    int64_t amax = (1L << alpha_bits) - 1;
+    int64_t amax;
+    int64_t shift_div;
+    int64_t rounding;
+    uint64_t k;
+    int64_t min_y;
+    int64_t max_y;
+    int64_t ky;
+    int64_t min_u;
+    int64_t max_u;
+    int64_t ku;
+    int64_t min_v;
+    int64_t max_v;
+    int64_t kv;
+    int64_t ciy;
+    int64_t ciu;
+    int64_t civ;
+
+    amax = (1LL << alpha_bits) - 1;
     self->parent->alpha_shift = alpha_bits;
-    int64_t shift_div = 1L << self->parent->alpha_shift;
-    int64_t rounding = 1L << (self->parent->alpha_shift - 1);
+    shift_div = 1LL << self->parent->alpha_shift;
+    rounding = 1LL << (self->parent->alpha_shift - 1);
+    k = shift_div / amax;
 
-    uint64_t k = shift_div / amax;
-
-    int64_t min_y = 0;
-    int64_t max_y = 0;
+    min_y = 0;
+    max_y = 0;
     akvcam_color_convert_private_limits_y(ybits, yuv_color_space_type, &min_y, &max_y);
-    int64_t ky = -akvcam_color_convert_private_rounded_div(shift_div * min_y, amax);
+    ky = -akvcam_color_convert_private_rounded_div(shift_div * min_y, amax);
 
-    int64_t min_u = 0;
-    int64_t max_u = 0;
+    min_u = 0;
+    max_u = 0;
     akvcam_color_convert_private_limits_uv(ubits, yuv_color_space_type, &min_u, &max_u);
-    int64_t ku = -akvcam_color_convert_private_rounded_div(shift_div * (min_u + max_u), 2 * amax);
+    ku = -akvcam_color_convert_private_rounded_div(shift_div * (min_u + max_u), 2 * amax);
 
-    int64_t min_v = 0;
-    int64_t max_v = 0;
+    min_v = 0;
+    max_v = 0;
     akvcam_color_convert_private_limits_uv(vbits, yuv_color_space_type, &min_v, &max_v);
-    int64_t kv = -akvcam_color_convert_private_rounded_div(shift_div * (min_v + max_v), 2 * amax);
+    kv = -akvcam_color_convert_private_rounded_div(shift_div * (min_v + max_v), 2 * amax);
 
-    int64_t ciy = rounding + shift_div * min_y;
-    int64_t ciu = rounding + shift_div * (min_u + max_u) / 2;
-    int64_t civ = rounding + shift_div * (min_v + max_v) / 2;
+    ciy = rounding + shift_div * min_y;
+    ciu = rounding + shift_div * (min_u + max_u) / 2;
+    civ = rounding + shift_div * (min_v + max_v) / 2;
 
     self->parent->a00 = k; self->parent->a01 = ky; self->parent->a02 = ciy;
     self->parent->a10 = k; self->parent->a11 = ku; self->parent->a12 = ciu;
@@ -1099,24 +1244,33 @@ void akvcam_color_convert_private_load_alpha_gray_matrix(akvcam_color_convert_pr
                                                          int gray_bits)
 {
     AKVCAM_YUV_COLOR_SPACE_TYPE otype = AKVCAM_YUV_COLOR_SPACE_TYPE_FULL_SWING;
+    int64_t amax;
+    int64_t shift_div;
+    int64_t rounding;
+    int64_t k;
+    int64_t min_u;
+    int64_t max_u;
+    int64_t min_v;
+    int64_t max_v;
+    int64_t ciu;
+    int64_t civ;
 
-    int64_t amax = (1L << alpha_bits) - 1;
+    amax = (1LL << alpha_bits) - 1;
     self->parent->alpha_shift = alpha_bits;
-    int64_t shift_div = 1L << self->parent->alpha_shift;
-    int64_t rounding = 1L << (self->parent->alpha_shift - 1);
+    shift_div = 1LL << self->parent->alpha_shift;
+    rounding = 1LL << (self->parent->alpha_shift - 1);
+    k = akvcam_color_convert_private_rounded_div(shift_div, amax);
 
-    int64_t k = akvcam_color_convert_private_rounded_div(shift_div, amax);
-
-    int64_t min_u = 0;
-    int64_t max_u = 0;
+    min_u = 0;
+    max_u = 0;
     akvcam_color_convert_private_limits_uv(gray_bits, otype, &min_u, &max_u);
 
-    int64_t min_v = 0;
-    int64_t max_v = 0;
+    min_v = 0;
+    max_v = 0;
     akvcam_color_convert_private_limits_uv(gray_bits, otype, &min_v, &max_v);
 
-    int64_t ciu = rounding + shift_div * (min_u + max_u) / 2;
-    int64_t civ = rounding + shift_div * (min_v + max_v) / 2;
+    ciu = rounding + shift_div * (min_u + max_u) / 2;
+    civ = rounding + shift_div * (min_v + max_v) / 2;
 
     self->parent->a00 = k; self->parent->a01 = 0; self->parent->a02 = rounding;
     self->parent->a10 = 0; self->parent->a11 = 0; self->parent->a12 = ciu;
