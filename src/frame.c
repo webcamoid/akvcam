@@ -149,7 +149,7 @@ struct akvcam_frame
                                                               akvcam_fill_parameters_ct fc, \
                                                               uint32_t color) \
     { \
-        size_t x \
+        size_t x; \
         \
         int xi = (int)((color >> 16) & 0xff); \
         int yi = (int)((color >>  8) & 0xff); \
@@ -190,7 +190,7 @@ struct akvcam_frame
                                                                akvcam_fill_parameters_ct fc, \
                                                                uint32_t color) \
     { \
-        size_t x \
+        size_t x; \
         \
         int xi = (int)((color >> 16) & 0xff); \
         int yi = (int)((color >>  8) & 0xff); \
@@ -235,7 +235,7 @@ struct akvcam_frame
                                                               akvcam_fill_parameters_ct fc, \
                                                               uint32_t color) \
     { \
-        size_t x \
+        size_t x; \
         \
         int xi = (int)((color >> 16) & 0xff); \
         int yi = (int)((color >>  8) & 0xff); \
@@ -262,7 +262,7 @@ struct akvcam_frame
                                                                akvcam_fill_parameters_ct fc, \
                                                                uint32_t color) \
     { \
-        size_t x \
+        size_t x; \
         \
         int xi = (int)((color >> 16) & 0xff); \
         int yi = (int)((color >>  8) & 0xff); \
@@ -297,7 +297,7 @@ struct akvcam_frame
                                                                akvcam_fill_parameters_ct fc, \
                                                                uint32_t color) \
     { \
-        size_t x \
+        size_t x; \
         \
         int xi = (int)((color >> 16) & 0xff); \
         int yi = (int)((color >>  8) & 0xff); \
@@ -338,7 +338,7 @@ struct akvcam_frame
                                                                 akvcam_fill_parameters_ct fc, \
                                                                 uint32_t color) \
     { \
-        size_t x \
+        size_t x; \
         \
         int xi = (int)((color >> 16) & 0xff); \
         int yi = (int)((color >>  8) & 0xff); \
