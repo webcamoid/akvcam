@@ -443,6 +443,7 @@ int akvcam_ioctl_g_parm(struct file *file,
     akvcam_device_t device = video_drvdata(file);
     akvcam_format_t format;
     __u32 *n_buffers;
+    struct v4l2_fract frame_rate;
     UNUSED(fh);
 
     akpr_function();
@@ -453,7 +454,7 @@ int akvcam_ioctl_g_parm(struct file *file,
 
     memset(&param->parm, 0, sizeof(param->parm));
     format = akvcam_device_format_nr(device);
-    struct v4l2_fract frame_rate = akvcam_format_frame_rate(format);
+    frame_rate = akvcam_format_frame_rate(format);
 
     if (param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT
         || param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {

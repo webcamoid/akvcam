@@ -17,7 +17,9 @@
  */
 
 #include <linux/kref.h>
+#include <linux/limits.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 
 #include "list.h"
 
@@ -388,9 +390,7 @@ akvcam_matrix_t akvcam_matrix_combine(akvcam_matrix_ct matrix)
      * but we reserve a safe limit.
      */
     max_frames = matrix_size * 64 + 1;
-    stack = kvmalloc_array(max_frames,
-                           sizeof(akvcam_matrix_combine_frame),
-                           GFP_KERNEL);
+    stack = vmalloc_array(max_frames, sizeof(akvcam_matrix_combine_frame));
 
     if (!stack)
         return combinations;
@@ -400,7 +400,8 @@ akvcam_matrix_t akvcam_matrix_combine(akvcam_matrix_ct matrix)
     stack[0].combined = akvcam_list_new();
 
     if (!stack[0].combined) {
-        kvfree(stack);
+        vfree(stack);
+
         return combinations;
     }
 
@@ -455,7 +456,7 @@ akvcam_matrix_t akvcam_matrix_combine(akvcam_matrix_ct matrix)
         akvcam_list_delete(frame.combined);
     }
 
-    kvfree(stack);
+    vfree(stack);
 
     return combinations;
 }

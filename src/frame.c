@@ -927,11 +927,12 @@ static bool akvcam_frame_load_rle8(akvcam_frame_t self,
     bool done = false;
     uint32_t width;
     uint32_t height;
+    uint32_t line_y;
 
     width  = le32_to_cpu(image_header->width);
     height = le32_to_cpu(image_header->height);
 
-    uint32_t line_y = top_down? y: height - y - 1;
+    line_y = top_down? y: height - y - 1;
     line = akvcam_frame_line(self, 0, line_y);
 
     while (!done) {
