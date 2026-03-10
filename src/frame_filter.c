@@ -313,6 +313,7 @@ void akvcam_frame_filter_mirror(akvcam_frame_t frame,
     __u32 fourcc;
     size_t width;
     size_t height;
+    size_t line_size;
 
     akpr_function();
 
@@ -327,7 +328,7 @@ void akvcam_frame_filter_mirror(akvcam_frame_t frame,
 
     width = akvcam_format_width(format);
     height = akvcam_format_height(format);
-    size_t line_size = akvcam_format_line_size(format, 0);
+    line_size = akvcam_format_line_size(format, 0);
 
     if (line_size == 0)
         return;
@@ -373,8 +374,9 @@ void akvcam_frame_filter_mirror(akvcam_frame_t frame,
         // If height is odd, the centerline only needs horizontal inversion
         if (height % 2 != 0) {
             uint8_t *mid_line = akvcam_frame_line(frame, 0, height / 2);
+            size_t x;
 
-            for (size_t x = 0; x < width / 2; x++) {
+            for (x = 0; x < width / 2; x++) {
                 size_t lo = x * 4;
                 size_t hi = (width - x - 1) * 4;
                 uint8_t b0 = mid_line[lo + 0], b1 = mid_line[lo + 1];

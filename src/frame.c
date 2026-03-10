@@ -103,25 +103,25 @@ typedef const akvcam_fill_parameters *akvcam_fill_parameters_ct;
 
 typedef struct
 {
-    uint32_t size;
-    uint16_t reserved1;
-    uint16_t reserved2;
-    uint32_t offBits;
+    __le32 size;
+    __le16 reserved1;
+    __le16 reserved2;
+    __le32 off_bits;
 } akvcam_bmp_header, *akvcam_bmp_header_t;
 
 typedef struct
 {
-    uint32_t size;
-    uint32_t width;
-    uint32_t height;
-    uint16_t planes;
-    uint16_t bitCount;
-    uint32_t compression;
-    uint32_t sizeImage;
-    uint32_t xPelsPerMeter;
-    uint32_t yPelsPerMeter;
-    uint32_t clrUsed;
-    uint32_t clrImportant;
+    __le32 size;
+    __le32 width;
+    __le32 height;
+    __le16 planes;
+    __le16 bit_count;
+    __le32 compression;
+    __le32 size_image;
+    __le32 x_pixels_per_meter;
+    __le32 y_pixels_per_meter;
+    __le32 clr_used;
+    __le32 clr_important;
 } akvcam_bmp_image_header, *akvcam_bmp_image_header_t;
 
 typedef struct
@@ -661,6 +661,12 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
     bool top_down;
     size_t data_size;
     struct v4l2_fract frame_rate = {0, 0};
+    uint32_t size;
+    uint32_t width;
+    uint32_t height;
+    uint16_t bit_count;
+    uint32_t compression;
+    uint32_t offset_bits;
 
     akvcam_frame_private_clear(self);
 
@@ -695,23 +701,24 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
 
 
     // Fix the endianness of the used fields
-    image_header.width       = le32_to_cpu(image_header.width);
-    image_header.height      = le32_to_cpu(image_header.height);
-    image_header.bitCount    = le16_to_cpu(image_header.bitCount);
-    image_header.compression = le32_to_cpu(image_header.compression);
-    header.offBits           = le32_to_cpu(header.offBits);
+    size        = le32_to_cpu(image_header.size);
+    width       = le32_to_cpu(image_header.width);
+    height      = le32_to_cpu(image_header.height);
+    bit_count   = le16_to_cpu(image_header.bit_count);
+    compression = le32_to_cpu(image_header.compression);
+    offset_bits = le32_to_cpu(header.off_bits);
 
-    top_down = (int32_t)image_header.height < 0;
+    top_down = (int32_t) height < 0;
 
     if (top_down)
-        image_header.height = (uint32_t)(-(int32_t)image_header.height);
+        height = (uint32_t)(-(int32_t) height);
 
     // Read the palette if required by the format
     memset(palette, 0, sizeof(palette));
 
-    if (image_header.bitCount <= 8) {
-        uint32_t palette_offset = 14u + image_header.size;
-        uint32_t palette_size = header.offBits - palette_offset;
+    if (bit_count <= 8) {
+        uint32_t palette_offset = 14u + size;
+        uint32_t palette_size = offset_bits - palette_offset;
         uint32_t n_colors = palette_size / 4u;
         uint32_t i;
         uint8_t  raw[4];
@@ -727,7 +734,7 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
         }
     }
 
-    akvcam_file_seek(bmp_file, header.offBits, AKVCAM_FILE_SEEK_BEG);
+    akvcam_file_seek(bmp_file, offset_bits, AKVCAM_FILE_SEEK_BEG);
 
     if (self->format) {
         frame_rate = akvcam_format_frame_rate(self->format);
@@ -735,8 +742,8 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
     }
 
     self->format = akvcam_format_new(V4L2_PIX_FMT_ARGB32,
-                                     image_header.width,
-                                     image_header.height,
+                                     width,
+                                     height,
                                      &frame_rate);
     data_size = akvcam_format_size(self->format);
 
@@ -754,9 +761,9 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
         self->fc = NULL;
     }
 
-    switch (image_header.bitCount) {
+    switch (bit_count) {
         case 8:
-             if (image_header.compression == 1) {
+             if (compression == 1) {
                  if (!akvcam_frame_load_rle8(self,
                                              bmp_file,
                                              &image_header,
@@ -764,8 +771,8 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
                                              top_down)) {
                      goto akvcam_frame_load_failed;
                  }
-             } else if (image_header.compression == 0) {
-                 uint32_t row_size = (image_header.width + 3u) & ~3u;
+             } else if (compression == 0) {
+                 uint32_t row_size = (width + 3u) & ~3u;
                  uint8_t *row_buf = vmalloc(row_size);
 
                  if (!row_buf) {
@@ -774,12 +781,12 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
                      goto akvcam_frame_load_failed;
                  }
 
-                 for (y = 0; y < image_header.height; y++) {
-                     uint32_t line_y = top_down? y: image_header.height - y - 1;
+                 for (y = 0; y < height; y++) {
+                     uint32_t line_y = top_down? y: height - y - 1;
                      line = akvcam_frame_line(self, 0, line_y);
                      akvcam_file_read(bmp_file, row_buf, row_size);
 
-                     for (x = 0; x < image_header.width; x++) {
+                     for (x = 0; x < width; x++) {
                          uint8_t index = row_buf[x];
                          line[4 * x + 0] = 0xff;
                          line[4 * x + 1] = palette[index].r;
@@ -791,7 +798,7 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
                  vfree(row_buf);
              } else {
                  akpr_err("Unsupported compression for 8-bit bitmap: %u\n",
-                          image_header.compression);
+                          compression);
 
                  goto akvcam_frame_load_failed;
              }
@@ -799,11 +806,11 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
              break;
 
         case 24:
-            for (y = 0; y < image_header.height; y++) {
-                uint32_t line_y = top_down? y: image_header.height - y - 1;
+            for (y = 0; y < height; y++) {
+                uint32_t line_y = top_down? y: height - y - 1;
                 line = akvcam_frame_line(self, 0, line_y);
 
-                for (x = 0; x < image_header.width; x++) {
+                for (x = 0; x < width; x++) {
                     akvcam_file_read(bmp_file, (char *) pixel, 3);
                     line[4 * x + 0] = 0xff;     // A
                     line[4 * x + 1] = pixel[2]; // R
@@ -815,11 +822,11 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
             break;
 
         case 32:
-            for (y = 0; y < image_header.height; y++) {
-                uint32_t line_y = top_down? y: image_header.height - y - 1;
+            for (y = 0; y < height; y++) {
+                uint32_t line_y = top_down? y: height - y - 1;
                 line = akvcam_frame_line(self, 0, line_y);
 
-                for (x = 0; x < image_header.width; x++) {
+                for (x = 0; x < width; x++) {
                     akvcam_file_read(bmp_file, (char *) pixel, 4);
                     line[4 * x + 0] = pixel[3]; // A
                     line[4 * x + 1] = pixel[2]; // R
@@ -831,8 +838,7 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
             break;
 
         default:
-            akpr_err("Bit count not supported in bitmap: %u\n",
-                     image_header.bitCount);
+            akpr_err("Bit count not supported in bitmap: %u\n", bit_count);
 
             goto akvcam_frame_load_failed;
     }
@@ -919,8 +925,13 @@ static bool akvcam_frame_load_rle8(akvcam_frame_t self,
     uint8_t *line;
     uint8_t pair[2];
     bool done = false;
+    uint32_t width;
+    uint32_t height;
 
-    uint32_t line_y = top_down? y: image_header->height - y - 1;
+    width  = le32_to_cpu(image_header->width);
+    height = le32_to_cpu(image_header->height);
+
+    uint32_t line_y = top_down? y: height - y - 1;
     line = akvcam_frame_line(self, 0, line_y);
 
     while (!done) {
@@ -936,7 +947,7 @@ static bool akvcam_frame_load_rle8(akvcam_frame_t self,
             uint8_t index = pair[1];
 
             while (count--) {
-                if (x >= image_header->width) {
+                if (x >= width) {
                     akpr_err("RLE8: pixel out of bounds at (%u, %u)\n", x, y);
 
                     return false;
@@ -951,20 +962,22 @@ static bool akvcam_frame_load_rle8(akvcam_frame_t self,
             }
         } else {
             switch (pair[1]) {
-                case 0: // End of line
+                case 0: { // End of line
+                    uint32_t line_y;
                     x = 0;
                     y++;
 
-                    if (y >= image_header->height) {
+                    if (y >= height) {
                         akpr_err("RLE8: line index out of bounds\n");
 
                         return false;
                     }
 
-                    uint32_t line_y = top_down? y: image_header->height - y - 1;
+                    line_y = top_down? y: height - y - 1;
                     line = akvcam_frame_line(self, 0, line_y);
 
                     break;
+                }
 
                 case 1: // End of picture
                     done = true;
@@ -973,6 +986,7 @@ static bool akvcam_frame_load_rle8(akvcam_frame_t self,
 
                 case 2: { // Delta: seek to the current position
                     uint8_t delta[2];
+                    uint32_t line_y;
 
                     if (akvcam_file_read(bmp_file, delta, 2) < 2) {
                         akpr_err("RLE8: unexpected end of file in delta\n");
@@ -983,13 +997,13 @@ static bool akvcam_frame_load_rle8(akvcam_frame_t self,
                     x += delta[0];
                     y += delta[1];
 
-                    if (x >= image_header->width || y >= image_header->height) {
+                    if (x >= width || y >= height) {
                         akpr_err("RLE8: delta out of bounds (%u, %u)\n", x, y);
 
                         return false;
                     }
 
-                    uint32_t line_y = top_down? y: image_header->height - y - 1;
+                    line_y = top_down? y: height - y - 1;
                     line = akvcam_frame_line(self, 0, line_y);
 
                     break;
@@ -1007,7 +1021,7 @@ static bool akvcam_frame_load_rle8(akvcam_frame_t self,
                             return false;
                         }
 
-                        if (x >= image_header->width) {
+                        if (x >= width) {
                             akpr_err("RLE8: pixel out of bounds at (%u, %u)\n", x, y);
 
                             return false;
@@ -1148,8 +1162,8 @@ static void akvcam_fill_parameters_clear_buffers(akvcam_fill_parameters_t self)
 static void akvcam_fill_parameters_allocate_buffers(akvcam_fill_parameters_t self,
                                                     akvcam_format_ct format)
 {
-    akvcam_fill_parameters_clear_buffers(self);
     int width = akvcam_format_width(format);
+    akvcam_fill_parameters_clear_buffers(self);
 
     if (width > 0) {
         size_t buffer_size = width * sizeof(int);
