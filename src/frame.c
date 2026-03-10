@@ -570,8 +570,8 @@ akvcam_frame_t akvcam_frame_ref(akvcam_frame_t self)
 
 void akvcam_frame_copy(akvcam_frame_t self, akvcam_frame_ct other)
 {
-    akvcam_format_copy(self->format, other->format);
     size_t data_size;
+    akvcam_format_copy(self->format, other->format);
 
     if (self->data) {
         vfree(self->data);
@@ -766,7 +766,7 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
                  }
              } else if (image_header.compression == 0) {
                  uint32_t row_size = (image_header.width + 3u) & ~3u;
-                 uint8_t *row_buf = kvmalloc(row_size, GFP_KERNEL);
+                 uint8_t *row_buf = vmalloc(row_size);
 
                  if (!row_buf) {
                      akpr_err("Failed to allocate row buffer\n");
@@ -788,7 +788,7 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
                      }
                  }
 
-                 kvfree(row_buf);
+                 vfree(row_buf);
              } else {
                  akpr_err("Unsupported compression for 8-bit bitmap: %u\n",
                           image_header.compression);
@@ -868,6 +868,7 @@ void akvcam_frame_fill_rgba(akvcam_frame_t self, uint32_t color)
     int x;
     int y;
     size_t nplanes;
+    size_t plane;
 
     if (!self->fc) {
         self->fc = akvcam_fill_parameters_new();
@@ -883,7 +884,7 @@ void akvcam_frame_fill_rgba(akvcam_frame_t self, uint32_t color)
         break;
     }
 
-    size_t nplanes = akvcam_format_planes(self->format);
+    nplanes = akvcam_format_planes(self->format);
 
     for (plane = 0; plane < nplanes; plane++) {
         size_t line_size = akvcam_format_line_size(self->format, plane);
