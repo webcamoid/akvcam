@@ -149,10 +149,16 @@ struct akvcam_frame
                                                               akvcam_fill_parameters_ct fc, \
                                                               uint32_t color) \
     { \
+        size_t x \
+        \
         int xi = (int)((color >> 16) & 0xff); \
         int yi = (int)((color >>  8) & 0xff); \
         int zi = (int)((color >>  0) & 0xff); \
         int ai = (int)((color >> 24) & 0xff); \
+        \
+        uint8_t *line_x; \
+        uint8_t *line_y; \
+        uint8_t *line_z; \
         \
         int64_t xo_ = 0; \
         int64_t yo_ = 0; \
@@ -160,11 +166,11 @@ struct akvcam_frame
         akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo_, &yo_, &zo_); \
         akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo_, &yo_, &zo_); \
         \
-        uint8_t *line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
-        uint8_t *line_y = self->planes[fc->plane_yo] + fc->yo_offset; \
-        uint8_t *line_z = self->planes[fc->plane_zo] + fc->zo_offset; \
+        line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
+        line_y = self->planes[fc->plane_yo] + fc->yo_offset; \
+        line_z = self->planes[fc->plane_zo] + fc->zo_offset; \
         \
-        for (size_t x = 0; x < fc->read_width; ++x) { \
+        for (x = 0; x < fc->read_width; ++x) { \
             int xd_x = fc->dst_width_offset_x[x]; \
             int xd_y = fc->dst_width_offset_y[x]; \
             int xd_z = fc->dst_width_offset_z[x]; \
@@ -184,22 +190,29 @@ struct akvcam_frame
                                                                akvcam_fill_parameters_ct fc, \
                                                                uint32_t color) \
     { \
+        size_t x \
+        \
         int xi = (int)((color >> 16) & 0xff); \
         int yi = (int)((color >>  8) & 0xff); \
         int zi = (int)((color >>  0) & 0xff); \
         int ai = (int)((color >> 24) & 0xff); \
+        \
+        uint8_t *line_x; \
+        uint8_t *line_y; \
+        uint8_t *line_z; \
+        uint8_t *line_a; \
         \
         int64_t xo_ = 0; \
         int64_t yo_ = 0; \
         int64_t zo_ = 0; \
         akvcam_color_convert_apply_matrix(fc->color_convert, xi, yi, zi, &xo_, &yo_, &zo_); \
         \
-        uint8_t *line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
-        uint8_t *line_y = self->planes[fc->plane_yo] + fc->yo_offset; \
-        uint8_t *line_z = self->planes[fc->plane_zo] + fc->zo_offset; \
-        uint8_t *line_a = self->planes[fc->plane_ao] + fc->ao_offset; \
+        line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
+        line_y = self->planes[fc->plane_yo] + fc->yo_offset; \
+        line_z = self->planes[fc->plane_zo] + fc->zo_offset; \
+        line_a = self->planes[fc->plane_ao] + fc->ao_offset; \
         \
-        for (size_t x = 0; x < fc->read_width; ++x) { \
+        for (x = 0; x < fc->read_width; ++x) { \
             int xd_x = fc->dst_width_offset_x[x]; \
             int xd_y = fc->dst_width_offset_y[x]; \
             int xd_z = fc->dst_width_offset_z[x]; \
@@ -222,18 +235,22 @@ struct akvcam_frame
                                                               akvcam_fill_parameters_ct fc, \
                                                               uint32_t color) \
     { \
+        size_t x \
+        \
         int xi = (int)((color >> 16) & 0xff); \
         int yi = (int)((color >>  8) & 0xff); \
         int zi = (int)((color >>  0) & 0xff); \
         int ai = (int)((color >> 24) & 0xff); \
         \
+        uint8_t *line_x; \
+        \
         int64_t xo_ = 0; \
         akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo_); \
         akvcam_color_convert_apply_alpha_1(fc->color_convert, ai, &xo_); \
         \
-        uint8_t *line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
+        line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
         \
-        for (size_t x = 0; x < fc->read_width; ++x) { \
+        for (x = 0; x < fc->read_width; ++x) { \
             int xd_x = fc->dst_width_offset_x[x]; \
             data_type *xo = (data_type *)(line_x + xd_x); \
             *xo = (*xo & (data_type)(fc->mask_xo)) | ((data_type)(xo_) << fc->xo_shift); \
@@ -245,18 +262,23 @@ struct akvcam_frame
                                                                akvcam_fill_parameters_ct fc, \
                                                                uint32_t color) \
     { \
+        size_t x \
+        \
         int xi = (int)((color >> 16) & 0xff); \
         int yi = (int)((color >>  8) & 0xff); \
         int zi = (int)((color >>  0) & 0xff); \
         int ai = (int)((color >> 24) & 0xff); \
         \
+        uint8_t *line_x; \
+        uint8_t *line_a; \
+        \
         int64_t xo_ = 0; \
         akvcam_color_convert_apply_point_3_1(fc->color_convert, xi, yi, zi, &xo_); \
         \
-        uint8_t *line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
-        uint8_t *line_a = self->planes[fc->plane_ao] + fc->ao_offset; \
+        line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
+        line_a = self->planes[fc->plane_ao] + fc->ao_offset; \
         \
-        for (size_t x = 0; x < fc->read_width; ++x) { \
+        for (x = 0; x < fc->read_width; ++x) { \
             int xd_x = fc->dst_width_offset_x[x]; \
             int xd_a = fc->dst_width_offset_a[x]; \
             \
@@ -275,10 +297,16 @@ struct akvcam_frame
                                                                akvcam_fill_parameters_ct fc, \
                                                                uint32_t color) \
     { \
+        size_t x \
+        \
         int xi = (int)((color >> 16) & 0xff); \
         int yi = (int)((color >>  8) & 0xff); \
         int zi = (int)((color >>  0) & 0xff); \
         int ai = (int)((color >> 24) & 0xff); \
+        \
+        uint8_t *line_x; \
+        uint8_t *line_y; \
+        uint8_t *line_z; \
         \
         int64_t xo_ = 0; \
         int64_t yo_ = 0; \
@@ -286,11 +314,11 @@ struct akvcam_frame
         akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo_, &yo_, &zo_); \
         akvcam_color_convert_apply_alpha_1_3(fc->color_convert, ai, &xo_, &yo_, &zo_); \
         \
-        uint8_t *line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
-        uint8_t *line_y = self->planes[fc->plane_yo] + fc->yo_offset; \
-        uint8_t *line_z = self->planes[fc->plane_zo] + fc->zo_offset; \
+        line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
+        line_y = self->planes[fc->plane_yo] + fc->yo_offset; \
+        line_z = self->planes[fc->plane_zo] + fc->zo_offset; \
         \
-        for (size_t x = 0; x < fc->read_width; ++x) { \
+        for (x = 0; x < fc->read_width; ++x) { \
             int xd_x = fc->dst_width_offset_x[x]; \
             int xd_y = fc->dst_width_offset_y[x]; \
             int xd_z = fc->dst_width_offset_z[x]; \
@@ -310,22 +338,29 @@ struct akvcam_frame
                                                                 akvcam_fill_parameters_ct fc, \
                                                                 uint32_t color) \
     { \
+        size_t x \
+        \
         int xi = (int)((color >> 16) & 0xff); \
         int yi = (int)((color >>  8) & 0xff); \
         int zi = (int)((color >>  0) & 0xff); \
         int ai = (int)((color >> 24) & 0xff); \
+        \
+        uint8_t *line_x; \
+        uint8_t *line_y; \
+        uint8_t *line_z; \
+        uint8_t *line_a; \
         \
         int64_t xo_ = 0; \
         int64_t yo_ = 0; \
         int64_t zo_ = 0; \
         akvcam_color_convert_apply_vector(fc->color_convert, xi, yi, zi, &xo_, &yo_, &zo_); \
         \
-        uint8_t *line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
-        uint8_t *line_y = self->planes[fc->plane_yo] + fc->yo_offset; \
-        uint8_t *line_z = self->planes[fc->plane_zo] + fc->zo_offset; \
-        uint8_t *line_a = self->planes[fc->plane_ao] + fc->ao_offset; \
+        line_x = self->planes[fc->plane_xo] + fc->xo_offset; \
+        line_y = self->planes[fc->plane_yo] + fc->yo_offset; \
+        line_z = self->planes[fc->plane_zo] + fc->zo_offset; \
+        line_a = self->planes[fc->plane_ao] + fc->ao_offset; \
         \
-        for (size_t x = 0; x < fc->read_width; ++x) { \
+        for (x = 0; x < fc->read_width; ++x) { \
             int xd_x = fc->dst_width_offset_x[x]; \
             int xd_y = fc->dst_width_offset_y[x]; \
             int xd_z = fc->dst_width_offset_z[x]; \
@@ -467,11 +502,12 @@ static void akvcam_fill_parameters_configure_fill(akvcam_fill_parameters_t self,
 akvcam_frame_t akvcam_frame_new(akvcam_format_t format)
 {
     akvcam_frame_t self = kzalloc(sizeof(struct akvcam_frame), GFP_KERNEL);
+    size_t data_size;
     kref_init(&self->ref);
     self->format = format?
                     akvcam_format_new_copy(format):
                     akvcam_format_new(0, 0, 0, NULL);
-    size_t data_size = akvcam_format_size(self->format);
+    data_size = akvcam_format_size(self->format);
 
     if (data_size > 0)
         self->data = vzalloc(data_size);
@@ -484,9 +520,10 @@ akvcam_frame_t akvcam_frame_new(akvcam_format_t format)
 akvcam_frame_t akvcam_frame_new_copy(akvcam_frame_ct other)
 {
     akvcam_frame_t self = kzalloc(sizeof(struct akvcam_frame), GFP_KERNEL);
+    size_t data_size;
     kref_init(&self->ref);
     self->format = akvcam_format_new_copy(other->format);
-    size_t data_size = akvcam_format_size(self->format);
+    data_size = akvcam_format_size(self->format);
 
     if (other->data && data_size > 0) {
         self->data = vzalloc(data_size);
@@ -534,13 +571,14 @@ akvcam_frame_t akvcam_frame_ref(akvcam_frame_t self)
 void akvcam_frame_copy(akvcam_frame_t self, akvcam_frame_ct other)
 {
     akvcam_format_copy(self->format, other->format);
+    size_t data_size;
 
     if (self->data) {
         vfree(self->data);
         self->data = NULL;
     }
 
-    size_t data_size = akvcam_format_size(self->format);
+    data_size = akvcam_format_size(self->format);
 
     if (other->data && data_size > 0) {
         self->data = vzalloc(data_size);
@@ -620,6 +658,9 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
     uint32_t x;
     uint32_t y;
     uint8_t pixel[4];
+    bool top_down;
+    size_t data_size;
+    struct v4l2_fract frame_rate = {0, 0};
 
     akvcam_frame_private_clear(self);
 
@@ -660,7 +701,7 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
     image_header.compression = le32_to_cpu(image_header.compression);
     header.offBits           = le32_to_cpu(header.offBits);
 
-    bool top_down = (int32_t)image_header.height < 0;
+    top_down = (int32_t)image_header.height < 0;
 
     if (top_down)
         image_header.height = (uint32_t)(-(int32_t)image_header.height);
@@ -687,7 +728,6 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
     }
 
     akvcam_file_seek(bmp_file, header.offBits, AKVCAM_FILE_SEEK_BEG);
-    struct v4l2_fract frame_rate = {0, 0};
 
     if (self->format) {
         frame_rate = akvcam_format_frame_rate(self->format);
@@ -698,7 +738,7 @@ bool akvcam_frame_load(akvcam_frame_t self, const char *file_name)
                                      image_header.width,
                                      image_header.height,
                                      &frame_rate);
-    size_t data_size = akvcam_format_size(self->format);
+    data_size = akvcam_format_size(self->format);
 
     if (data_size < 1) {
         akpr_err("Bitmap format is invalid\n");
@@ -814,8 +854,9 @@ akvcam_frame_load_failed:
         \
         if (self->fc->endianess != __BYTE_ORDER__) { \
             size_t nplanes = akvcam_format_planes(self->format); \
+            size_t plane; \
             \
-            for (size_t plane = 0; plane < nplanes; ++plane) \
+            for (plane = 0; plane < nplanes; ++plane) \
                 akvcam_swap_data_bytes_uint##size##_t((uint##size##_t *)self->planes[plane], \
                                                       akvcam_format_plane_size(self->format, plane)); \
         } \
@@ -824,6 +865,10 @@ akvcam_frame_load_failed:
 
 void akvcam_frame_fill_rgba(akvcam_frame_t self, uint32_t color)
 {
+    int x;
+    int y;
+    size_t nplanes;
+
     if (!self->fc) {
         self->fc = akvcam_fill_parameters_new();
         akvcam_fill_parameters_configure(self->fc, self->format, self->fc->color_convert);
@@ -840,7 +885,7 @@ void akvcam_frame_fill_rgba(akvcam_frame_t self, uint32_t color)
 
     size_t nplanes = akvcam_format_planes(self->format);
 
-    for (size_t plane = 0; plane < nplanes; plane++) {
+    for (plane = 0; plane < nplanes; plane++) {
         size_t line_size = akvcam_format_line_size(self->format, plane);
         size_t pixel_size = akvcam_format_pixel_size(self->format, plane);
         uint8_t *line0 = self->planes[plane];
@@ -848,14 +893,14 @@ void akvcam_frame_fill_rgba(akvcam_frame_t self, uint32_t color)
         size_t width = pixel_size > 0? line_size / pixel_size: 0;
         size_t height = self->fc->height >> akvcam_format_height_div(self->format, plane);
 
-        for (int x = 1; x < width; ++x) {
+        for (x = 1; x < width; ++x) {
             memcpy(line, line0, pixel_size);
             line += pixel_size;
         }
 
         line = line0 + line_size;
 
-        for (int y = 1; y < height; ++y) {
+        for (y = 1; y < height; ++y) {
             memcpy(line, line0, line_size);
             line += line_size;
         }
@@ -991,8 +1036,9 @@ static bool akvcam_frame_load_rle8(akvcam_frame_t self,
 void akvcam_frame_private_update_planes(akvcam_frame_t self)
 {
     size_t nplanes = akvcam_format_planes(self->format);
+    int i;
 
-    for (int i = 0; i < nplanes; ++i)
+    for (i = 0; i < nplanes; ++i)
         self->planes[i] = self->data + akvcam_format_offset(self->format, i);
 }
 
@@ -1124,13 +1170,14 @@ static void akvcam_fill_parameters_configure(akvcam_fill_parameters_t self,
     akvcam_format_specs_ct ispecs = akvcam_format_specs_from_fixel_format(V4L2_PIX_FMT_ARGB32);
     akvcam_format_specs_ct ospecs = akvcam_format_specs_from_fixel_format(akvcam_format_fourcc(format));
     size_t ospecs_depth = akvcam_format_specs_depth(ospecs);
+    size_t components;
 
     DEFINE_FILL_TYPES(8);
     DEFINE_FILL_TYPES(16);
     DEFINE_FILL_TYPES(32);
     DEFINE_FILL_TYPES(64);
 
-    size_t components = akvcam_format_specs_main_components(ospecs);
+    components = akvcam_format_specs_main_components(ospecs);
 
     switch (components) {
     case 3:
@@ -1212,12 +1259,13 @@ static void akvcam_fill_parameters_configure(akvcam_fill_parameters_t self,
 static void akvcam_fill_parameters_configure_fill(akvcam_fill_parameters_t self,
                                                   akvcam_format_ct format)
 {
+    int x;
     akvcam_fill_parameters_allocate_buffers(self, format);
     self->width = akvcam_format_width(format);
     self->height = akvcam_format_height(format);
     self->read_width = akvcam_max(8 * akvcam_format_pixel_size(format, 0) / akvcam_format_bpp(format), 1);
 
-    for (int x = 0; x < self->width; ++x) {
+    for (x = 0; x < self->width; ++x) {
         self->dst_width_offset_x[x] = self->comp_xo? (x >> self->comp_xo->width_div) * self->comp_xo->step: 0;
         self->dst_width_offset_y[x] = self->comp_yo? (x >> self->comp_yo->width_div) * self->comp_yo->step: 0;
         self->dst_width_offset_z[x] = self->comp_zo? (x >> self->comp_zo->width_div) * self->comp_zo->step: 0;
