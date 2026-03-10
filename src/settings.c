@@ -457,11 +457,12 @@ akvcam_string_list_t akvcam_settings_to_list(const char *value,
 struct v4l2_fract akvcam_settings_to_frac(const char *value)
 {
     struct v4l2_fract frac = {0, 1};
+    akvcam_string_list_t frac_list;
 
     if (!value)
         return frac;
 
-    akvcam_string_list_t frac_list = akvcam_settings_to_list(value, "/");
+    frac_list = akvcam_settings_to_list(value, "/");
 
     switch (akvcam_list_size(frac_list)) {
     case 1:
