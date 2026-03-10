@@ -8557,6 +8557,7 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
     int height;
     int owidth;
     int oheight;
+    struct v4l2_fract frame_rate;
 
     if (output_convert_format_fourcc == 0)
         output_convert_format_fourcc = akvcam_format_fourcc(iformat);
@@ -8595,7 +8596,7 @@ void akvcam_frame_convert_parameters_configure_scaling(akvcam_frame_convert_para
     if (fc->output_convert_format)
         akvcam_format_delete(fc->output_convert_format);
 
-    struct v4l2_fract frame_rate = akvcam_format_frame_rate(iformat);
+    frame_rate = akvcam_format_frame_rate(iformat);
     fc->output_convert_format =
             akvcam_format_new(output_convert_format_fourcc,
                               width,

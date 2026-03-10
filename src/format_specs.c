@@ -444,8 +444,11 @@ akvcam_format_specs_ct akvcam_format_specs_from_fixel_format(__u32 pixel_format)
 akvcam_color_component_ct akvcam_format_specs_component(akvcam_format_specs_ct self,
                                                         AKVCAM_COMPONENT_TYPE component_type)
 {
-    for (size_t j = 0; j < self->nplanes; ++j)
-        for (size_t i = 0; i < self->planes[j].ncomponents; ++i)
+    size_t i;
+    size_t j;
+
+    for (j = 0; j < self->nplanes; ++j)
+        for (i = 0; i < self->planes[j].ncomponents; ++i)
             if (self->planes[j].components[i].type == component_type)
                 return self->planes[j].components + i;
 
@@ -455,8 +458,11 @@ akvcam_color_component_ct akvcam_format_specs_component(akvcam_format_specs_ct s
 int akvcam_format_specs_component_plane(akvcam_format_specs_ct self,
                                         AKVCAM_COMPONENT_TYPE component_type)
 {
-    for (size_t j = 0; j < self->nplanes; ++j)
-        for (size_t i = 0; i < self->planes[j].ncomponents; ++i)
+    size_t i;
+    size_t j;
+
+    for (j = 0; j < self->nplanes; ++j)
+        for (i = 0; i < self->planes[j].ncomponents; ++i)
             if (self->planes[j].components[i].type == component_type)
                 return j;
 
@@ -466,8 +472,11 @@ int akvcam_format_specs_component_plane(akvcam_format_specs_ct self,
 bool akvcam_format_specs_contains(akvcam_format_specs_ct self,
                                   AKVCAM_COMPONENT_TYPE component_type)
 {
-    for (size_t j = 0; j < self->nplanes; ++j)
-        for (size_t i = 0; i < self->planes[j].ncomponents; ++i)
+    size_t i;
+    size_t j;
+
+    for (j = 0; j < self->nplanes; ++j)
+        for (i = 0; i < self->planes[j].ncomponents; ++i)
             if (self->planes[j].components[i].type == component_type)
                 return true;
 
@@ -529,13 +538,15 @@ size_t akvcam_format_specs_main_components(akvcam_format_specs_ct self)
 
 bool akvcam_format_specs_is_fast(akvcam_format_specs_ct self)
 {
+    size_t cur_depth = 0;
+    size_t i;
+    size_t j;
+
     if (self->endianness != __BYTE_ORDER__)
         return false;
 
-    size_t cur_depth = 0;
-
-    for (size_t j = 0; j < self->nplanes; ++j)
-        for (size_t i = 0; i < self->planes[j].ncomponents; ++i) {
+    for (j = 0; j < self->nplanes; ++j)
+        for (i = 0; i < self->planes[j].ncomponents; ++i) {
             akvcam_color_component_ct component = self->planes[j].components + i;
 
             if (component->shift > 0)
@@ -556,8 +567,9 @@ bool akvcam_format_specs_is_fast(akvcam_format_specs_ct self)
 size_t akvcam_plane_pixel_size(akvcam_plane_ct plane)
 {
     size_t pixel_size = 0;
+    size_t i;
 
-    for (size_t i = 0; i < plane->ncomponents; ++i) {
+    for (i = 0; i < plane->ncomponents; ++i) {
         akvcam_color_component_ct component = plane->components + i;
         pixel_size = akvcam_max(pixel_size, component->step);
     }
@@ -568,8 +580,9 @@ size_t akvcam_plane_pixel_size(akvcam_plane_ct plane)
 size_t akvcam_plane_width_div(akvcam_plane_ct plane)
 {
     size_t width_div = 0;
+    size_t i;
 
-    for (size_t i = 0; i < plane->ncomponents; ++i) {
+    for (i = 0; i < plane->ncomponents; ++i) {
         akvcam_color_component_ct component = plane->components + i;
 
         if (i == 0)
@@ -584,8 +597,9 @@ size_t akvcam_plane_width_div(akvcam_plane_ct plane)
 size_t akvcam_plane_height_div(akvcam_plane_ct plane)
 {
     size_t height_div = 0;
+    size_t i;
 
-    for (size_t i = 0; i < plane->ncomponents; ++i) {
+    for (i = 0; i < plane->ncomponents; ++i) {
         akvcam_color_component_ct component = plane->components + i;
         height_div = akvcam_max(height_div, component->height_div);
     }
