@@ -37,10 +37,11 @@ const struct proc_ops *akvcam_proc_info(void)
 
 static void akvcam_proc_print_formats(struct seq_file *f, const char *label)
 {
+    size_t i;
     size_t n = akvcam_supported_pixel_formats();
     seq_printf(f, "%s = ", label);
 
-    for (size_t i = 0; i < n; ++i) {
+    for (i = 0; i < n; ++i) {
         __u32 fourcc = akvcam_pixel_format_by_index(i);
 
         if (fourcc != 0)
