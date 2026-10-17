@@ -180,7 +180,7 @@ akvcam_frame_t akvcam_buffers_read_frame(akvcam_buffers_t self)
         void *src = vb2_plane_vaddr(&buf->vb.vb2_buf, i);
         void *dst = akvcam_frame_plane_data(frame, i);
         size_t payload = vb2_get_plane_payload(&buf->vb.vb2_buf, i);
-        size_t expected = akvcam_format_plane_size(self->format, i);
+        size_t expected = akvcam_format_memory_plane_size(self->format, i);
         size_t copy_size = akvcam_min(payload, expected);
 
         if (src && dst && copy_size > 0)
@@ -220,7 +220,7 @@ int akvcam_buffers_write_frame(akvcam_buffers_t self, akvcam_frame_t frame)
     for (i = 0; i < buf->vb.vb2_buf.num_planes; i++) {
         void *dst = vb2_plane_vaddr(&buf->vb.vb2_buf, i);
         void *src = akvcam_frame_plane_data(frame, i);
-        size_t frame_size = akvcam_format_plane_size(self->format, i);
+        size_t frame_size = akvcam_format_memory_plane_size(self->format, i);
         size_t buf_size = vb2_plane_size(&buf->vb.vb2_buf, i);
         size_t copy_size = akvcam_min(frame_size, buf_size);
 
@@ -279,21 +279,21 @@ int akvcam_buffers_queue_setup(struct vb2_queue *queue,
         *num_buffers = 1;
 
     if (*num_planes > 0) {
-        if (*num_planes < akvcam_format_planes(self->format))
+        if (*num_planes != akvcam_format_memory_planes(self->format))
             return -EINVAL;
 
         for (i = 0; i < *num_planes; i++)
-            if (sizes[i] < akvcam_format_plane_size(self->format, i))
+            if (sizes[i] < akvcam_format_memory_plane_size(self->format, i))
                 return -EINVAL;
 
         return 0;
     }
 
-    *num_planes = akvcam_min(akvcam_format_planes(self->format),
+    *num_planes = akvcam_min(akvcam_format_memory_planes(self->format),
                              MAX_PLANES);
 
     for (i = 0; i < *num_planes; i++)
-        sizes[i] = akvcam_format_plane_size(self->format, i);
+        sizes[i] = akvcam_format_memory_plane_size(self->format, i);
 
     return 0;
 }
@@ -307,7 +307,7 @@ int akvcam_buffers_buffer_prepare(struct vb2_buffer *buffer)
     akpr_function();
 
     for (i = 0; i < buffer->num_planes; i++) {
-        size_t plane_size = akvcam_format_plane_size(self->format, i);
+        size_t plane_size = akvcam_format_memory_plane_size(self->format, i);
 
         if (vb2_plane_size(buffer, i) < plane_size)
             return -EINVAL;

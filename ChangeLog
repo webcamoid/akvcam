@@ -1,7 +1,7 @@
 akvcam 1.4.0:
 
 - Minimum supported kernel version: 5.10.
-- Added support bidirectional format convertion to any format.
+- Added support bidirectional format conversion to any format.
   The supported formats are:
 
       V4L2_PIX_FMT_ABGR32
@@ -48,7 +48,7 @@ akvcam 1.4.0:
   You can now send send the video frames to the output in any format supported
   by the module.
 - Added direct mode support. The devices, when configured in direct mode, the
-  frames are sent straight to the other side without any kind of treatement,
+  frames are sent straight to the other side without any kind of treatment,
   giving a higher frame rate than using the normal normal mode.
   You can only connect the devices when both sides are configured in direct
   mode, also both devices must have the same format (only one allowed), and the

@@ -24,6 +24,7 @@
 #include "format.h"
 #include "format_specs.h"
 #include "list.h"
+#include "utils.h"
 
 #define DEFAULT_COLORSPACE V4L2_COLORSPACE_RAW
 
@@ -200,6 +201,22 @@ size_t akvcam_format_planes(akvcam_format_ct self)
     return self->nplanes;
 }
 
+/* Planes as seen by V4L2 (memory planes). All the formats supported by this
+ * driver are contiguous (YU12, NV12, ...): their color planes (Y, U, V) live
+ * in a single memory plane, so V4L2 sees one plane holding the whole frame,
+ * with bytesperline referring to the first color plane. Only the "M" variants
+ * (YM12, NM12, ...) use one memory plane per color plane.
+ */
+size_t akvcam_format_memory_planes(akvcam_format_ct self)
+{
+    return self->nplanes > 0? 1: 0;
+}
+
+size_t akvcam_format_memory_plane_size(akvcam_format_ct self, size_t plane)
+{
+    return plane < akvcam_format_memory_planes(self)? self->data_size: 0;
+}
+
 size_t akvcam_format_bpp(akvcam_format_ct self)
 {
     return self->bpp;
@@ -324,6 +341,124 @@ akvcam_format_t akvcam_format_nearest(akvcam_formats_list_ct formats,
         return NULL;
 
     return akvcam_format_new_copy(nearest_format);
+}
+
+bool akvcam_format_is_supported(__u32 fourcc)
+{
+    return akvcam_format_specs_from_fixel_format(fourcc) != NULL;
+}
+
+/* Smallest width/height step that keeps every plane and every chroma
+ * sub-sampled component aligned (YUV420: 2x2, YUYV: 2x1, YUV410: 4x4,
+ * RGB: 1x1).
+ */
+void akvcam_format_size_step(__u32 fourcc, size_t *step_width, size_t *step_height)
+{
+    akvcam_format_specs_ct specs = akvcam_format_specs_from_fixel_format(fourcc);
+    size_t width_div = 0;
+    size_t height_div = 0;
+    size_t i;
+    size_t j;
+
+    if (specs)
+        for (i = 0; i < specs->nplanes; i++) {
+            akvcam_plane_ct plane = specs->planes + i;
+
+            for (j = 0; j < plane->ncomponents; j++) {
+                const akvcam_color_component *component = plane->components + j;
+                width_div = akvcam_max(width_div, component->width_div);
+                height_div = akvcam_max(height_div, component->height_div);
+            }
+        }
+
+    if (step_width)
+        *step_width = (size_t) 1 << width_div;
+
+    if (step_height)
+        *step_height = (size_t) 1 << height_div;
+}
+
+static size_t akvcam_format_dynamic_dimension(size_t value,
+                                              size_t step,
+                                              size_t max_value,
+                                              size_t default_value)
+{
+    size_t rounded;
+
+    if (value < 1)
+        value = default_value;
+
+    value = akvcam_min(value, max_value);
+    rounded = ((value + step / 2) / step) * step;
+
+    if (rounded < step)
+        rounded = step;
+
+    if (rounded > max_value)
+        rounded = (max_value / step) * step;
+
+    return rounded;
+}
+
+static struct v4l2_fract akvcam_format_dynamic_frame_rate(const struct v4l2_fract *rate)
+{
+    struct v4l2_fract fps = {AKVCAM_DYNAMIC_DEFAULT_FPS, 1};
+
+    if (!rate || rate->numerator < 1 || rate->denominator < 1)
+        return fps;
+
+    if ((__u64) rate->numerator
+        < (__u64) AKVCAM_DYNAMIC_MIN_FPS * rate->denominator) {
+        fps.numerator = AKVCAM_DYNAMIC_MIN_FPS;
+    } else if ((__u64) rate->numerator
+               > (__u64) AKVCAM_DYNAMIC_MAX_FPS * rate->denominator) {
+        fps.numerator = AKVCAM_DYNAMIC_MAX_FPS;
+    } else {
+        fps = *rate;
+    }
+
+    return fps;
+}
+
+akvcam_format_t akvcam_format_dynamic_default(void)
+{
+    struct v4l2_fract fps = {AKVCAM_DYNAMIC_DEFAULT_FPS, 1};
+
+    return akvcam_format_new(AKVCAM_DYNAMIC_DEFAULT_FOURCC,
+                             AKVCAM_DYNAMIC_DEFAULT_WIDTH,
+                             AKVCAM_DYNAMIC_DEFAULT_HEIGHT,
+                             &fps);
+}
+
+/* Correct a requested format to the nearest valid one: unsupported pixel
+ * formats fall back to the default one, sizes are clamped to the dynamic
+ * limits and rounded to the size step of the final pixel format, and the
+ * frame rate (fps, not interval) is clamped to the supported range.
+ */
+akvcam_format_t akvcam_format_dynamic_nearest(akvcam_format_ct format)
+{
+    __u32 fourcc = format->fourcc;
+    struct v4l2_fract frame_rate;
+    size_t step_width;
+    size_t step_height;
+    size_t width;
+    size_t height;
+
+    if (!akvcam_format_is_supported(fourcc))
+        fourcc = AKVCAM_DYNAMIC_DEFAULT_FOURCC;
+
+    akvcam_format_size_step(fourcc, &step_width, &step_height);
+    width = akvcam_format_dynamic_dimension(format->width,
+                                            step_width,
+                                            AKVCAM_DYNAMIC_MAX_WIDTH,
+                                            AKVCAM_DYNAMIC_DEFAULT_WIDTH);
+    height = akvcam_format_dynamic_dimension(format->height,
+                                             step_height,
+                                             AKVCAM_DYNAMIC_MAX_HEIGHT,
+                                             AKVCAM_DYNAMIC_DEFAULT_HEIGHT);
+    frame_rate = akvcam_format_dynamic_frame_rate(&format->frame_rate);
+
+    return akvcam_format_new(fourcc, width, height, &frame_rate);
 }
 
 akvcam_pixel_formats_list_t akvcam_format_pixel_formats(akvcam_formats_list_ct formats)
@@ -454,7 +589,6 @@ akvcam_format_ct akvcam_format_from_v4l2_nr(akvcam_formats_list_ct formats,
                                             const struct v4l2_format *format)
 {
     akvcam_list_element_t element = NULL;
-    size_t i;
 
     for (;;) {
         akvcam_format_t akformat = akvcam_list_next(formats, &element);
@@ -471,29 +605,6 @@ akvcam_format_ct akvcam_format_from_v4l2_nr(akvcam_formats_list_ct formats,
                 && format->fmt.pix.bytesperline == (__u32) akvcam_format_line_size(akformat, 0)
                 && format->fmt.pix.colorspace == DEFAULT_COLORSPACE) {
                 return akformat;
-            }
-        } else if (format->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
-                   || format->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-            if (format->fmt.pix_mp.width == akvcam_format_width(akformat)
-                && format->fmt.pix_mp.height == akvcam_format_height(akformat)
-                && format->fmt.pix_mp.pixelformat == akvcam_format_fourcc(akformat)
-                && format->fmt.pix_mp.field == V4L2_FIELD_NONE
-                && format->fmt.pix_mp.colorspace == DEFAULT_COLORSPACE
-                && format->fmt.pix_mp.num_planes == akvcam_format_planes(akformat)) {
-                bool is_valid = true;
-
-                for (i = 0; i < format->fmt.pix_mp.num_planes; i++) {
-                    size_t bypl = akvcam_format_line_size(akformat, i);
-
-                    if (format->fmt.pix_mp.plane_fmt[i].bytesperline != bypl) {
-                        is_valid = false;
-
-                        break;
-                    }
-                }
-
-                if (is_valid)
-                    return akformat;
             }
         }
     }
@@ -512,21 +623,95 @@ akvcam_format_t akvcam_format_from_v4l2(akvcam_formats_list_ct formats,
     return akvcam_format_new_copy(akformat);
 }
 
-bool akvcam_format_have_multiplanar(akvcam_formats_list_ct formats)
+static size_t akvcam_format_gcd(size_t a, size_t b)
 {
-    akvcam_list_element_t it = NULL;
-
-    for (;;) {
-        akvcam_format_t format = akvcam_list_next(formats, &it);
-
-        if (!it)
-            break;
-
-        if (format->nplanes > 1)
-            return true;
+    while (b) {
+        size_t r = a % b;
+        a = b;
+        b = r;
     }
 
-    return false;
+    return a;
+}
+
+static size_t akvcam_format_lcm(size_t a, size_t b)
+{
+    return a / akvcam_format_gcd(a, b) * b;
+}
+
+static size_t akvcam_format_round_up(size_t value, size_t multiple)
+{
+    return multiple > 0? (value + multiple - 1) / multiple * multiple: value;
+}
+
+/* Planar formats are laid out as the V4L2 API defines for contiguous
+ * formats: the planes follow each other with no padding in between, and the
+ * line size of every plane is derived from the one of the first plane
+ * (YU12: half, NV12: the same, YUV410: a quarter...). This is what clients
+ * compute when they only know bytesperline of the first plane.
+ */
+static void akvcam_format_private_update_planar_params(akvcam_format_t self,
+                                                       akvcam_format_specs_ct specs)
+{
+    size_t align = akvcam_max((size_t) self->align, (size_t) 1);
+    size_t plane_pixel_size[MAX_PLANES];
+    size_t plane_width_div[MAX_PLANES];
+    size_t plane_height_div[MAX_PLANES];
+    size_t needed_line = 0;
+    size_t multiple = align;
+    size_t line_size0;
+    size_t i;
+
+    for (i = 0; i < specs->nplanes; ++i) {
+        akvcam_plane_ct plane = specs->planes + i;
+        size_t width_div = akvcam_plane_width_div(plane);
+        size_t pixel_size = akvcam_plane_pixel_size(plane);
+        size_t samples = (self->width + ((size_t) 1 << width_div) - 1) >> width_div;
+        size_t bytes_used = samples * pixel_size;
+
+        plane_pixel_size[i] = pixel_size;
+        plane_width_div[i] = width_div;
+        plane_height_div[i] = akvcam_plane_height_div(plane);
+        self->pixel_size[i] = pixel_size;
+        self->bytes_used[i] = bytes_used;
+        self->width_div[i] = width_div;
+        self->height_div[i] = plane_height_div[i];
+        self->bpp += plane->bits_size;
+    }
+
+    /* line_size[i] = line_size[0] * pixel_size[i] / (pixel_size[0] * 2^width_div[i])
+     * must be an integer multiple of the alignment and at least bytes_used[i].
+     */
+    for (i = 0; i < specs->nplanes; ++i) {
+        size_t den = plane_pixel_size[0] << plane_width_div[i];
+        size_t num = plane_pixel_size[i];
+        size_t step;
+
+        if (num < 1 || den < 1)
+            continue;
+
+        /* Smallest line_size[0] making the line of plane i aligned. */
+        step = align * den / akvcam_format_gcd(num, align * den);
+        multiple = akvcam_format_lcm(multiple, step);
+
+        /* Smallest line_size[0] that fits bytes_used of plane i. */
+        needed_line = akvcam_max(needed_line,
+                                 (self->bytes_used[i] * den + num - 1) / num);
+    }
+
+    line_size0 = akvcam_format_round_up(needed_line, multiple);
+
+    for (i = 0; i < specs->nplanes; ++i) {
+        size_t den = plane_pixel_size[0] << plane_width_div[i];
+        size_t num = plane_pixel_size[i];
+        size_t rows = (self->height + ((size_t) 1 << plane_height_div[i]) - 1)
+                      >> plane_height_div[i];
+
+        self->line_size[i] = den > 0? line_size0 * num / den: 0;
+        self->plane_size[i] = self->line_size[i] * rows;
+        self->plane_offset[i] = self->data_size;
+        self->data_size += self->plane_size[i];
+    }
 }
 
 static void akvcam_format_private_update_params(akvcam_format_t self,
@@ -546,6 +731,12 @@ static void akvcam_format_private_update_params(akvcam_format_t self,
         memset(self->bytes_used, 0, mem_size);
         memset(self->width_div, 0, mem_size);
         memset(self->height_div, 0, mem_size);
+
+        return;
+    }
+
+    if (specs->nplanes > 1) {
+        akvcam_format_private_update_planar_params(self, specs);
 
         return;
     }

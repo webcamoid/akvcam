@@ -44,6 +44,7 @@ struct akvcam_device
     char *description;
     akvcam_formats_list_t formats;
     akvcam_format_t format;
+    bool dynamic_formats;
     akvcam_controls_t controls;
     akvcam_devices_list_t connected_devices;
     akvcam_buffers_t buffers;
@@ -85,8 +86,7 @@ struct akvcam_device
 typedef int (*akvcam_thread_t)(void *data);
 static const struct v4l2_file_operations akvcam_device_fops;
 
-enum v4l2_buf_type akvcam_device_v4l2_from_device_type(AKVCAM_DEVICE_TYPE type,
-                                                       bool multiplanar);
+enum v4l2_buf_type akvcam_device_v4l2_from_device_type(AKVCAM_DEVICE_TYPE type);
 int akvcam_device_controls_updated(akvcam_device_t self, __u32 id, __s32 value);
 int akvcam_device_stop_streaming(akvcam_device_t self);
 void akvcam_device_clock_run_once(akvcam_device_t self);
@@ -104,21 +104,20 @@ akvcam_device_t akvcam_device_new(const char *name,
                                   akvcam_frame_ct default_frame,
                                   akvcam_frame_filter_ct frame_filter)
 {
-    bool multiplanar;
-
     akvcam_device_t self = kzalloc(sizeof(struct akvcam_device), GFP_KERNEL);
     kref_init(&self->ref);
     self->type = type;
     self->name = akvcam_strdup(name, AKVCAM_MEMORY_TYPE_KMALLOC);
     self->description = akvcam_strdup(description, AKVCAM_MEMORY_TYPE_KMALLOC);
     self->formats = akvcam_list_new_copy(formats);
-    self->format = akvcam_list_empty(formats)?
-                     akvcam_format_new(0, 0, 0, NULL):
+    /* No configured formats: accept any supported format at runtime. */
+    self->dynamic_formats = akvcam_list_empty(formats);
+    self->format = self->dynamic_formats?
+                     akvcam_format_dynamic_default():
                      akvcam_format_new_copy(akvcam_list_front(formats));
     self->controls = akvcam_controls_new(type);
     self->connected_devices = akvcam_list_new();
-    multiplanar = akvcam_format_have_multiplanar(formats);
-    self->buffer_type = akvcam_device_v4l2_from_device_type(type, multiplanar);
+    self->buffer_type = akvcam_device_v4l2_from_device_type(type);
     self->buffers = akvcam_buffers_new(rw_mode, self->buffer_type);
     self->current_frame = NULL;
     self->default_frame = default_frame;
@@ -287,6 +286,11 @@ void akvcam_device_set_direct_mode(akvcam_device_t self, bool direct_mode)
     self->direct_mode = direct_mode;
 }
 
+bool akvcam_device_dynamic_formats(akvcam_device_ct self)
+{
+    return self->dynamic_formats;
+}
+
 akvcam_formats_list_t akvcam_device_formats(akvcam_device_ct self)
 {
     return akvcam_list_new_copy(self->formats);
@@ -332,7 +336,6 @@ AKVCAM_DEVICE_TYPE akvcam_device_type_from_v4l2(enum v4l2_buf_type type)
 {
     switch (type) {
     case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-    case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
         return AKVCAM_DEVICE_TYPE_OUTPUT;
 
     default:
@@ -340,16 +343,11 @@ AKVCAM_DEVICE_TYPE akvcam_device_type_from_v4l2(enum v4l2_buf_type type)
     }
 }
 
-enum v4l2_buf_type akvcam_device_v4l2_from_device_type(AKVCAM_DEVICE_TYPE type,
-                                                       bool multiplanar)
+enum v4l2_buf_type akvcam_device_v4l2_from_device_type(AKVCAM_DEVICE_TYPE type)
 {
-    if (type == AKVCAM_DEVICE_TYPE_CAPTURE && multiplanar)
-        return V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-    else if (type == AKVCAM_DEVICE_TYPE_CAPTURE && !multiplanar)
+    if (type == AKVCAM_DEVICE_TYPE_CAPTURE)
         return V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    else if (type == AKVCAM_DEVICE_TYPE_OUTPUT && multiplanar)
-        return V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-    else if (type == AKVCAM_DEVICE_TYPE_OUTPUT && !multiplanar)
+    else if (type == AKVCAM_DEVICE_TYPE_OUTPUT)
         return V4L2_BUF_TYPE_VIDEO_OUTPUT;
 
     return (enum v4l2_buf_type) 0;
@@ -463,16 +461,9 @@ __u32 akvcam_device_caps(akvcam_device_ct self)
         caps = V4L2_CAP_VIDEO_CAPTURE;
         break;
 
-    case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
-        caps = V4L2_CAP_VIDEO_CAPTURE_MPLANE;
-        break;
-
     case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-        caps = V4L2_CAP_VIDEO_OUTPUT;
-        break;
-
     default:
-        caps = V4L2_CAP_VIDEO_OUTPUT_MPLANE;
+        caps = V4L2_CAP_VIDEO_OUTPUT;
         break;
     }
 

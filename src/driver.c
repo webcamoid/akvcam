@@ -448,10 +448,17 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
     }
 
     if (akvcam_list_empty(formats)) {
-        pr_err("Can't read device formats\n");
-        akvcam_list_delete(formats);
+        /* An absent or empty "formats" key enables dynamic formats. A key
+         * with values that can't be resolved is still a configuration
+         * error. */
+        if (akvcam_strlen(akvcam_settings_value(settings, "formats")) > 0) {
+            pr_err("Can't read device formats\n");
+            akvcam_list_delete(formats);
 
-        return NULL;
+            return NULL;
+        }
+
+        akpr_info("No formats defined, using dynamic formats\n");
     }
 
     device = akvcam_device_new("akvcam-device",
@@ -466,6 +473,11 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
     if (akvcam_settings_contains(settings, "direct_mode"))
         akvcam_device_set_direct_mode(device,
                                       akvcam_settings_value_bool(settings, "direct_mode"));
+
+    if (akvcam_device_dynamic_formats(device)
+        && akvcam_device_direct_mode(device))
+        akpr_warning("direct_mode with dynamic formats: formats must match "
+                     "between connected devices at runtime\n");
 
     if (akvcam_settings_contains(settings, "videonr"))
         akvcam_device_set_num(device,
@@ -733,7 +745,10 @@ void akvcam_driver_print_formats(akvcam_device_ct device)
 
     formats = akvcam_device_formats(device);
 
-    if (akvcam_list_empty(formats)) {
+    if (akvcam_device_dynamic_formats(device)) {
+        akpr_info("\tFormats: dynamic (default %s)\n",
+                  akvcam_format_to_string(akvcam_device_format_nr(device)));
+    } else if (akvcam_list_empty(formats)) {
         akpr_warning("No formats defined\n");
     } else {
         akpr_info("\tFormats:\n");

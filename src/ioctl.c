@@ -78,16 +78,10 @@ const struct v4l2_ioctl_ops *akvcam_ioctl_ops(void)
         .vidioc_enum_fmt_vid_out       = akvcam_ioctl_enum_fmt           ,
         .vidioc_g_fmt_vid_cap          = akvcam_ioctl_g_fmt              ,
         .vidioc_g_fmt_vid_out          = akvcam_ioctl_g_fmt              ,
-        .vidioc_g_fmt_vid_cap_mplane   = akvcam_ioctl_g_fmt              ,
-        .vidioc_g_fmt_vid_out_mplane   = akvcam_ioctl_g_fmt              ,
         .vidioc_s_fmt_vid_cap          = akvcam_ioctl_s_fmt              ,
         .vidioc_s_fmt_vid_out          = akvcam_ioctl_s_fmt              ,
-        .vidioc_s_fmt_vid_cap_mplane   = akvcam_ioctl_s_fmt              ,
-        .vidioc_s_fmt_vid_out_mplane   = akvcam_ioctl_s_fmt              ,
         .vidioc_try_fmt_vid_cap        = akvcam_ioctl_try_fmt            ,
         .vidioc_try_fmt_vid_out        = akvcam_ioctl_try_fmt            ,
-        .vidioc_try_fmt_vid_cap_mplane = akvcam_ioctl_try_fmt            ,
-        .vidioc_try_fmt_vid_out_mplane = akvcam_ioctl_try_fmt            ,
         .vidioc_reqbufs                = vb2_ioctl_reqbufs               ,
         .vidioc_querybuf               = vb2_ioctl_querybuf              ,
         .vidioc_qbuf                   = vb2_ioctl_qbuf                  ,
@@ -113,6 +107,29 @@ const struct v4l2_ioctl_ops *akvcam_ioctl_ops(void)
     };
 
     return &ops;
+}
+
+static struct v4l2_fract akvcam_ioctl_invert_fract(struct v4l2_fract fract)
+{
+    struct v4l2_fract inverted = {fract.denominator, fract.numerator};
+
+    return inverted;
+}
+
+static akvcam_format_t akvcam_ioctl_nearest_format(akvcam_device_ct device,
+                                                   akvcam_format_ct format)
+{
+    akvcam_formats_list_t formats;
+    akvcam_format_t nearest_format;
+
+    if (akvcam_device_dynamic_formats(device))
+        return akvcam_format_dynamic_nearest(format);
+
+    formats = akvcam_device_formats(device);
+    nearest_format = akvcam_format_nearest(formats, format);
+    akvcam_list_delete(formats);
+
+    return nearest_format;
 }
 
 int akvcam_ioctl_querycap(struct file *file,
@@ -157,6 +174,21 @@ int akvcam_ioctl_enum_fmt(struct file *file,
     if (format->type != akvcam_device_v4l2_type(device))
         return -EINVAL;
 
+    if (akvcam_device_dynamic_formats(device)) {
+        __u32 dynamic_fourcc = akvcam_pixel_format_by_index(format->index);
+
+        if (!dynamic_fourcc)
+            return -EINVAL;
+
+        format->flags = 0;
+        format->pixelformat = dynamic_fourcc;
+        snprintf((char *) format->description, 32, "%s",
+                 akvcam_string_from_fourcc(dynamic_fourcc));
+        akvcam_init_reserved(format);
+
+        return 0;
+    }
+
     formats = akvcam_device_formats(device);
     pixel_formats = akvcam_format_pixel_formats(formats);
     akvcam_list_delete(formats);
@@ -191,32 +223,13 @@ int akvcam_ioctl_g_fmt(struct file *file, void *fh, struct v4l2_format *format)
 
     current_format = akvcam_device_format_nr(device);
     memset(&format->fmt, 0, sizeof(format->fmt));
-
-    if (format->type == V4L2_BUF_TYPE_VIDEO_CAPTURE
-        || format->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
-        format->fmt.pix.width = (__u32) akvcam_format_width(current_format);
-        format->fmt.pix.height = (__u32) akvcam_format_height(current_format);
-        format->fmt.pix.pixelformat = akvcam_format_fourcc(current_format);
-        format->fmt.pix.field = V4L2_FIELD_NONE;
-        format->fmt.pix.bytesperline = (__u32) akvcam_format_line_size(current_format, 0);
-        format->fmt.pix.sizeimage = (__u32) akvcam_format_size(current_format);
-        format->fmt.pix.colorspace = DEFAULT_COLORSPACE;
-    } else {
-        size_t i;
-        format->fmt.pix_mp.width = (__u32) akvcam_format_width(current_format);
-        format->fmt.pix_mp.height = (__u32) akvcam_format_height(current_format);
-        format->fmt.pix_mp.pixelformat = akvcam_format_fourcc(current_format);
-        format->fmt.pix_mp.field = V4L2_FIELD_NONE;
-        format->fmt.pix_mp.colorspace = DEFAULT_COLORSPACE;
-        format->fmt.pix_mp.num_planes = (__u8) akvcam_format_planes(current_format);
-
-        for (i = 0; i < format->fmt.pix_mp.num_planes; i++) {
-            size_t bypl = akvcam_format_line_size(current_format, i);
-            size_t plane_size = akvcam_format_plane_size(current_format, i);
-            format->fmt.pix_mp.plane_fmt[i].bytesperline = (__u32) bypl;
-            format->fmt.pix_mp.plane_fmt[i].sizeimage = (__u32) plane_size;
-        }
-    }
+    format->fmt.pix.width = (__u32) akvcam_format_width(current_format);
+    format->fmt.pix.height = (__u32) akvcam_format_height(current_format);
+    format->fmt.pix.pixelformat = akvcam_format_fourcc(current_format);
+    format->fmt.pix.field = V4L2_FIELD_NONE;
+    format->fmt.pix.bytesperline = (__u32) akvcam_format_line_size(current_format, 0);
+    format->fmt.pix.sizeimage = (__u32) akvcam_format_size(current_format);
+    format->fmt.pix.colorspace = DEFAULT_COLORSPACE;
 
     return 0;
 }
@@ -236,19 +249,10 @@ int akvcam_ioctl_s_fmt(struct file *file, void *fh, struct v4l2_format *format)
         akvcam_format_t current_format = NULL;
         struct v4l2_fract frame_rate = akvcam_format_frame_rate(device_format);
 
-        if (format->type == V4L2_BUF_TYPE_VIDEO_CAPTURE
-            || format->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
-            current_format = akvcam_format_new(format->fmt.pix.pixelformat,
-                                               format->fmt.pix.width,
-                                               format->fmt.pix.height,
-                                               &frame_rate);
-        } else {
-            current_format = akvcam_format_new(format->fmt.pix_mp.pixelformat,
-                                               format->fmt.pix_mp.width,
-                                               format->fmt.pix_mp.height,
-                                               &frame_rate);
-        }
-
+        current_format = akvcam_format_new(format->fmt.pix.pixelformat,
+                                           format->fmt.pix.width,
+                                           format->fmt.pix.height,
+                                           &frame_rate);
         akvcam_device_set_format(device, current_format);
         akvcam_format_delete(current_format);
     }
@@ -263,7 +267,6 @@ int akvcam_ioctl_try_fmt(struct file *file,
     akvcam_device_t device = video_drvdata(file);
     akvcam_format_t nearest_format = NULL;
     akvcam_format_t temp_format;
-    akvcam_formats_list_t formats;
     struct v4l2_fract frame_rate = {0, 0};
     UNUSED(fh);
 
@@ -280,45 +283,20 @@ int akvcam_ioctl_try_fmt(struct file *file,
                                     format->fmt.pix.width,
                                     format->fmt.pix.height,
                                     &frame_rate);
-    formats = akvcam_device_formats(device);
-    nearest_format = akvcam_format_nearest(formats, temp_format);
-    akvcam_list_delete(formats);
+    nearest_format = akvcam_ioctl_nearest_format(device, temp_format);
     akvcam_format_delete(temp_format);
 
     if (!nearest_format)
         return -EINVAL;
 
     memset(&format->fmt, 0, sizeof(format->fmt));
-
-    if (format->type == V4L2_BUF_TYPE_VIDEO_CAPTURE
-        || format->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
-        format->fmt.pix.width = (__u32) akvcam_format_width(nearest_format);
-        format->fmt.pix.height = (__u32) akvcam_format_height(nearest_format);
-        format->fmt.pix.pixelformat = akvcam_format_fourcc(nearest_format);
-        format->fmt.pix.field = V4L2_FIELD_NONE;
-        format->fmt.pix.bytesperline = (__u32) akvcam_format_line_size(nearest_format, 0);
-        format->fmt.pix.sizeimage = (__u32) akvcam_format_size(nearest_format);
-        format->fmt.pix.colorspace = DEFAULT_COLORSPACE;
-    } else {
-        size_t i;
-        size_t nplanes = akvcam_format_planes(nearest_format);
-
-        nplanes = akvcam_min(nplanes, MAX_PLANES);
-        format->fmt.pix_mp.width = (__u32) akvcam_format_width(nearest_format);
-        format->fmt.pix_mp.height = (__u32) akvcam_format_height(nearest_format);
-        format->fmt.pix_mp.pixelformat = akvcam_format_fourcc(nearest_format);
-        format->fmt.pix_mp.field = V4L2_FIELD_NONE;
-        format->fmt.pix_mp.colorspace = DEFAULT_COLORSPACE;
-        format->fmt.pix_mp.num_planes = (__u8) nplanes;
-
-        for (i = 0; i < format->fmt.pix_mp.num_planes; i++) {
-            size_t bypl = akvcam_format_line_size(nearest_format, i);
-            size_t plane_size = akvcam_format_plane_size(nearest_format, i);
-            format->fmt.pix_mp.plane_fmt[i].bytesperline = (__u32) bypl;
-            format->fmt.pix_mp.plane_fmt[i].sizeimage = (__u32) plane_size;
-        }
-    }
-
+    format->fmt.pix.width = (__u32) akvcam_format_width(nearest_format);
+    format->fmt.pix.height = (__u32) akvcam_format_height(nearest_format);
+    format->fmt.pix.pixelformat = akvcam_format_fourcc(nearest_format);
+    format->fmt.pix.field = V4L2_FIELD_NONE;
+    format->fmt.pix.bytesperline = (__u32) akvcam_format_line_size(nearest_format, 0);
+    format->fmt.pix.sizeimage = (__u32) akvcam_format_size(nearest_format);
+    format->fmt.pix.colorspace = DEFAULT_COLORSPACE;
     akvcam_format_delete(nearest_format);
 
     return 0;
@@ -455,9 +433,9 @@ int akvcam_ioctl_g_parm(struct file *file,
     memset(&param->parm, 0, sizeof(param->parm));
     format = akvcam_device_format_nr(device);
     frame_rate = akvcam_format_frame_rate(format);
+    frame_rate = akvcam_ioctl_invert_fract(frame_rate);
 
-    if (param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT
-        || param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+    if (param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
         param->parm.output.capability = V4L2_CAP_TIMEPERFRAME;
         param->parm.output.timeperframe = frame_rate;
         n_buffers = &param->parm.output.writebuffers;
@@ -480,7 +458,6 @@ int akvcam_ioctl_s_parm(struct file *file,
                         struct v4l2_streamparm *param)
 {
     akvcam_device_t device = video_drvdata(file);
-    akvcam_formats_list_t formats;
     akvcam_format_t device_format;
     akvcam_format_t format = NULL;
     akvcam_format_t nearest_format = NULL;
@@ -499,22 +476,20 @@ int akvcam_ioctl_s_parm(struct file *file,
     if (param->type != akvcam_device_v4l2_type(device))
         return -EINVAL;
 
-    if (param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT
-        || param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+    if (param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
         frame_rate = param->parm.output.timeperframe;
     } else {
         frame_rate = param->parm.capture.timeperframe;
         total_buffers = param->parm.capture.readbuffers;
     }
 
+    frame_rate = akvcam_ioctl_invert_fract(frame_rate);
     device_format = akvcam_device_format_nr(device);
     format = akvcam_format_new(akvcam_format_fourcc(device_format),
                                akvcam_format_width(device_format),
                                akvcam_format_height(device_format),
                                &frame_rate);
-    formats = akvcam_device_formats(device);
-    nearest_format = akvcam_format_nearest(formats, format);
-    akvcam_list_delete(formats);
+    nearest_format = akvcam_ioctl_nearest_format(device, format);
 
     if (!nearest_format) {
         akvcam_format_delete(format);
@@ -526,8 +501,7 @@ int akvcam_ioctl_s_parm(struct file *file,
     akvcam_device_set_format(device, nearest_format);
     memset(&param->parm, 0, 200);
 
-    if (param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT
-        || param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+    if (param->type == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
         param->parm.output.capability = V4L2_CAP_TIMEPERFRAME;
         param->parm.output.timeperframe.numerator =
                 akvcam_format_frame_rate(nearest_format).denominator;
@@ -572,6 +546,30 @@ int akvcam_ioctl_enum_framesizes(struct file *file,
     akpr_function();
     akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device));
 
+    if (akvcam_device_dynamic_formats(device)) {
+        size_t step_width;
+        size_t step_height;
+
+        // A single stepwise range per supported pixel format.
+        if (frame_sizes->index != 0
+            || !akvcam_format_is_supported(frame_sizes->pixel_format))
+            return -EINVAL;
+
+        akvcam_format_size_step(frame_sizes->pixel_format,
+                                &step_width,
+                                &step_height);
+        frame_sizes->type = V4L2_FRMSIZE_TYPE_STEPWISE;
+        frame_sizes->stepwise.min_width = (__u32) step_width;
+        frame_sizes->stepwise.max_width = AKVCAM_DYNAMIC_MAX_WIDTH;
+        frame_sizes->stepwise.step_width = (__u32) step_width;
+        frame_sizes->stepwise.min_height = (__u32) step_height;
+        frame_sizes->stepwise.max_height = AKVCAM_DYNAMIC_MAX_HEIGHT;
+        frame_sizes->stepwise.step_height = (__u32) step_height;
+        akvcam_init_reserved(frame_sizes);
+
+        return 0;
+    }
+
     formats = akvcam_device_formats(device);
     resolutions = akvcam_format_resolutions(formats,
                                             frame_sizes->pixel_format);
@@ -602,6 +600,39 @@ int akvcam_ioctl_enum_frameintervals(struct file *file,
 
     akpr_function();
     akpr_debug("Device: /dev/video%d\n", akvcam_device_num(device));
+
+    if (akvcam_device_dynamic_formats(device)) {
+        size_t step_width;
+        size_t step_height;
+
+        // A single continuous range for every valid pixel format and size.
+        if (frame_intervals->index != 0
+            || !akvcam_format_is_supported(frame_intervals->pixel_format))
+            return -EINVAL;
+
+        akvcam_format_size_step(frame_intervals->pixel_format,
+                                &step_width,
+                                &step_height);
+
+        if (frame_intervals->width < step_width
+            || frame_intervals->width > AKVCAM_DYNAMIC_MAX_WIDTH
+            || frame_intervals->width % step_width
+            || frame_intervals->height < step_height
+            || frame_intervals->height > AKVCAM_DYNAMIC_MAX_HEIGHT
+            || frame_intervals->height % step_height)
+            return -EINVAL;
+
+        frame_intervals->type = V4L2_FRMIVAL_TYPE_CONTINUOUS;
+        frame_intervals->stepwise.min.numerator = 1;
+        frame_intervals->stepwise.min.denominator = AKVCAM_DYNAMIC_MAX_FPS;
+        frame_intervals->stepwise.max.numerator = 1;
+        frame_intervals->stepwise.max.denominator = AKVCAM_DYNAMIC_MIN_FPS;
+        frame_intervals->stepwise.step.numerator = 1;
+        frame_intervals->stepwise.step.denominator = 1;
+        akvcam_init_reserved(frame_intervals);
+
+        return 0;
+    }
 
     formats = akvcam_device_formats(device);
     frame_rates = akvcam_format_frame_rates(formats,
