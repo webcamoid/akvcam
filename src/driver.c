@@ -16,7 +16,9 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/mutex.h>
 #include <linux/slab.h>
+#include <linux/workqueue.h>
 #include <linux/version.h>
 #include <linux/videodev2.h>
 
@@ -45,6 +47,8 @@ typedef struct
     char name[AKVCAM_MAX_STRING_SIZE];
     char description[AKVCAM_MAX_STRING_SIZE];
     akvcam_devices_list_t devices;
+    struct mutex devices_mutex;
+    struct workqueue_struct *elastic_wq;
     akvcam_frame_t default_frame;
     akvcam_frame_filter_t frame_filter;
 } akvcam_driver, *akvcam_driver_t;
@@ -71,6 +75,8 @@ void akvcam_driver_print_devices(void);
 void akvcam_driver_print_formats(akvcam_device_ct device);
 void akvcam_driver_print_connections(akvcam_device_ct device);
 akvcam_driver_rw_mode_strings_ct akvcam_driver_rw_mode_strs(void);
+static bool akvcam_driver_enable_elastic(void);
+static void akvcam_driver_elastic_shutdown(void);
 
 int akvcam_driver_init(const char *name, const char *description)
 {
@@ -89,6 +95,8 @@ int akvcam_driver_init(const char *name, const char *description)
 
     snprintf(akvcam_driver_global->name, AKVCAM_MAX_STRING_SIZE, "%s", name);
     snprintf(akvcam_driver_global->description, AKVCAM_MAX_STRING_SIZE, "%s", description);
+    mutex_init(&akvcam_driver_global->devices_mutex);
+    akvcam_driver_global->elastic_wq = NULL;
     akvcam_driver_global->default_frame = NULL;
     akvcam_driver_global->devices = NULL;
     akvcam_driver_global->frame_filter = akvcam_frame_filter_new();
@@ -127,6 +135,7 @@ void akvcam_driver_uninit(void)
         return;
 
     remove_proc_entry(akvcam_proc_file_name(), NULL);
+    akvcam_driver_elastic_shutdown();
     akvcam_driver_unregister();
     akvcam_list_delete(akvcam_driver_global->devices);
     akvcam_frame_delete(akvcam_driver_global->default_frame);
@@ -154,6 +163,97 @@ const char *akvcam_driver_description(void)
 uint akvcam_driver_version(void)
 {
     return LINUX_VERSION_CODE;
+}
+
+struct workqueue_struct *akvcam_driver_elastic_wq(void)
+{
+    if (!akvcam_driver_global)
+        return NULL;
+
+    return akvcam_driver_global->elastic_wq;
+}
+
+static bool akvcam_driver_enable_elastic(void)
+{
+    if (!akvcam_driver_global)
+        return false;
+
+    /* A single ordered queue serializes the creation and removal of the
+     * elastic devices. */
+    if (!akvcam_driver_global->elastic_wq)
+        akvcam_driver_global->elastic_wq =
+                alloc_ordered_workqueue("akvcam-elastic", 0);
+
+    return akvcam_driver_global->elastic_wq != NULL;
+}
+
+static void akvcam_driver_elastic_shutdown(void)
+{
+    akvcam_devices_list_t devices;
+    akvcam_list_element_t it = NULL;
+
+    if (!akvcam_driver_global || !akvcam_driver_global->devices)
+        return;
+
+    mutex_lock(&akvcam_driver_global->devices_mutex);
+    devices = akvcam_list_new_copy(akvcam_driver_global->devices);
+    mutex_unlock(&akvcam_driver_global->devices_mutex);
+
+    for (;;) {
+        akvcam_device_t device = akvcam_list_next(devices, &it);
+
+        if (!it)
+            break;
+
+        if (akvcam_device_elastic(device))
+            akvcam_device_elastic_shutdown(device);
+    }
+
+    akvcam_list_delete(devices);
+
+    if (akvcam_driver_global->elastic_wq) {
+        destroy_workqueue(akvcam_driver_global->elastic_wq);
+        akvcam_driver_global->elastic_wq = NULL;
+    }
+}
+
+static bool akvcam_driver_same_device(const void *element_data,
+                                      const void *data)
+{
+    return element_data == data;
+}
+
+bool akvcam_driver_add_device(akvcam_device_t device)
+{
+    if (!akvcam_driver_global || !akvcam_driver_global->devices)
+        return false;
+
+    mutex_lock(&akvcam_driver_global->devices_mutex);
+    akvcam_list_push_back(akvcam_driver_global->devices,
+                          device,
+                          (akvcam_copy_t) akvcam_device_ref,
+                          (akvcam_delete_t) akvcam_device_delete);
+    mutex_unlock(&akvcam_driver_global->devices_mutex);
+
+    return true;
+}
+
+void akvcam_driver_remove_device(akvcam_device_t device)
+{
+    akvcam_list_element_t it;
+
+    if (!akvcam_driver_global || !akvcam_driver_global->devices)
+        return;
+
+    mutex_lock(&akvcam_driver_global->devices_mutex);
+    it = akvcam_list_find(akvcam_driver_global->devices,
+                          device,
+                          akvcam_driver_same_device);
+
+    if (it)
+        akvcam_list_erase(akvcam_driver_global->devices, it);
+
+    mutex_unlock(&akvcam_driver_global->devices_mutex);
 }
 
 bool akvcam_driver_register(void)
@@ -483,6 +583,22 @@ akvcam_device_t akvcam_driver_read_device(akvcam_settings_t settings,
         akvcam_device_set_num(device,
                               akvcam_settings_value_int32(settings, "videonr"));
 
+    if (akvcam_settings_contains(settings, "elastic")
+        && akvcam_settings_value_bool(settings, "elastic")) {
+        if (type != AKVCAM_DEVICE_TYPE_OUTPUT) {
+            akpr_warning("'elastic' is only valid for output devices, "
+                         "ignoring it\n");
+        } else if (!akvcam_driver_enable_elastic()) {
+            akpr_err("Can't enable elastic devices\n");
+        } else {
+            int32_t elastic_max = akvcam_settings_contains(settings, "elastic_max")?
+                                      akvcam_settings_value_int32(settings, "elastic_max"):
+                                      8;
+
+            akvcam_device_set_elastic(device, true, elastic_max);
+        }
+    }
+
     if (!akvcam_device_v4l2_type(device)) {
         akvcam_device_delete(device);
         device = NULL;
@@ -716,6 +832,10 @@ void akvcam_driver_print_devices(void)
         akpr_info("Device: /dev/video%d\n", akvcam_device_num(device));
         akpr_info("\tDescription: %s\n", akvcam_device_description(device));
 
+        if (akvcam_device_elastic(device))
+            akpr_info("\tElastic: yes (max %d capture devices)\n",
+                      akvcam_device_elastic_max(device));
+
         if (akvcam_device_type(device) == AKVCAM_DEVICE_TYPE_OUTPUT) {
             akpr_info("\tType: Output\n");
         } else {
@@ -772,7 +892,10 @@ void akvcam_driver_print_connections(akvcam_device_ct device)
     akvcam_list_element_t it = NULL;
 
     if (akvcam_list_empty(devices)) {
-        akpr_warning("No devices connected\n");
+        if (akvcam_device_elastic(device))
+            akpr_info("\tConnections: created on demand\n");
+        else
+            akpr_warning("No devices connected\n");
 
         return;
     }

@@ -21,6 +21,10 @@
 
 #include <linux/types.h>
 
+#include "device_types.h"
+
+struct workqueue_struct;
+
 // public static
 int akvcam_driver_init(const char *name, const char *description);
 void akvcam_driver_uninit(void);
@@ -28,5 +32,9 @@ void akvcam_driver_uninit(void);
 const char *akvcam_driver_name(void);
 const char *akvcam_driver_description(void);
 uint akvcam_driver_version(void);
+
+bool akvcam_driver_add_device(akvcam_device_t device);
+void akvcam_driver_remove_device(akvcam_device_t device);
+struct workqueue_struct *akvcam_driver_elastic_wq(void);
 
 #endif // AKVCAM_DRIVER_H

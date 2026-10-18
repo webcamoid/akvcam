@@ -80,6 +80,7 @@ static ssize_t akvcam_attributes_connected_devices_show(struct device *dev,
 {
     struct video_device *vdev = to_video_device(dev);
     akvcam_device_t device = video_get_drvdata(vdev);
+    akvcam_device_t owner = device;
     akvcam_devices_list_t devices;
     akvcam_list_element_t it = NULL;
     size_t n = 0;
@@ -88,6 +89,7 @@ static ssize_t akvcam_attributes_connected_devices_show(struct device *dev,
     UNUSED(attribute);
     devices = akvcam_device_connected_devices_nr(device);
     memset(buffer, 0, PAGE_SIZE);
+    akvcam_device_connected_lock(owner);
 
     for (i = 0; i < 64 && PAGE_SIZE > n; i++) {
         device = akvcam_list_next(devices, &it);
@@ -101,6 +103,8 @@ static ssize_t akvcam_attributes_connected_devices_show(struct device *dev,
                       akvcam_device_num(device));
     }
 
+    akvcam_device_connected_unlock(owner);
+
     return n;
 }
 
@@ -110,6 +114,7 @@ static ssize_t akvcam_attributes_streaming_devices_show(struct device *dev,
 {
     struct video_device *vdev = to_video_device(dev);
     akvcam_device_t device = video_get_drvdata(vdev);
+    akvcam_device_t owner = device;
     akvcam_devices_list_t devices;
     akvcam_list_element_t it = NULL;
     size_t n = 0;
@@ -118,6 +123,8 @@ static ssize_t akvcam_attributes_streaming_devices_show(struct device *dev,
     UNUSED(attribute);
     devices = akvcam_device_connected_devices_nr(device);
     memset(buffer, 0, PAGE_SIZE);
+
+    akvcam_device_connected_lock(owner);
 
     for (i = 0; i < 64 && n < PAGE_SIZE; i++) {
         device = akvcam_list_next(devices, &it);
@@ -132,6 +139,8 @@ static ssize_t akvcam_attributes_streaming_devices_show(struct device *dev,
                           akvcam_device_num(device));
         }
     }
+
+    akvcam_device_connected_unlock(owner);
 
     return n;
 }

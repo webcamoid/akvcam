@@ -51,6 +51,14 @@ AKVCAM_RW_MODE akvcam_device_rw_mode(akvcam_device_ct self);
 bool akvcam_device_direct_mode(akvcam_device_ct self);
 void akvcam_device_set_direct_mode(akvcam_device_t self, bool direct_mode);
 bool akvcam_device_dynamic_formats(akvcam_device_ct self);
+bool akvcam_device_elastic(akvcam_device_ct self);
+int akvcam_device_elastic_max(akvcam_device_ct self);
+void akvcam_device_set_elastic(akvcam_device_t self,
+                               bool elastic,
+                               int max_devices);
+void akvcam_device_elastic_shutdown(akvcam_device_t self);
+void akvcam_device_connected_lock(akvcam_device_t self);
+void akvcam_device_connected_unlock(akvcam_device_t self);
 akvcam_formats_list_t akvcam_device_formats(akvcam_device_ct self);
 akvcam_format_t akvcam_device_format_nr(akvcam_device_ct self);
 akvcam_format_t akvcam_device_format(akvcam_device_ct self);

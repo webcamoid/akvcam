@@ -16,9 +16,13 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/atomic.h>
 #include <linux/delay.h>
+#include <linux/jiffies.h>
+#include <linux/kernel.h>
 #include <linux/kthread.h>
 #include <linux/mutex.h>
+#include <linux/workqueue.h>
 #include <linux/random.h>
 #include <linux/slab.h>
 #include <media/v4l2-device.h>
@@ -30,12 +34,18 @@
 #include "buffers.h"
 #include "controls.h"
 #include "converter.h"
+#include "driver.h"
 #include "format.h"
 #include "frame.h"
 #include "frame_filter.h"
 #include "ioctl.h"
 #include "list.h"
 #include "log.h"
+
+// Elastic devices: an output device creates capture devices on demand.
+#define AKVCAM_ELASTIC_DEFAULT_MAX    8
+#define AKVCAM_ELASTIC_MAX_LIMIT      64
+#define AKVCAM_ELASTIC_STOP_DELAY_MS  3000
 
 struct akvcam_device
 {
@@ -64,6 +74,16 @@ struct akvcam_device
     AKVCAM_RW_MODE rw_mode;
     bool direct_mode;
     int32_t videonr;
+    struct mutex connected_mutex;
+    atomic_t open_count;
+
+    // Elastic devices
+    bool elastic;                      // output: creates capture devices
+    int elastic_max;                   // output: maximum capture devices
+    struct delayed_work elastic_work;  // output: reconciles capture devices
+    unsigned long elastic_stop_time;   // output: jiffies when it stopped
+    akvcam_device_t elastic_owner;     // capture: output that created it
+    unsigned int elastic_index;        // capture: N in "<description> N"
 
     // Capture controls
     int brightness;
@@ -85,6 +105,9 @@ struct akvcam_device
 
 typedef int (*akvcam_thread_t)(void *data);
 static const struct v4l2_file_operations akvcam_device_fops;
+static void akvcam_device_vdev_release(struct video_device *vdev);
+static void akvcam_device_elastic_work(struct work_struct *work);
+static void akvcam_device_elastic_kick(akvcam_device_t self);
 
 enum v4l2_buf_type akvcam_device_v4l2_from_device_type(AKVCAM_DEVICE_TYPE type);
 int akvcam_device_controls_updated(akvcam_device_t self, __u32 id, __s32 value);
@@ -127,6 +150,10 @@ akvcam_device_t akvcam_device_new(const char *name,
     mutex_init(&self->device_mutex);
     mutex_init(&self->frame_mutex);
     mutex_init(&self->clock_mutex);
+    mutex_init(&self->connected_mutex);
+    atomic_set(&self->open_count, 0);
+    self->elastic_max = AKVCAM_ELASTIC_DEFAULT_MAX;
+    INIT_DELAYED_WORK(&self->elastic_work, akvcam_device_elastic_work);
 
     self->in_video_converter = akvcam_converter_new();
     self->out_video_converter = akvcam_converter_new();
@@ -146,6 +173,7 @@ static void akvcam_device_free(struct kref *ref)
 {
     akvcam_device_t self = container_of(ref, struct akvcam_device, ref);
 
+    cancel_delayed_work_sync(&self->elastic_work);
     akvcam_converter_delete(self->in_video_converter);
     akvcam_converter_delete(self->out_video_converter);
     akvcam_frame_delete(self->current_frame);
@@ -198,7 +226,7 @@ bool akvcam_device_register(akvcam_device_t self)
             self->vdev->fops = &akvcam_device_fops;
             self->vdev->ioctl_ops = akvcam_ioctl_ops();
             self->vdev->tvnorms = V4L2_STD_ALL;
-            self->vdev->release = video_device_release_empty;
+            self->vdev->release = akvcam_device_vdev_release;
             self->vdev->queue = queue;
             self->vdev->lock = &self->device_mutex;
             self->vdev->ctrl_handler =
@@ -216,6 +244,10 @@ bool akvcam_device_register(akvcam_device_t self)
                 v4l2_device_unregister(&self->v4l2_dev);
                 video_device_release(self->vdev);
                 self->vdev = NULL;
+            } else {
+                /* The video device keeps the device alive until its last
+                 * user closes it (see akvcam_device_vdev_release). */
+                akvcam_device_ref(self);
             }
         } else {
             v4l2_device_unregister(&self->v4l2_dev);
@@ -227,16 +259,26 @@ bool akvcam_device_register(akvcam_device_t self)
     return self->vdev;
 }
 
+/* Called by the V4L2 core when the last reference to the video device is
+ * gone, that is, after unregistering it and closing every open file. */
+static void akvcam_device_vdev_release(struct video_device *vdev)
+{
+    akvcam_device_t self = video_get_drvdata(vdev);
+
+    video_device_release(vdev);
+    v4l2_device_unregister(&self->v4l2_dev);
+    akvcam_device_delete(self);
+}
+
 void akvcam_device_unregister(akvcam_device_t self)
 {
-    if (!self->vdev)
+    struct video_device *vdev = self->vdev;
+
+    if (!vdev)
         return;
 
-    video_unregister_device(self->vdev);
-    video_device_release(self->vdev);
     self->vdev = NULL;
-
-    v4l2_device_unregister(&self->v4l2_dev);
+    video_unregister_device(vdev);
 }
 
 int32_t akvcam_device_num(akvcam_device_ct self)
@@ -406,7 +448,9 @@ int akvcam_device_controls_updated(akvcam_device_t self, __u32 id, __s32 value)
         break;
     }
 
-    if (self->type != AKVCAM_DEVICE_TYPE_CAPTURE)
+    if (self->type != AKVCAM_DEVICE_TYPE_CAPTURE) {
+        mutex_lock(&self->connected_mutex);
+
         for (;;) {
             akvcam_device_t capture_device
                     = akvcam_list_next(self->connected_devices, &it);
@@ -421,6 +465,9 @@ int akvcam_device_controls_updated(akvcam_device_t self, __u32 id, __s32 value)
             capture_device->swap_rgb = self->swap_rgb;
         }
 
+        mutex_unlock(&self->connected_mutex);
+    }
+
     return 0;
 }
 
@@ -433,6 +480,11 @@ int akvcam_device_stop_streaming(akvcam_device_t self)
         self->current_frame = NULL;
         mutex_unlock(&self->frame_mutex);
     }
+
+    if (self->elastic)
+        self->elastic_stop_time = jiffies;
+
+    akvcam_device_elastic_kick(self);
 
     return 0;
 }
@@ -489,9 +541,12 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
     if (self->type == AKVCAM_DEVICE_TYPE_CAPTURE) {
         akvcam_frame_t frame = NULL;
         akvcam_frame_t adjusted_frame;
-        akvcam_device_t output_device =
-                akvcam_list_front(self->connected_devices);
+        akvcam_device_t output_device;
         int result;
+
+        mutex_lock(&self->connected_mutex);
+        output_device = akvcam_list_front(self->connected_devices);
+        mutex_unlock(&self->connected_mutex);
 
         if (!mutex_lock_interruptible(&self->frame_mutex)) {
             if (output_device
@@ -502,6 +557,17 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
             }
 
             mutex_unlock(&self->frame_mutex);
+        }
+
+        /* In direct mode the frame is copied as is, so it must match the
+         * format of this device. An elastic device can outlive the stream
+         * that created it; in that case show the default frame. */
+        if (frame
+            && self->direct_mode
+            && !akvcam_format_is_same_format(akvcam_frame_format_nr(frame),
+                                             self->format)) {
+            akvcam_frame_delete(frame);
+            frame = NULL;
         }
 
         if (!frame) {
@@ -566,6 +632,8 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
         akvcam_frame_t frame = akvcam_buffers_read_frame(self->buffers);
 
         if (frame) {
+            mutex_lock(&self->connected_mutex);
+
             for (;;) {
                 akvcam_device_t capture_device =
                         akvcam_list_next(self->connected_devices, &it);
@@ -580,6 +648,7 @@ void akvcam_device_clock_run_once(akvcam_device_t self)
                 }
             }
 
+            mutex_unlock(&self->connected_mutex);
             akvcam_frame_delete(frame);
         }
     }
@@ -607,6 +676,9 @@ int akvcam_device_clock_start(akvcam_device_t self)
     }
 
     mutex_unlock(&self->clock_mutex);
+
+    if (result == 0)
+        akvcam_device_elastic_kick(self);
 
     return result;
 }
@@ -713,10 +785,406 @@ akvcam_frame_t akvcam_device_frame_apply_adjusts(akvcam_device_ct self,
     return oframe;
 }
 
+static int akvcam_device_open(struct file *file)
+{
+    akvcam_device_t self = video_drvdata(file);
+    int result = v4l2_fh_open(file);
+
+    if (result == 0)
+        atomic_inc(&self->open_count);
+
+    return result;
+}
+
+static int akvcam_device_release(struct file *file)
+{
+    akvcam_device_t self = video_drvdata(file);
+    int result = vb2_fop_release(file);
+
+    atomic_dec(&self->open_count);
+    akvcam_device_elastic_kick(self);
+
+    return result;
+}
+
+/* ---------------------------------------------------------------------------
+ * Elastic devices
+ *
+ * An output device with the elastic property creates capture devices on
+ * demand: while the output is streaming there is always exactly one capture
+ * device without a streaming client (the spare one). As soon as a client
+ * starts streaming from the spare device a new spare is created, and when a
+ * client leaves the surplus spare devices are removed. A client is attached
+ * when it starts streaming, not when it opens the device, because many
+ * applications open every video device just to query its capabilities.
+ *
+ * When the output stops, devices without open files are removed after a
+ * short delay. Devices still in use keep showing the default frame and are
+ * removed when their client closes them. If the output starts again they
+ * are fed again, as long as their format is still compatible.
+ *
+ * All the changes are done by a single ordered work queue, because the
+ * devices can't be registered or removed from the ioctls that trigger them.
+ * ------------------------------------------------------------------------ */
+
+static bool akvcam_device_same_device(const void *element_data,
+                                      const void *data)
+{
+    return element_data == data;
+}
+
+static void akvcam_device_elastic_kick(akvcam_device_t self)
+{
+    akvcam_device_t output = self->elastic? self: self->elastic_owner;
+    struct workqueue_struct *wq;
+
+    if (!output || !output->elastic)
+        return;
+
+    wq = akvcam_driver_elastic_wq();
+
+    if (wq)
+        mod_delayed_work(wq, &output->elastic_work, 0);
+}
+
+static bool akvcam_device_elastic_is_idle(akvcam_device_t capture)
+{
+    return atomic_read(&capture->open_count) < 1
+           && !akvcam_device_streaming(capture);
+}
+
+static akvcam_devices_list_t akvcam_device_connected_snapshot(akvcam_device_t self)
+{
+    akvcam_devices_list_t snapshot;
+
+    mutex_lock(&self->connected_mutex);
+    snapshot = akvcam_list_new_copy(self->connected_devices);
+    mutex_unlock(&self->connected_mutex);
+
+    return snapshot;
+}
+
+static void akvcam_device_elastic_remove(akvcam_device_t self,
+                                         akvcam_device_t capture)
+{
+    akvcam_list_element_t it;
+
+    akpr_info("Removing elastic device '%s %u'\n",
+              self->description,
+              capture->elastic_index);
+
+    mutex_lock(&self->connected_mutex);
+    it = akvcam_list_find(self->connected_devices,
+                          capture,
+                          akvcam_device_same_device);
+
+    if (it)
+        akvcam_list_erase(self->connected_devices, it);
+
+    mutex_unlock(&self->connected_mutex);
+
+    akvcam_driver_remove_device(capture);
+
+    /* Break the reference cycle with the output device. */
+    mutex_lock(&capture->connected_mutex);
+    akvcam_list_clear(capture->connected_devices);
+    mutex_unlock(&capture->connected_mutex);
+
+    akvcam_device_unregister(capture);
+}
+
+static akvcam_device_t akvcam_device_elastic_create(akvcam_device_t self,
+                                                    unsigned int index)
+{
+    akvcam_formats_list_t formats;
+    akvcam_format_t output_format;
+    akvcam_device_t capture;
+    char *description;
+
+    description = kasprintf(GFP_KERNEL, "%s %u", self->description, index);
+
+    if (!description)
+        return NULL;
+
+    output_format = akvcam_format_new_copy(self->format);
+
+    if (self->direct_mode) {
+        /* The only format offered is the one the output is streaming. */
+        formats = akvcam_list_new();
+        akvcam_list_push_back(formats,
+                              output_format,
+                              (akvcam_copy_t) akvcam_format_ref,
+                              (akvcam_delete_t) akvcam_format_delete);
+    } else {
+        /* Same formats as the output; no formats means dynamic formats. */
+        formats = akvcam_list_new_copy(self->formats);
+    }
+
+    capture = akvcam_device_new(self->name,
+                                description,
+                                AKVCAM_DEVICE_TYPE_CAPTURE,
+                                self->rw_mode,
+                                formats,
+                                self->default_frame,
+                                self->frame_filter);
+    akvcam_list_delete(formats);
+    kfree(description);
+
+    if (!capture) {
+        akvcam_format_delete(output_format);
+
+        return NULL;
+    }
+
+    capture->direct_mode = self->direct_mode;
+    capture->elastic_owner = self;
+    capture->elastic_index = index;
+    capture->horizontal_flip = self->horizontal_flip;
+    capture->vertical_flip = self->vertical_flip;
+    capture->scaling = self->scaling;
+    capture->aspect_ratio = self->aspect_ratio;
+    capture->swap_rgb = self->swap_rgb;
+    akvcam_device_set_format(capture, output_format);
+    akvcam_format_delete(output_format);
+
+    /* Connect both devices; every list owns a reference. */
+    mutex_lock(&capture->connected_mutex);
+    akvcam_list_push_back(capture->connected_devices,
+                          self,
+                          (akvcam_copy_t) akvcam_device_ref,
+                          (akvcam_delete_t) akvcam_device_delete);
+    mutex_unlock(&capture->connected_mutex);
+    mutex_lock(&self->connected_mutex);
+    akvcam_list_push_back(self->connected_devices,
+                          capture,
+                          (akvcam_copy_t) akvcam_device_ref,
+                          (akvcam_delete_t) akvcam_device_delete);
+    mutex_unlock(&self->connected_mutex);
+    akvcam_driver_add_device(capture);
+
+    if (!akvcam_device_register(capture)) {
+        akpr_err("Failed to register elastic device '%s %u'\n",
+                 self->description,
+                 index);
+        akvcam_device_elastic_remove(self, capture);
+        akvcam_device_delete(capture);
+
+        return NULL;
+    }
+
+    akpr_info("Created elastic device '%s %u' as /dev/video%d\n",
+              self->description,
+              index,
+              akvcam_device_num(capture));
+
+    /* The lists keep the device alive. */
+    akvcam_device_delete(capture);
+
+    return capture;
+}
+
+static void akvcam_device_elastic_reconcile(akvcam_device_t self)
+{
+    akvcam_device_t captures[AKVCAM_ELASTIC_MAX_LIMIT];
+    bool spare[AKVCAM_ELASTIC_MAX_LIMIT];
+    akvcam_devices_list_t snapshot;
+    akvcam_list_element_t it = NULL;
+    akvcam_format_t output_format = NULL;
+    struct workqueue_struct *wq = akvcam_driver_elastic_wq();
+    size_t ncaptures = 0;
+    size_t nspares = 0;
+    size_t total;
+    size_t i;
+    size_t j;
+    bool streaming = akvcam_device_streaming(self);
+
+    if (!self->elastic || !wq)
+        return;
+
+    if (!streaming) {
+        /* Give the output a chance to start again before removing
+         * anything, so a quick restart doesn't make devices flicker. */
+        unsigned long deadline =
+                self->elastic_stop_time
+                + msecs_to_jiffies(AKVCAM_ELASTIC_STOP_DELAY_MS);
+
+        if (time_before(jiffies, deadline)) {
+            queue_delayed_work(wq, &self->elastic_work, deadline - jiffies);
+
+            return;
+        }
+    }
+
+    snapshot = akvcam_device_connected_snapshot(self);
+
+    /* Elastic capture devices, sorted by index. */
+    for (;;) {
+        akvcam_device_t capture = akvcam_list_next(snapshot, &it);
+
+        if (!it)
+            break;
+
+        if (capture->elastic_owner != self
+            || ncaptures >= AKVCAM_ELASTIC_MAX_LIMIT)
+            continue;
+
+        for (i = ncaptures; i > 0
+             && captures[i - 1]->elastic_index > capture->elastic_index; i--)
+            captures[i] = captures[i - 1];
+
+        captures[i] = capture;
+        ncaptures++;
+    }
+
+    total = ncaptures;
+
+    if (!streaming) {
+        /* Remove the devices nobody is using. */
+        for (i = 0; i < ncaptures; i++)
+            if (akvcam_device_elastic_is_idle(captures[i])) {
+                akvcam_device_elastic_remove(self, captures[i]);
+                captures[i] = NULL;
+            }
+
+        goto elastic_reconcile_done;
+    }
+
+    if (self->direct_mode)
+        output_format = akvcam_format_new_copy(self->format);
+
+    for (i = 0; i < ncaptures; i++) {
+        spare[i] = false;
+
+        if (akvcam_device_streaming(captures[i]))
+            continue;
+
+        if (output_format) {
+            akvcam_format_t capture_format =
+                    akvcam_format_new_copy(captures[i]->format);
+            bool compatible =
+                    akvcam_format_is_same_format(capture_format, output_format);
+
+            akvcam_format_delete(capture_format);
+
+            if (!compatible) {
+                /* Stale format from a previous stream. */
+                if (akvcam_device_elastic_is_idle(captures[i])) {
+                    akvcam_device_elastic_remove(self, captures[i]);
+                    captures[i] = NULL;
+                    total--;
+                }
+
+                continue;
+            }
+        }
+
+        spare[i] = true;
+        nspares++;
+    }
+
+    akvcam_format_delete(output_format);
+
+    /* Keep a single spare device: the surplus ones are removed, starting
+     * from the highest index. */
+    for (i = ncaptures; i > 0 && nspares > 1; i--) {
+        j = i - 1;
+
+        if (!captures[j] || !spare[j])
+            continue;
+
+        if (akvcam_device_elastic_is_idle(captures[j])) {
+            akvcam_device_elastic_remove(self, captures[j]);
+            captures[j] = NULL;
+            spare[j] = false;
+            nspares--;
+            total--;
+        }
+    }
+
+    if (nspares < 1 && total < (size_t) self->elastic_max) {
+        unsigned int index = 1;
+
+        /* Lowest index not in use. */
+        for (i = 0; i < ncaptures; i++)
+            if (captures[i] && captures[i]->elastic_index == index)
+                index++;
+
+        akvcam_device_elastic_create(self, index);
+    }
+
+elastic_reconcile_done:
+    akvcam_list_delete(snapshot);
+}
+
+static void akvcam_device_elastic_work(struct work_struct *work)
+{
+    akvcam_device_t self = container_of(to_delayed_work(work),
+                                        struct akvcam_device,
+                                        elastic_work);
+
+    akvcam_device_elastic_reconcile(self);
+}
+
+bool akvcam_device_elastic(akvcam_device_ct self)
+{
+    return self->elastic;
+}
+
+int akvcam_device_elastic_max(akvcam_device_ct self)
+{
+    return self->elastic_max;
+}
+
+void akvcam_device_set_elastic(akvcam_device_t self,
+                               bool elastic,
+                               int max_devices)
+{
+    if (self->type != AKVCAM_DEVICE_TYPE_OUTPUT)
+        return;
+
+    self->elastic = elastic;
+    self->elastic_max = clamp(max_devices, 1, AKVCAM_ELASTIC_MAX_LIMIT);
+}
+
+void akvcam_device_elastic_shutdown(akvcam_device_t self)
+{
+    akvcam_devices_list_t snapshot;
+    akvcam_list_element_t it = NULL;
+
+    if (!self->elastic)
+        return;
+
+    self->elastic = false;
+    cancel_delayed_work_sync(&self->elastic_work);
+    snapshot = akvcam_device_connected_snapshot(self);
+
+    for (;;) {
+        akvcam_device_t capture = akvcam_list_next(snapshot, &it);
+
+        if (!it)
+            break;
+
+        if (capture->elastic_owner == self)
+            akvcam_device_elastic_remove(self, capture);
+    }
+
+    akvcam_list_delete(snapshot);
+}
+
+void akvcam_device_connected_lock(akvcam_device_t self)
+{
+    mutex_lock(&self->connected_mutex);
+}
+
+void akvcam_device_connected_unlock(akvcam_device_t self)
+{
+    mutex_unlock(&self->connected_mutex);
+}
+
 static const struct v4l2_file_operations akvcam_device_fops = {
     .owner          = THIS_MODULE    ,
-    .open           = v4l2_fh_open   ,
-    .release        = vb2_fop_release,
+    .open           = akvcam_device_open   ,
+    .release        = akvcam_device_release,
     .unlocked_ioctl = video_ioctl2   ,
     .read           = vb2_fop_read   ,
     .write          = vb2_fop_write  ,
