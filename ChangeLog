@@ -1,3 +1,38 @@
+akvcam 2.0.0:
+
+- Added dynamic formats. A device that doesn't define the 'formats' property
+  now accepts any supported pixel format, any resolution up to 3840x2160 and
+  any frame rate from 1 to 120 FPS. Values that are not valid are corrected to
+  the nearest valid one. The default format is YUV420 640x480 30 FPS. The
+  supported ranges are reported using VIDIOC_ENUM_FMT, VIDIOC_ENUM_FRAMESIZES
+  and VIDIOC_ENUM_FRAMEINTERVALS, so these devices also pass v4l2-compliance.
+  Before, a device without formats was not created.
+- Added elastic devices. An output device with the 'elastic' property creates
+  its own capture devices on demand, so you don't need to define the capture
+  devices nor the connections. The first capture device ("Virtual Camera 1")
+  is created when the output starts streaming, and a new one is created every
+  time a program starts streaming from the last free one, so there is always
+  one free device. The devices that are not needed anymore are removed. The
+  capture devices copy the formats, the streaming modes and the direct mode of
+  the output device. The 'elastic_max' property sets the maximum number of
+  capture devices (8 by default).
+- The multi-planar V4L2 API is not used anymore. All the devices use the
+  single-planar API (Video Capture and Video Output).
+- The planar formats (NV12, NV16, NV21, NV61, YUV410, YUV411P, YUV420, YUV422P,
+  YVU410 and YVU420) are now exposed as a single contiguous memory plane, using
+  the standard V4L2 layout: the line size of the other planes is derived from
+  the bytesperline of the first plane.
+- Fixed the size of the chroma planes in the planar formats, they were smaller
+  than needed.
+- Fixed VIDIOC_G_PARM and VIDIOC_S_PARM, timeperframe is now the frame interval
+  (1/fps) instead of the frame rate.
+- Fixed VIDIOC_CREATE_BUFS accepting more planes than required by the format.
+- In direct mode, a capture device now shows the default frame when the frames
+  received don't have the format of the device.
+- The video devices are now released when the last file referencing them is
+  closed, so the devices can be removed while they are still in use.
+- Protected the list of connected devices and the list of devices with mutexes.
+
 akvcam 1.4.0:
 
 - Minimum supported kernel version: 5.10.
